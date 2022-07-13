@@ -1,0 +1,13 @@
+
+# from Compiler import program
+
+# sint.get_input_from(0)
+
+a = sint(1)
+b = sint(2)
+
+c = a * b
+d = a * c
+e = a * d
+f = a * e
+g = a * f

@@ -1,0 +1,612 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+  8.00     36.83    36.83 3705272704     0.00     0.00  avx_memzero(void*, unsigned long)
+  7.88     73.11    36.28 2000000000     0.00     0.00  long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&)
+  5.00     96.12    23.01 2019572561     0.00     0.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()()
+  3.85    113.85    17.72 4000000000     0.00     0.00  bool operator==<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int)
+  3.34    129.24    15.39 10000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__get_mp() const
+  3.27    144.29    15.06 2000000000     0.00     0.00  modp_<1>::convert_destroy(bigint&, Zp_Data const&)
+  3.25    159.28    14.98 2000000000     0.00     0.00  std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<__mpz_struct> >, std::is_move_constructible<__mpz_struct>, std::is_move_assignable<__mpz_struct> >::value, void>::type std::swap<__mpz_struct>(__mpz_struct&, __mpz_struct&)
+  2.85    172.38    13.10 2000000000     0.00     0.00  modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool)
+  2.70    184.78    12.41 2000100000     0.00     0.00  gfp_<0, 1>::gfp_(long)
+  2.38    195.74    10.95 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::eval(__mpz_struct*) const
+  2.37    206.63    10.89 4000000000     0.00     0.00  __gmp_binary_equal::eval(__mpz_struct const*, long)
+  2.35    217.45    10.82  6472989     0.00     0.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand()
+  2.06    226.94     9.50 6000000000     0.00     0.00  std::remove_reference<__mpz_struct&>::type&& std::move<__mpz_struct&>(__mpz_struct&)
+  2.03    236.27     9.33 2000000000     0.00     0.00  bool operator< <__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int)
+  2.02    245.59     9.32 4000000000     0.00     0.00  std::uniform_int_distribution<long long>::param_type::a() const
+  1.78    253.79     8.20 5000120000     0.00     0.00  modp_<1>::modp_()
+  1.73    261.73     7.95 4000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::get_mpz_t()
+  1.68    269.46     7.73 2000000000     0.00     0.00  bigint::operator=(bigint&&)
+  1.66    277.08     7.63 2000000000     0.00     0.00  void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&)
+  1.66    284.70     7.62 2000000000     0.00     0.00  Zp_Data::Mont_Mult_variable(unsigned long*, unsigned long const*, unsigned long const*) const
+  1.64    292.26     7.56 2000000002     0.00     0.00  bigint::~bigint()
+  1.63    299.75     7.49 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>& __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator%=<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  1.59    307.05     7.30 2000000000     0.00     0.00  bigint::operator=(long)
+  1.58    314.34     7.29   200000     0.04     2.05  VectorPrime::set_random()
+  1.57    321.57     7.23 2000000000     0.00     0.00  std::uniform_int_distribution<long long>::param_type::b() const
+  1.54    328.67     7.10 2000000000     0.00     0.00  void __gmp_set_expr<__gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >(__mpz_struct*, __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> > const&)
+  1.52    335.67     7.01 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  1.46    342.42     6.74 2000000000     0.00     0.00  inline_mpn_copyi(unsigned long*, unsigned long const*, long)
+  1.46    349.13     6.71 2000000000     0.00     0.00  long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&)
+  1.45    355.82     6.69 2000000000     0.00     0.00  __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus>::__gmp_binary_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  1.43    362.40     6.58 2000000000     0.00     0.00  __gmp_binary_less::eval(__mpz_struct const*, long)
+  1.43    368.97     6.58 2000000000     0.00     0.00  bigint::bigint<__gmp_expr<__mpz_struct [1], __mpz_struct [1]> >(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  1.42    375.50     6.53 1000000000     0.00     0.00  void Zp_Data::Add<1>(unsigned long*, unsigned long const*, unsigned long const*) const
+  1.38    381.84     6.34 2000000000     0.00     0.00  gfp_<0, 1>::gfp_(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  1.29    387.79     5.96 2000000000     0.00     0.00  __gmp_binary_modulus::eval(__mpz_struct*, __mpz_struct const*, __mpz_struct const*)
+  1.28    393.68     5.88 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&&)
+  1.25    399.45     5.77 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::swap(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&)
+  1.15    404.73     5.28 1000000000     0.00     0.00  void modp_<1>::mul<1>(modp_<1> const&, modp_<1> const&, Zp_Data const&)
+  1.12    409.90     5.17 2000000000     0.00     0.00  inline_mpn_zero(unsigned long*, long)
+  1.05    414.73     4.84 2000000000     0.00     0.00  avx_memcpy(void*, void const*, unsigned long)
+  1.01    419.38     4.65 2000000000     0.00     0.00  Zp_Data::Mont_Mult(unsigned long*, unsigned long const*, unsigned long const*) const
+  1.00    423.96     4.58 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(long)
+  0.81    427.67     3.71 1000000000     0.00     0.00  gfp_<0, 1>::operator+=(gfp_<0, 1> const&)
+  0.80    431.34     3.67 2000000000     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  0.77    434.88     3.54 2000000005     0.00     0.00  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::~__gmp_expr()
+  0.74    438.30     3.42 1000000000     0.00     0.00  gfp_<0, 1>::mul(gfp_<0, 1> const&, gfp_<0, 1> const&)
+  0.71    441.56     3.26 1000000000     0.00     0.00  gfp_<0, 1>::add(gfp_<0, 1> const&, gfp_<0, 1> const&)
+  0.64    444.50     2.94 1000020000     0.00     0.00  gfp_<0, 1>::gfp_()
+  0.59    447.23     2.73 1000000000     0.00     0.00  void Zp_Data::Mont_Mult_<1>(unsigned long*, unsigned long const*, unsigned long const*) const
+  0.58    449.92     2.69   100000     0.03     0.48  VectorPrime::operator*(VectorPrime const&)
+  0.54    452.42     2.50 1000000000     0.00     0.00  gfp_<0, 1>::operator*(gfp_<0, 1> const&) const
+  0.44    454.44     2.03 6000000000     0.00     0.00  TLS wrapper function for bigint::tmp
+  0.41    456.31     1.87 1000120000     0.00     0.00  void assignZero<1>(modp_<1>&, Zp_Data const&)
+  0.40    458.17     1.86 2000000000     0.00     0.00  gfp_<0, 1>::gfp_(long long)
+  0.12    458.73     0.56                             __gnu_cxx::__aligned_membuf<unsigned long>::_M_addr()
+  0.06    458.99     0.26                             void assignOne<1>(modp_<1>&, Zp_Data const&)
+  0.05    459.22     0.23                             __gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >::difference_type __gnu_cxx::operator-<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&, __gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&)
+  0.04    459.40     0.18        8    22.50    25.00  bigint::bigint()
+  0.04    459.57     0.18                             std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider::~_Alloc_hider()
+  0.04    459.74     0.17        1   170.02   170.02  std::uniform_int_distribution<long long>::param_type::param_type(long long, long long)
+  0.03    459.88     0.14   100000     0.00     0.00  gfp_<0, 1>::assign_zero()
+  0.02    460.00     0.12 2000000000     0.00     0.00  cpu_has_bmi2()
+  0.02    460.08     0.08    20000     0.00     0.00  gfp_<0, 1>::init_field(bigint const&, bool)
+  0.02    460.16     0.08                             int128::int128()
+  0.01    460.20     0.05                             int* std::copy<std::move_iterator<int*>, int*>(std::move_iterator<int*>, std::move_iterator<int*>, int*)
+  0.01    460.24     0.04                             std::operator|(std::_Ios_Openmode, std::_Ios_Openmode)
+  0.01    460.27     0.03   100000     0.00     0.00  gfp_<0, 1>::gfp_(int)
+  0.00    460.29     0.02        8     2.50     2.50  __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr()
+  0.00    460.31     0.02        1    20.00   190.02  std::uniform_int_distribution<long long>::uniform_int_distribution(long long, long long)
+  0.00    460.33     0.02                             __gnu_cxx::new_allocator<std::_List_node<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*> >::max_size() const
+  0.00    460.34     0.02                             std::ostream& operator<< <__mpz_struct [1], __mpz_struct [1]>(std::ostream&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  0.00    460.35     0.01      311     0.03     0.03  unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long)
+  0.00    460.36     0.01                             int* std::__copy_move_a2<true, int*, int*>(int*, int*, int*)
+  0.00    460.37     0.01                             main
+  0.00    460.38     0.01        1     5.00   205.02  Zp_Data::Zp_Data()
+  0.00    460.38     0.00    40000     0.00     0.00  Zp_Data::get_t() const
+  0.00    460.38     0.00      312     0.00     0.00  std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long)
+  0.00    460.38     0.00      312     0.00     0.00  unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long)
+  0.00    460.38     0.00      311     0.00     0.00  std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long)
+  0.00    460.38     0.00        2     0.00    40.18  VectorPrime::VectorPrime()
+  0.00    460.38     0.00        1     0.00   405.04  _GLOBAL__sub_I_RNG
+  0.00    460.38     0.00        1     0.00   405.04  __static_initialization_and_destruction_0(int, int)
+  0.00    460.38     0.00        1     0.00     0.00  IntBase<long>::IntBase(long)
+  0.00    460.38     0.00        1     0.00     0.00  Integer::Integer(long)
+  0.00    460.38     0.00        1     0.00    10.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long)
+  0.00    460.38     0.00        1     0.00    10.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long)
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.00% of 460.38 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.6    0.01  458.54                 main [1]
+                7.29  403.22  200000/200000      VectorPrime::set_random() [2]
+                2.69   45.26  100000/100000      VectorPrime::operator*(VectorPrime const&) [12]
+                0.00    0.08       2/2           VectorPrime::VectorPrime() [69]
+-----------------------------------------------
+                7.29  403.22  200000/200000      main [1]
+[2]     89.2    7.29  403.22  200000         VectorPrime::set_random() [2]
+                1.86  307.99 2000000000/2000000000     gfp_<0, 1>::gfp_(long long) [3]
+                6.71   86.65 2000000000/2000000000     long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&) [8]
+-----------------------------------------------
+                1.86  307.99 2000000000/2000000000     VectorPrime::set_random() [2]
+[3]     67.3    1.86  307.99 2000000000         gfp_<0, 1>::gfp_(long long) [3]
+               12.41  295.59 2000000000/2000100000     gfp_<0, 1>::gfp_(long) [4]
+-----------------------------------------------
+                0.00    0.01  100000/2000100000     gfp_<0, 1>::gfp_(int) [72]
+               12.41  295.59 2000000000/2000100000     gfp_<0, 1>::gfp_(long long) [3]
+[4]     66.9   12.41  295.60 2000100000         gfp_<0, 1>::gfp_(long) [4]
+                6.34  270.48 2000000000/2000000000     gfp_<0, 1>::gfp_(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [5]
+                7.30    4.58 2000000000/2000000000     bigint::operator=(long) [31]
+                3.28    2.80 2000100000/5000120000     modp_<1>::modp_() [27]
+                0.68    0.00 2000000000/6000000000     TLS wrapper function for bigint::tmp [55]
+                0.14    0.00  100000/100000      gfp_<0, 1>::assign_zero() [67]
+-----------------------------------------------
+                6.34  270.48 2000000000/2000000000     gfp_<0, 1>::gfp_(long) [4]
+[5]     60.1    6.34  270.48 2000000000         gfp_<0, 1>::gfp_(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [5]
+                7.63  256.77 2000000000/2000000000     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+                3.28    2.80 2000000000/5000120000     modp_<1>::modp_() [27]
+-----------------------------------------------
+                7.63  256.77 2000000000/2000000000     gfp_<0, 1>::gfp_(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [5]
+[6]     57.4    7.63  256.77 2000000000         void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+               15.06  140.40 2000000000/2000000000     modp_<1>::convert_destroy(bigint&, Zp_Data const&) [7]
+                7.73   36.13 2000000000/2000000000     bigint::operator=(bigint&&) [13]
+               17.72   17.05 4000000000/4000000000     bool operator==<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [16]
+                7.56    3.54 2000000000/2000000002     bigint::~bigint() [35]
+                6.58    3.67 2000000000/2000000000     bigint::bigint<__gmp_expr<__mpz_struct [1], __mpz_struct [1]> >(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [38]
+                1.35    0.00 4000000000/6000000000     TLS wrapper function for bigint::tmp [55]
+-----------------------------------------------
+               15.06  140.40 2000000000/2000000000     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+[7]     33.8   15.06  140.40 2000000000         modp_<1>::convert_destroy(bigint&, Zp_Data const&) [7]
+               13.10   49.01 2000000000/2000000000     modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool) [10]
+                7.49   43.86 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>& __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator%=<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [11]
+                9.33    9.66 2000000000/2000000000     bool operator< <__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [24]
+                7.95    0.00 4000000000/4000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::get_mpz_t() [43]
+-----------------------------------------------
+                6.71   86.65 2000000000/2000000000     VectorPrime::set_random() [2]
+[8]     20.3    6.71   86.65 2000000000         long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&) [8]
+               36.28   50.38 2000000000/2000000000     long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&) [9]
+-----------------------------------------------
+               36.28   50.38 2000000000/2000000000     long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&) [8]
+[9]     18.8   36.28   50.38 2000000000         long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&) [9]
+               23.01   10.82 2019572561/2019572561     std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()() [17]
+                9.32    0.00 4000000000/4000000000     std::uniform_int_distribution<long long>::param_type::a() const [41]
+                7.23    0.00 2000000000/2000000000     std::uniform_int_distribution<long long>::param_type::b() const [45]
+-----------------------------------------------
+               13.10   49.01 2000000000/2000000000     modp_<1>::convert_destroy(bigint&, Zp_Data const&) [7]
+[10]    13.5   13.10   49.01 2000000000         modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool) [10]
+                5.17   19.88 2000000000/2000000000     inline_mpn_zero(unsigned long*, long) [21]
+                4.65    7.74 2000000000/2000000000     Zp_Data::Mont_Mult(unsigned long*, unsigned long const*, unsigned long const*) const [30]
+                6.74    4.84 2000000000/2000000000     inline_mpn_copyi(unsigned long*, unsigned long const*, long) [33]
+-----------------------------------------------
+                7.49   43.86 2000000000/2000000000     modp_<1>::convert_destroy(bigint&, Zp_Data const&) [7]
+[11]    11.2    7.49   43.86 2000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>& __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator%=<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [11]
+                7.10   23.06 2000000000/2000000000     void __gmp_set_expr<__gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >(__mpz_struct*, __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> > const&) [20]
+                7.01    6.69 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [28]
+-----------------------------------------------
+                2.69   45.26  100000/100000      main [1]
+[12]    10.4    2.69   45.26  100000         VectorPrime::operator*(VectorPrime const&) [12]
+                2.50   29.21 1000000000/1000000000     gfp_<0, 1>::operator*(gfp_<0, 1> const&) const [18]
+                3.71    9.79 1000000000/1000000000     gfp_<0, 1>::operator+=(gfp_<0, 1> const&) [29]
+                0.03    0.02  100000/100000      gfp_<0, 1>::gfp_(int) [72]
+-----------------------------------------------
+                7.73   36.13 2000000000/2000000000     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+[13]     9.5    7.73   36.13 2000000000         bigint::operator=(bigint&&) [13]
+                5.88   30.25 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&&) [15]
+-----------------------------------------------
+                7.01    0.00 705152704/3705272704     modp_<1>::modp_() [27]
+                9.94    0.00 1000120000/3705272704     void assignZero<1>(modp_<1>&, Zp_Data const&) [32]
+               19.88    0.00 2000000000/3705272704     inline_mpn_zero(unsigned long*, long) [21]
+[14]     8.0   36.83    0.00 3705272704         avx_memzero(void*, unsigned long) [14]
+-----------------------------------------------
+                5.88   30.25 2000000000/2000000000     bigint::operator=(bigint&&) [13]
+[15]     7.8    5.88   30.25 2000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&&) [15]
+                5.77   24.48 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::swap(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&) [19]
+-----------------------------------------------
+               17.72   17.05 4000000000/4000000000     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+[16]     7.6   17.72   17.05 4000000000         bool operator==<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [16]
+               10.89    0.00 4000000000/4000000000     __gmp_binary_equal::eval(__mpz_struct const*, long) [36]
+                6.16    0.00 4000000000/10000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__get_mp() const [26]
+-----------------------------------------------
+               23.01   10.82 2019572561/2019572561     long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&) [9]
+[17]     7.3   23.01   10.82 2019572561         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()() [17]
+               10.82    0.00 6472989/6472989     std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand() [37]
+-----------------------------------------------
+                2.50   29.21 1000000000/1000000000     VectorPrime::operator*(VectorPrime const&) [12]
+[18]     6.9    2.50   29.21 1000000000         gfp_<0, 1>::operator*(gfp_<0, 1> const&) const [18]
+                2.94   14.85 1000000000/1000020000     gfp_<0, 1>::gfp_() [25]
+                3.42    8.01 1000000000/1000000000     gfp_<0, 1>::mul(gfp_<0, 1> const&, gfp_<0, 1> const&) [34]
+-----------------------------------------------
+                5.77   24.48 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&&) [15]
+[19]     6.6    5.77   24.48 2000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::swap(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&) [19]
+               14.98    9.50 2000000000/2000000000     std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<__mpz_struct> >, std::is_move_constructible<__mpz_struct>, std::is_move_assignable<__mpz_struct> >::value, void>::type std::swap<__mpz_struct>(__mpz_struct&, __mpz_struct&) [22]
+-----------------------------------------------
+                7.10   23.06 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>& __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator%=<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [11]
+[20]     6.6    7.10   23.06 2000000000         void __gmp_set_expr<__gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >(__mpz_struct*, __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> > const&) [20]
+               10.95   12.11 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::eval(__mpz_struct*) const [23]
+-----------------------------------------------
+                5.17   19.88 2000000000/2000000000     modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool) [10]
+[21]     5.4    5.17   19.88 2000000000         inline_mpn_zero(unsigned long*, long) [21]
+               19.88    0.00 2000000000/3705272704     avx_memzero(void*, unsigned long) [14]
+-----------------------------------------------
+               14.98    9.50 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::swap(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&) [19]
+[22]     5.3   14.98    9.50 2000000000         std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<__mpz_struct> >, std::is_move_constructible<__mpz_struct>, std::is_move_assignable<__mpz_struct> >::value, void>::type std::swap<__mpz_struct>(__mpz_struct&, __mpz_struct&) [22]
+                9.50    0.00 6000000000/6000000000     std::remove_reference<__mpz_struct&>::type&& std::move<__mpz_struct&>(__mpz_struct&) [40]
+-----------------------------------------------
+               10.95   12.11 2000000000/2000000000     void __gmp_set_expr<__gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >(__mpz_struct*, __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> > const&) [20]
+[23]     5.0   10.95   12.11 2000000000         __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::eval(__mpz_struct*) const [23]
+                6.16    0.00 4000000000/10000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__get_mp() const [26]
+                5.96    0.00 2000000000/2000000000     __gmp_binary_modulus::eval(__mpz_struct*, __mpz_struct const*, __mpz_struct const*) [49]
+-----------------------------------------------
+                9.33    9.66 2000000000/2000000000     modp_<1>::convert_destroy(bigint&, Zp_Data const&) [7]
+[24]     4.1    9.33    9.66 2000000000         bool operator< <__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [24]
+                6.58    0.00 2000000000/2000000000     __gmp_binary_less::eval(__mpz_struct const*, long) [47]
+                3.08    0.00 2000000000/10000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__get_mp() const [26]
+-----------------------------------------------
+                0.00    0.00   20000/1000020000     VectorPrime::VectorPrime() [69]
+                2.94   14.85 1000000000/1000020000     gfp_<0, 1>::operator*(gfp_<0, 1> const&) const [18]
+[25]     3.9    2.94   14.85 1000020000         gfp_<0, 1>::gfp_() [25]
+                1.87    9.94 1000020000/1000120000     void assignZero<1>(modp_<1>&, Zp_Data const&) [32]
+                1.64    1.40 1000020000/5000120000     modp_<1>::modp_() [27]
+-----------------------------------------------
+                3.08    0.00 2000000000/10000000000     bool operator< <__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [24]
+                6.16    0.00 4000000000/10000000000     bool operator==<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [16]
+                6.16    0.00 4000000000/10000000000     __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::eval(__mpz_struct*) const [23]
+[26]     3.3   15.39    0.00 10000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__get_mp() const [26]
+-----------------------------------------------
+                1.64    1.40 1000020000/5000120000     gfp_<0, 1>::gfp_() [25]
+                3.28    2.80 2000000000/5000120000     gfp_<0, 1>::gfp_(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [5]
+                3.28    2.80 2000100000/5000120000     gfp_<0, 1>::gfp_(long) [4]
+[27]     3.3    8.20    7.01 5000120000         modp_<1>::modp_() [27]
+                7.01    0.00 705152704/3705272704     avx_memzero(void*, unsigned long) [14]
+-----------------------------------------------
+                7.01    6.69 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>& __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator%=<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [11]
+[28]     3.0    7.01    6.69 2000000000         __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [28]
+                6.69    0.00 2000000000/2000000000     __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus>::__gmp_binary_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [46]
+-----------------------------------------------
+                3.71    9.79 1000000000/1000000000     VectorPrime::operator*(VectorPrime const&) [12]
+[29]     2.9    3.71    9.79 1000000000         gfp_<0, 1>::operator+=(gfp_<0, 1> const&) [29]
+                3.26    6.53 1000000000/1000000000     gfp_<0, 1>::add(gfp_<0, 1> const&, gfp_<0, 1> const&) [39]
+-----------------------------------------------
+                4.65    7.74 2000000000/2000000000     modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool) [10]
+[30]     2.7    4.65    7.74 2000000000         Zp_Data::Mont_Mult(unsigned long*, unsigned long const*, unsigned long const*) const [30]
+                7.62    0.00 2000000000/2000000000     Zp_Data::Mont_Mult_variable(unsigned long*, unsigned long const*, unsigned long const*) const [44]
+                0.12    0.00 2000000000/2000000000     cpu_has_bmi2() [68]
+-----------------------------------------------
+                7.30    4.58 2000000000/2000000000     gfp_<0, 1>::gfp_(long) [4]
+[31]     2.6    7.30    4.58 2000000000         bigint::operator=(long) [31]
+                4.58    0.00 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(long) [51]
+-----------------------------------------------
+                0.00    0.00  100000/1000120000     gfp_<0, 1>::assign_zero() [67]
+                1.87    9.94 1000020000/1000120000     gfp_<0, 1>::gfp_() [25]
+[32]     2.6    1.87    9.94 1000120000         void assignZero<1>(modp_<1>&, Zp_Data const&) [32]
+                9.94    0.00 1000120000/3705272704     avx_memzero(void*, unsigned long) [14]
+-----------------------------------------------
+                6.74    4.84 2000000000/2000000000     modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool) [10]
+[33]     2.5    6.74    4.84 2000000000         inline_mpn_copyi(unsigned long*, unsigned long const*, long) [33]
+                4.84    0.00 2000000000/2000000000     avx_memcpy(void*, void const*, unsigned long) [50]
+-----------------------------------------------
+                3.42    8.01 1000000000/1000000000     gfp_<0, 1>::operator*(gfp_<0, 1> const&) const [18]
+[34]     2.5    3.42    8.01 1000000000         gfp_<0, 1>::mul(gfp_<0, 1> const&, gfp_<0, 1> const&) [34]
+                5.28    2.73 1000000000/1000000000     void modp_<1>::mul<1>(modp_<1> const&, modp_<1> const&, Zp_Data const&) [42]
+-----------------------------------------------
+                0.00    0.00       2/2000000002     Zp_Data::~Zp_Data() [82]
+                7.56    3.54 2000000000/2000000002     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+[35]     2.4    7.56    3.54 2000000002         bigint::~bigint() [35]
+                3.54    0.00 2000000005/2000000005     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::~__gmp_expr() [53]
+-----------------------------------------------
+               10.89    0.00 4000000000/4000000000     bool operator==<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [16]
+[36]     2.4   10.89    0.00 4000000000         __gmp_binary_equal::eval(__mpz_struct const*, long) [36]
+-----------------------------------------------
+               10.82    0.00 6472989/6472989     std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()() [17]
+[37]     2.4   10.82    0.00 6472989         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand() [37]
+-----------------------------------------------
+                6.58    3.67 2000000000/2000000000     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+[38]     2.2    6.58    3.67 2000000000         bigint::bigint<__gmp_expr<__mpz_struct [1], __mpz_struct [1]> >(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [38]
+                3.67    0.00 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [52]
+-----------------------------------------------
+                3.26    6.53 1000000000/1000000000     gfp_<0, 1>::operator+=(gfp_<0, 1> const&) [29]
+[39]     2.1    3.26    6.53 1000000000         gfp_<0, 1>::add(gfp_<0, 1> const&, gfp_<0, 1> const&) [39]
+                6.53    0.00 1000000000/1000000000     void Zp_Data::Add<1>(unsigned long*, unsigned long const*, unsigned long const*) const [48]
+-----------------------------------------------
+                9.50    0.00 6000000000/6000000000     std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<__mpz_struct> >, std::is_move_constructible<__mpz_struct>, std::is_move_assignable<__mpz_struct> >::value, void>::type std::swap<__mpz_struct>(__mpz_struct&, __mpz_struct&) [22]
+[40]     2.1    9.50    0.00 6000000000         std::remove_reference<__mpz_struct&>::type&& std::move<__mpz_struct&>(__mpz_struct&) [40]
+-----------------------------------------------
+                9.32    0.00 4000000000/4000000000     long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&) [9]
+[41]     2.0    9.32    0.00 4000000000         std::uniform_int_distribution<long long>::param_type::a() const [41]
+-----------------------------------------------
+                5.28    2.73 1000000000/1000000000     gfp_<0, 1>::mul(gfp_<0, 1> const&, gfp_<0, 1> const&) [34]
+[42]     1.7    5.28    2.73 1000000000         void modp_<1>::mul<1>(modp_<1> const&, modp_<1> const&, Zp_Data const&) [42]
+                2.73    0.00 1000000000/1000000000     void Zp_Data::Mont_Mult_<1>(unsigned long*, unsigned long const*, unsigned long const*) const [54]
+-----------------------------------------------
+                7.95    0.00 4000000000/4000000000     modp_<1>::convert_destroy(bigint&, Zp_Data const&) [7]
+[43]     1.7    7.95    0.00 4000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::get_mpz_t() [43]
+-----------------------------------------------
+                7.62    0.00 2000000000/2000000000     Zp_Data::Mont_Mult(unsigned long*, unsigned long const*, unsigned long const*) const [30]
+[44]     1.7    7.62    0.00 2000000000         Zp_Data::Mont_Mult_variable(unsigned long*, unsigned long const*, unsigned long const*) const [44]
+-----------------------------------------------
+                7.23    0.00 2000000000/2000000000     long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&) [9]
+[45]     1.6    7.23    0.00 2000000000         std::uniform_int_distribution<long long>::param_type::b() const [45]
+-----------------------------------------------
+                6.69    0.00 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [28]
+[46]     1.5    6.69    0.00 2000000000         __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus>::__gmp_binary_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [46]
+-----------------------------------------------
+                6.58    0.00 2000000000/2000000000     bool operator< <__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int) [24]
+[47]     1.4    6.58    0.00 2000000000         __gmp_binary_less::eval(__mpz_struct const*, long) [47]
+-----------------------------------------------
+                6.53    0.00 1000000000/1000000000     gfp_<0, 1>::add(gfp_<0, 1> const&, gfp_<0, 1> const&) [39]
+[48]     1.4    6.53    0.00 1000000000         void Zp_Data::Add<1>(unsigned long*, unsigned long const*, unsigned long const*) const [48]
+-----------------------------------------------
+                5.96    0.00 2000000000/2000000000     __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::eval(__mpz_struct*) const [23]
+[49]     1.3    5.96    0.00 2000000000         __gmp_binary_modulus::eval(__mpz_struct*, __mpz_struct const*, __mpz_struct const*) [49]
+-----------------------------------------------
+                4.84    0.00 2000000000/2000000000     inline_mpn_copyi(unsigned long*, unsigned long const*, long) [33]
+[50]     1.1    4.84    0.00 2000000000         avx_memcpy(void*, void const*, unsigned long) [50]
+-----------------------------------------------
+                4.58    0.00 2000000000/2000000000     bigint::operator=(long) [31]
+[51]     1.0    4.58    0.00 2000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(long) [51]
+-----------------------------------------------
+                3.67    0.00 2000000000/2000000000     bigint::bigint<__gmp_expr<__mpz_struct [1], __mpz_struct [1]> >(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [38]
+[52]     0.8    3.67    0.00 2000000000         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [52]
+-----------------------------------------------
+                3.54    0.00 2000000005/2000000005     bigint::~bigint() [35]
+[53]     0.8    3.54    0.00 2000000005         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::~__gmp_expr() [53]
+-----------------------------------------------
+                2.73    0.00 1000000000/1000000000     void modp_<1>::mul<1>(modp_<1> const&, modp_<1> const&, Zp_Data const&) [42]
+[54]     0.6    2.73    0.00 1000000000         void Zp_Data::Mont_Mult_<1>(unsigned long*, unsigned long const*, unsigned long const*) const [54]
+-----------------------------------------------
+                0.68    0.00 2000000000/6000000000     gfp_<0, 1>::gfp_(long) [4]
+                1.35    0.00 4000000000/6000000000     void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [6]
+[55]     0.4    2.03    0.00 6000000000         TLS wrapper function for bigint::tmp [55]
+-----------------------------------------------
+                                                 <spontaneous>
+[56]     0.1    0.56    0.00                 __gnu_cxx::__aligned_membuf<unsigned long>::_M_addr() [56]
+-----------------------------------------------
+                0.00    0.41       1/1           __libc_csu_init [59]
+[57]     0.1    0.00    0.41       1         _GLOBAL__sub_I_RNG [57]
+                0.00    0.41       1/1           __static_initialization_and_destruction_0(int, int) [58]
+-----------------------------------------------
+                0.00    0.41       1/1           _GLOBAL__sub_I_RNG [57]
+[58]     0.1    0.00    0.41       1         __static_initialization_and_destruction_0(int, int) [58]
+                0.01    0.20       1/1           Zp_Data::Zp_Data() [62]
+                0.02    0.17       1/1           std::uniform_int_distribution<long long>::uniform_int_distribution(long long, long long) [64]
+                0.00    0.01       1/1           std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long) [80]
+                0.00    0.00       1/1           Integer::Integer(long) [94]
+-----------------------------------------------
+                                                 <spontaneous>
+[59]     0.1    0.00    0.41                 __libc_csu_init [59]
+                0.00    0.41       1/1           _GLOBAL__sub_I_RNG [57]
+-----------------------------------------------
+                                                 <spontaneous>
+[60]     0.1    0.26    0.00                 void assignOne<1>(modp_<1>&, Zp_Data const&) [60]
+-----------------------------------------------
+                                                 <spontaneous>
+[61]     0.0    0.23    0.00                 __gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >::difference_type __gnu_cxx::operator-<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&, __gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&) [61]
+-----------------------------------------------
+                0.01    0.20       1/1           __static_initialization_and_destruction_0(int, int) [58]
+[62]     0.0    0.01    0.20       1         Zp_Data::Zp_Data() [62]
+                0.18    0.02       8/8           bigint::bigint() [63]
+-----------------------------------------------
+                0.18    0.02       8/8           Zp_Data::Zp_Data() [62]
+[63]     0.0    0.18    0.02       8         bigint::bigint() [63]
+                0.02    0.00       8/8           __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr() [75]
+-----------------------------------------------
+                0.02    0.17       1/1           __static_initialization_and_destruction_0(int, int) [58]
+[64]     0.0    0.02    0.17       1         std::uniform_int_distribution<long long>::uniform_int_distribution(long long, long long) [64]
+                0.17    0.00       1/1           std::uniform_int_distribution<long long>::param_type::param_type(long long, long long) [66]
+-----------------------------------------------
+                                                 <spontaneous>
+[65]     0.0    0.18    0.00                 std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider::~_Alloc_hider() [65]
+-----------------------------------------------
+                0.17    0.00       1/1           std::uniform_int_distribution<long long>::uniform_int_distribution(long long, long long) [64]
+[66]     0.0    0.17    0.00       1         std::uniform_int_distribution<long long>::param_type::param_type(long long, long long) [66]
+-----------------------------------------------
+                0.14    0.00  100000/100000      gfp_<0, 1>::gfp_(long) [4]
+[67]     0.0    0.14    0.00  100000         gfp_<0, 1>::assign_zero() [67]
+                0.00    0.00  100000/1000120000     void assignZero<1>(modp_<1>&, Zp_Data const&) [32]
+-----------------------------------------------
+                0.12    0.00 2000000000/2000000000     Zp_Data::Mont_Mult(unsigned long*, unsigned long const*, unsigned long const*) const [30]
+[68]     0.0    0.12    0.00 2000000000         cpu_has_bmi2() [68]
+-----------------------------------------------
+                0.00    0.08       2/2           main [1]
+[69]     0.0    0.00    0.08       2         VectorPrime::VectorPrime() [69]
+                0.08    0.00   20000/20000       gfp_<0, 1>::init_field(bigint const&, bool) [70]
+                0.00    0.00   20000/1000020000     gfp_<0, 1>::gfp_() [25]
+-----------------------------------------------
+                0.08    0.00   20000/20000       VectorPrime::VectorPrime() [69]
+[70]     0.0    0.08    0.00   20000         gfp_<0, 1>::init_field(bigint const&, bool) [70]
+                0.00    0.00   40000/40000       Zp_Data::get_t() const [89]
+-----------------------------------------------
+                                                 <spontaneous>
+[71]     0.0    0.08    0.00                 int128::int128() [71]
+-----------------------------------------------
+                0.03    0.02  100000/100000      VectorPrime::operator*(VectorPrime const&) [12]
+[72]     0.0    0.03    0.02  100000         gfp_<0, 1>::gfp_(int) [72]
+                0.00    0.01  100000/2000100000     gfp_<0, 1>::gfp_(long) [4]
+-----------------------------------------------
+                                                 <spontaneous>
+[73]     0.0    0.05    0.00                 int* std::copy<std::move_iterator<int*>, int*>(std::move_iterator<int*>, std::move_iterator<int*>, int*) [73]
+-----------------------------------------------
+                                                 <spontaneous>
+[74]     0.0    0.04    0.00                 std::operator|(std::_Ios_Openmode, std::_Ios_Openmode) [74]
+-----------------------------------------------
+                0.02    0.00       8/8           bigint::bigint() [63]
+[75]     0.0    0.02    0.00       8         __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr() [75]
+-----------------------------------------------
+                                                 <spontaneous>
+[76]     0.0    0.02    0.00                 __gnu_cxx::new_allocator<std::_List_node<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*> >::max_size() const [76]
+-----------------------------------------------
+                                                 <spontaneous>
+[77]     0.0    0.02    0.00                 std::ostream& operator<< <__mpz_struct [1], __mpz_struct [1]>(std::ostream&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [77]
+-----------------------------------------------
+                0.01    0.00     311/311         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [79]
+[78]     0.0    0.01    0.00     311         unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long) [78]
+                0.00    0.00     311/311         std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long) [92]
+-----------------------------------------------
+                0.00    0.01       1/1           std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long) [80]
+[79]     0.0    0.00    0.01       1         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [79]
+                0.01    0.00     311/311         unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long) [78]
+                0.00    0.00     312/312         unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long) [91]
+-----------------------------------------------
+                0.00    0.01       1/1           __static_initialization_and_destruction_0(int, int) [58]
+[80]     0.0    0.00    0.01       1         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long) [80]
+                0.00    0.01       1/1           std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [79]
+-----------------------------------------------
+                                                 <spontaneous>
+[81]     0.0    0.01    0.00                 int* std::__copy_move_a2<true, int*, int*>(int*, int*, int*) [81]
+-----------------------------------------------
+                                                 <spontaneous>
+[82]     0.0    0.00    0.00                 Zp_Data::~Zp_Data() [82]
+                0.00    0.00       2/2000000002     bigint::~bigint() [35]
+-----------------------------------------------
+                0.00    0.00   40000/40000       gfp_<0, 1>::init_field(bigint const&, bool) [70]
+[89]     0.0    0.00    0.00   40000         Zp_Data::get_t() const [89]
+-----------------------------------------------
+                0.00    0.00     312/312         unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long) [91]
+[90]     0.0    0.00    0.00     312         std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long) [90]
+-----------------------------------------------
+                0.00    0.00     312/312         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [79]
+[91]     0.0    0.00    0.00     312         unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long) [91]
+                0.00    0.00     312/312         std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long) [90]
+-----------------------------------------------
+                0.00    0.00     311/311         unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long) [78]
+[92]     0.0    0.00    0.00     311         std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long) [92]
+-----------------------------------------------
+                0.00    0.00       1/1           Integer::Integer(long) [94]
+[93]     0.0    0.00    0.00       1         IntBase<long>::IntBase(long) [93]
+-----------------------------------------------
+                0.00    0.00       1/1           __static_initialization_and_destruction_0(int, int) [58]
+[94]     0.0    0.00    0.00       1         Integer::Integer(long) [94]
+                0.00    0.00       1/1           IntBase<long>::IntBase(long) [93]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [57] _GLOBAL__sub_I_RNG     [39] gfp_<0, 1>::add(gfp_<0, 1> const&, gfp_<0, 1> const&) [89] Zp_Data::get_t() const
+  [32] void assignZero<1>(modp_<1>&, Zp_Data const&) [34] gfp_<0, 1>::mul(gfp_<0, 1> const&, gfp_<0, 1> const&) [30] Zp_Data::Mont_Mult(unsigned long*, unsigned long const*, unsigned long const*) const
+  [50] avx_memcpy(void*, void const*, unsigned long) [5] gfp_<0, 1>::gfp_(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [76] __gnu_cxx::new_allocator<std::_List_node<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*> >::max_size() const
+  [14] avx_memzero(void*, unsigned long) [72] gfp_<0, 1>::gfp_(int) [41] std::uniform_int_distribution<long long>::param_type::a() const
+  [68] cpu_has_bmi2()         [25] gfp_<0, 1>::gfp_()     [45] std::uniform_int_distribution<long long>::param_type::b() const
+  [20] void __gmp_set_expr<__gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >(__mpz_struct*, __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> > const&) [4] gfp_<0, 1>::gfp_(long) [37] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand()
+  [21] inline_mpn_zero(unsigned long*, long) [3] gfp_<0, 1>::gfp_(long long) [79] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long)
+  [33] inline_mpn_copyi(unsigned long*, unsigned long const*, long) [29] gfp_<0, 1>::operator+=(gfp_<0, 1> const&) [80] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long)
+  [58] __static_initialization_and_destruction_0(int, int) [7] modp_<1>::convert_destroy(bigint&, Zp_Data const&) [17] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()()
+   [6] void to_modp<1>(modp_<1>&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, Zp_Data const&) [42] void modp_<1>::mul<1>(modp_<1> const&, modp_<1> const&, Zp_Data const&) [66] std::uniform_int_distribution<long long>::param_type::param_type(long long, long long)
+  [60] void assignOne<1>(modp_<1>&, Zp_Data const&) [10] modp_<1>::convert(unsigned long const*, long, Zp_Data const&, bool) [64] std::uniform_int_distribution<long long>::uniform_int_distribution(long long, long long)
+  [28] __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [27] modp_<1>::modp_() [8] long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&)
+  [19] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::swap(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&) [38] bigint::bigint<__gmp_expr<__mpz_struct [1], __mpz_struct [1]> >(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [9] long long std::uniform_int_distribution<long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<long long>::param_type const&)
+  [43] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::get_mpz_t() [63] bigint::bigint() [65] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider::~_Alloc_hider()
+  [52] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [35] bigint::~bigint() [90] std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long)
+  [75] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__gmp_expr() [13] bigint::operator=(bigint&&) [92] std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long)
+  [53] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::~__gmp_expr() [31] bigint::operator=(long) [91] unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long)
+  [15] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(__gmp_expr<__mpz_struct [1], __mpz_struct [1]>&&) [71] int128::int128() [78] unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long)
+  [51] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator=(long) [93] IntBase<long>::IntBase(long) [81] int* std::__copy_move_a2<true, int*, int*>(int*, int*, int*)
+  [11] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>& __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::operator%=<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [94] Integer::Integer(long) [73] int* std::copy<std::move_iterator<int*>, int*>(std::move_iterator<int*>, std::move_iterator<int*>, int*)
+   [2] VectorPrime::set_random() [62] Zp_Data::Zp_Data()  [40] std::remove_reference<__mpz_struct&>::type&& std::move<__mpz_struct&>(__mpz_struct&)
+  [69] VectorPrime::VectorPrime() [56] __gnu_cxx::__aligned_membuf<unsigned long>::_M_addr() [22] std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<__mpz_struct> >, std::is_move_constructible<__mpz_struct>, std::is_move_assignable<__mpz_struct> >::value, void>::type std::swap<__mpz_struct>(__mpz_struct&, __mpz_struct&)
+  [12] VectorPrime::operator*(VectorPrime const&) [61] __gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >::difference_type __gnu_cxx::operator-<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&, __gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > const&) [74] std::operator|(std::_Ios_Openmode, std::_Ios_Openmode)
+  [46] __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus>::__gmp_binary_expr(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&) [23] __gmp_expr<__mpz_struct [1], __gmp_binary_expr<__gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_expr<__mpz_struct [1], __mpz_struct [1]>, __gmp_binary_modulus> >::eval(__mpz_struct*) const [55] TLS wrapper function for bigint::tmp
+  [47] __gmp_binary_less::eval(__mpz_struct const*, long) [26] __gmp_expr<__mpz_struct [1], __mpz_struct [1]>::__get_mp() const [16] bool operator==<__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int)
+  [36] __gmp_binary_equal::eval(__mpz_struct const*, long) [18] gfp_<0, 1>::operator*(gfp_<0, 1> const&) const [77] std::ostream& operator<< <__mpz_struct [1], __mpz_struct [1]>(std::ostream&, __gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&)
+  [49] __gmp_binary_modulus::eval(__mpz_struct*, __mpz_struct const*, __mpz_struct const*) [54] void Zp_Data::Mont_Mult_<1>(unsigned long*, unsigned long const*, unsigned long const*) const [24] bool operator< <__mpz_struct [1], __mpz_struct [1]>(__gmp_expr<__mpz_struct [1], __mpz_struct [1]> const&, int)
+  [70] gfp_<0, 1>::init_field(bigint const&, bool) [44] Zp_Data::Mont_Mult_variable(unsigned long*, unsigned long const*, unsigned long const*) const [1] main
+  [67] gfp_<0, 1>::assign_zero() [48] void Zp_Data::Add<1>(unsigned long*, unsigned long const*, unsigned long const*) const

@@ -1,0 +1,364 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 15.75      3.11     3.11 200000000     0.00     0.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()()
+  8.81      4.85     1.74 400030000     0.00     0.00  avx_memzero(void*, unsigned long)
+  6.58      6.16     1.30 200000000     0.00     0.00  unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&)
+  6.18      7.38     1.22   641026     0.00     0.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand()
+  5.77      8.52     1.14 400000000     0.00     0.00  void mpn_addmul_1_fixed<4>(unsigned long*, unsigned long const*, unsigned long)
+  4.51      9.41     0.89 300030000     0.00     0.00  Z2<256>::Z2()
+  4.51     10.30     0.89 400000000     0.00     0.00  void mpn_addmul_1_fixed_<5, 4>(unsigned long*, unsigned long const*, unsigned long)
+  4.15     11.12     0.82    20000     0.04     0.66  Vector256::set_random()
+  3.80     11.87     0.75 200000000     0.00     0.00  IntBase<long>::get() const
+  3.60     12.58     0.71 200010000     0.00     0.00  Z2<256>::Z2(unsigned long)
+  3.50     13.27     0.69 400000000     0.00     0.00  std::uniform_int_distribution<unsigned long long>::param_type::a() const
+  3.50     13.96     0.69 200000000     0.00     0.00  unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&)
+  3.09     14.57     0.61 300030000     0.00     0.00  Z2<256>::assign_zero()
+  3.04     15.17     0.60 200000000     0.00     0.00  IntBase<long>::IntBase(long)
+  2.99     15.76     0.59 200000000     0.00     0.00  std::uniform_int_distribution<unsigned long long>::param_type::b() const
+  2.94     16.34     0.58 100000000     0.00     0.00  void mpn_add_fixed_n<4>(unsigned long*, unsigned long const*, unsigned long const*)
+  2.68     16.88     0.53 100000000     0.00     0.00  void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*)
+  2.03     17.28     0.40 200000000     0.00     0.00  Z2<256>::Z2<long>(IntBase<long> const&)
+  1.98     17.67     0.39 100000000     0.00     0.00  Z2<256>::operator+=(Z2<256> const&)
+  1.82     18.03     0.36 200000000     0.00     0.00  Integer::Integer(long)
+  1.67     18.36     0.33 100000000     0.00     0.00  Z2<256>::normalize()
+  1.62     18.68     0.32 100000000     0.00     0.00  Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&)
+  1.57     18.99     0.31 100000000     0.00     0.00  Z2<(((256)>(256)))?(256) : (256)> Z2<256>::operator*<256>(Z2<256> const&) const
+  1.52     19.29     0.30 100000000     0.00     0.00  avx_memcpy(void*, void const*, unsigned long)
+  1.37     19.56     0.27 100000000     0.00     0.00  inline_mpn_copyi(unsigned long*, unsigned long const*, long)
+  0.91     19.74     0.18    10000     0.02     0.66  Vector256::operator*(Vector256 const&)
+  0.20     19.78     0.04        1    40.04    40.04  int128::int128()
+  0.00     19.78     0.00    10000     0.00     0.00  Z2<256>::Z2(long)
+  0.00     19.78     0.00    10000     0.00     0.00  Z2<256>::Z2(int)
+  0.00     19.78     0.00      312     0.00     0.00  std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long)
+  0.00     19.78     0.00      312     0.00     0.00  unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long)
+  0.00     19.78     0.00      311     0.00     0.00  std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long)
+  0.00     19.78     0.00      311     0.00     0.00  unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long)
+  0.00     19.78     0.00        2     0.00     0.09  Vector256::Vector256()
+  0.00     19.78     0.00        1     0.00    40.04  _GLOBAL__sub_I_RNG
+  0.00     19.78     0.00        1     0.00    40.04  __static_initialization_and_destruction_0(int, int)
+  0.00     19.78     0.00        1     0.00     0.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long)
+  0.00     19.78     0.00        1     0.00     0.00  std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long)
+  0.00     19.78     0.00        1     0.00     0.00  std::uniform_int_distribution<unsigned long long>::param_type::param_type(unsigned long long, unsigned long long)
+  0.00     19.78     0.00        1     0.00     0.00  std::uniform_int_distribution<unsigned long long>::uniform_int_distribution(unsigned long long, unsigned long long)
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.05% of 19.78 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.8    0.00   19.74                 main [1]
+                0.82   12.30   20000/20000       Vector256::set_random() [2]
+                0.18    6.44   10000/10000       Vector256::operator*(Vector256 const&) [5]
+                0.00    0.00       2/2           Vector256::Vector256() [32]
+-----------------------------------------------
+                0.82   12.30   20000/20000       main [1]
+[2]     66.3    0.82   12.30   20000         Vector256::set_random() [2]
+                0.69    6.92 200000000/200000000     unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&) [3]
+                0.40    3.33 200000000/200000000     Z2<256>::Z2<long>(IntBase<long> const&) [9]
+                0.36    0.60 200000000/200000000     Integer::Integer(long) [18]
+-----------------------------------------------
+                0.69    6.92 200000000/200000000     Vector256::set_random() [2]
+[3]     38.5    0.69    6.92 200000000         unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&) [3]
+                1.30    5.62 200000000/200000000     unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&) [4]
+-----------------------------------------------
+                1.30    5.62 200000000/200000000     unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&) [3]
+[4]     35.0    1.30    5.62 200000000         unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&) [4]
+                3.11    1.22 200000000/200000000     std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()() [8]
+                0.69    0.00 400000000/400000000     std::uniform_int_distribution<unsigned long long>::param_type::a() const [21]
+                0.59    0.00 200000000/200000000     std::uniform_int_distribution<unsigned long long>::param_type::b() const [23]
+-----------------------------------------------
+                0.18    6.44   10000/10000       main [1]
+[5]     33.5    0.18    6.44   10000         Vector256::operator*(Vector256 const&) [5]
+                0.31    5.15 100000000/100000000     Z2<(((256)>(256)))?(256) : (256)> Z2<256>::operator*<256>(Z2<256> const&) const [6]
+                0.39    0.58 100000000/100000000     Z2<256>::operator+=(Z2<256> const&) [17]
+                0.00    0.00   10000/10000       Z2<256>::Z2(int) [34]
+-----------------------------------------------
+                0.31    5.15 100000000/100000000     Vector256::operator*(Vector256 const&) [5]
+[6]     27.6    0.31    5.15 100000000         Z2<(((256)>(256)))?(256) : (256)> Z2<256>::operator*<256>(Z2<256> const&) const [6]
+                0.32    4.83 100000000/100000000     Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&) [7]
+-----------------------------------------------
+                0.32    4.83 100000000/100000000     Z2<(((256)>(256)))?(256) : (256)> Z2<256>::operator*<256>(Z2<256> const&) const [6]
+[7]     26.1    0.32    4.83 100000000         Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&) [7]
+                0.53    3.04 100000000/100000000     void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*) [10]
+                0.30    0.64 100000000/300030000     Z2<256>::Z2() [11]
+                0.33    0.00 100000000/100000000     Z2<256>::normalize() [26]
+-----------------------------------------------
+                3.11    1.22 200000000/200000000     unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&) [4]
+[8]     21.9    3.11    1.22 200000000         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()() [8]
+                1.22    0.00  641026/641026      std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand() [16]
+-----------------------------------------------
+                0.40    3.33 200000000/200000000     Vector256::set_random() [2]
+[9]     18.9    0.40    3.33 200000000         Z2<256>::Z2<long>(IntBase<long> const&) [9]
+                0.71    1.87 200000000/200010000     Z2<256>::Z2(unsigned long) [12]
+                0.75    0.00 200000000/200000000     IntBase<long>::get() const [20]
+-----------------------------------------------
+                0.53    3.04 100000000/100000000     Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&) [7]
+[10]    18.0    0.53    3.04 100000000         void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*) [10]
+                1.14    0.89 400000000/400000000     void mpn_addmul_1_fixed<4>(unsigned long*, unsigned long const*, unsigned long) [13]
+                0.27    0.30 100000000/100000000     inline_mpn_copyi(unsigned long*, unsigned long const*, long) [25]
+                0.44    0.00 100000000/400030000     avx_memzero(void*, unsigned long) [15]
+-----------------------------------------------
+                0.00    0.00   20000/300030000     Vector256::Vector256() [32]
+                0.30    0.64 100000000/300030000     Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&) [7]
+                0.59    1.28 200010000/300030000     Z2<256>::Z2(unsigned long) [12]
+[11]    14.2    0.89    1.92 300030000         Z2<256>::Z2() [11]
+                0.61    1.31 300030000/300030000     Z2<256>::assign_zero() [14]
+-----------------------------------------------
+                0.00    0.00   10000/200010000     Z2<256>::Z2(long) [33]
+                0.71    1.87 200000000/200010000     Z2<256>::Z2<long>(IntBase<long> const&) [9]
+[12]    13.1    0.71    1.87 200010000         Z2<256>::Z2(unsigned long) [12]
+                0.59    1.28 200010000/300030000     Z2<256>::Z2() [11]
+-----------------------------------------------
+                1.14    0.89 400000000/400000000     void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*) [10]
+[13]    10.3    1.14    0.89 400000000         void mpn_addmul_1_fixed<4>(unsigned long*, unsigned long const*, unsigned long) [13]
+                0.89    0.00 400000000/400000000     void mpn_addmul_1_fixed_<5, 4>(unsigned long*, unsigned long const*, unsigned long) [19]
+-----------------------------------------------
+                0.61    1.31 300030000/300030000     Z2<256>::Z2() [11]
+[14]     9.7    0.61    1.31 300030000         Z2<256>::assign_zero() [14]
+                1.31    0.00 300030000/400030000     avx_memzero(void*, unsigned long) [15]
+-----------------------------------------------
+                0.44    0.00 100000000/400030000     void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*) [10]
+                1.31    0.00 300030000/400030000     Z2<256>::assign_zero() [14]
+[15]     8.8    1.74    0.00 400030000         avx_memzero(void*, unsigned long) [15]
+-----------------------------------------------
+                1.22    0.00  641026/641026      std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()() [8]
+[16]     6.2    1.22    0.00  641026         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand() [16]
+-----------------------------------------------
+                0.39    0.58 100000000/100000000     Vector256::operator*(Vector256 const&) [5]
+[17]     4.9    0.39    0.58 100000000         Z2<256>::operator+=(Z2<256> const&) [17]
+                0.58    0.00 100000000/100000000     void mpn_add_fixed_n<4>(unsigned long*, unsigned long const*, unsigned long const*) [24]
+-----------------------------------------------
+                0.36    0.60 200000000/200000000     Vector256::set_random() [2]
+[18]     4.9    0.36    0.60 200000000         Integer::Integer(long) [18]
+                0.60    0.00 200000000/200000000     IntBase<long>::IntBase(long) [22]
+-----------------------------------------------
+                0.89    0.00 400000000/400000000     void mpn_addmul_1_fixed<4>(unsigned long*, unsigned long const*, unsigned long) [13]
+[19]     4.5    0.89    0.00 400000000         void mpn_addmul_1_fixed_<5, 4>(unsigned long*, unsigned long const*, unsigned long) [19]
+-----------------------------------------------
+                0.75    0.00 200000000/200000000     Z2<256>::Z2<long>(IntBase<long> const&) [9]
+[20]     3.8    0.75    0.00 200000000         IntBase<long>::get() const [20]
+-----------------------------------------------
+                0.69    0.00 400000000/400000000     unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&) [4]
+[21]     3.5    0.69    0.00 400000000         std::uniform_int_distribution<unsigned long long>::param_type::a() const [21]
+-----------------------------------------------
+                0.60    0.00 200000000/200000000     Integer::Integer(long) [18]
+[22]     3.0    0.60    0.00 200000000         IntBase<long>::IntBase(long) [22]
+-----------------------------------------------
+                0.59    0.00 200000000/200000000     unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&) [4]
+[23]     3.0    0.59    0.00 200000000         std::uniform_int_distribution<unsigned long long>::param_type::b() const [23]
+-----------------------------------------------
+                0.58    0.00 100000000/100000000     Z2<256>::operator+=(Z2<256> const&) [17]
+[24]     2.9    0.58    0.00 100000000         void mpn_add_fixed_n<4>(unsigned long*, unsigned long const*, unsigned long const*) [24]
+-----------------------------------------------
+                0.27    0.30 100000000/100000000     void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*) [10]
+[25]     2.9    0.27    0.30 100000000         inline_mpn_copyi(unsigned long*, unsigned long const*, long) [25]
+                0.30    0.00 100000000/100000000     avx_memcpy(void*, void const*, unsigned long) [27]
+-----------------------------------------------
+                0.33    0.00 100000000/100000000     Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&) [7]
+[26]     1.7    0.33    0.00 100000000         Z2<256>::normalize() [26]
+-----------------------------------------------
+                0.30    0.00 100000000/100000000     inline_mpn_copyi(unsigned long*, unsigned long const*, long) [25]
+[27]     1.5    0.30    0.00 100000000         avx_memcpy(void*, void const*, unsigned long) [27]
+-----------------------------------------------
+                0.00    0.04       1/1           __libc_csu_init [31]
+[28]     0.2    0.00    0.04       1         _GLOBAL__sub_I_RNG [28]
+                0.00    0.04       1/1           __static_initialization_and_destruction_0(int, int) [29]
+-----------------------------------------------
+                0.00    0.04       1/1           _GLOBAL__sub_I_RNG [28]
+[29]     0.2    0.00    0.04       1         __static_initialization_and_destruction_0(int, int) [29]
+                0.04    0.00       1/1           int128::int128() [30]
+                0.00    0.00       1/1           std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long) [46]
+                0.00    0.00       1/1           std::uniform_int_distribution<unsigned long long>::uniform_int_distribution(unsigned long long, unsigned long long) [48]
+-----------------------------------------------
+                0.04    0.00       1/1           __static_initialization_and_destruction_0(int, int) [29]
+[30]     0.2    0.04    0.00       1         int128::int128() [30]
+-----------------------------------------------
+                                                 <spontaneous>
+[31]     0.2    0.00    0.04                 __libc_csu_init [31]
+                0.00    0.04       1/1           _GLOBAL__sub_I_RNG [28]
+-----------------------------------------------
+                0.00    0.00       2/2           main [1]
+[32]     0.0    0.00    0.00       2         Vector256::Vector256() [32]
+                0.00    0.00   20000/300030000     Z2<256>::Z2() [11]
+-----------------------------------------------
+                0.00    0.00   10000/10000       Z2<256>::Z2(int) [34]
+[33]     0.0    0.00    0.00   10000         Z2<256>::Z2(long) [33]
+                0.00    0.00   10000/200010000     Z2<256>::Z2(unsigned long) [12]
+-----------------------------------------------
+                0.00    0.00   10000/10000       Vector256::operator*(Vector256 const&) [5]
+[34]     0.0    0.00    0.00   10000         Z2<256>::Z2(int) [34]
+                0.00    0.00   10000/10000       Z2<256>::Z2(long) [33]
+-----------------------------------------------
+                0.00    0.00     312/312         unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long) [42]
+[41]     0.0    0.00    0.00     312         std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long) [41]
+-----------------------------------------------
+                0.00    0.00     312/312         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [45]
+[42]     0.0    0.00    0.00     312         unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long) [42]
+                0.00    0.00     312/312         std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long) [41]
+-----------------------------------------------
+                0.00    0.00     311/311         unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long) [44]
+[43]     0.0    0.00    0.00     311         std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long) [43]
+-----------------------------------------------
+                0.00    0.00     311/311         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [45]
+[44]     0.0    0.00    0.00     311         unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long) [44]
+                0.00    0.00     311/311         std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long) [43]
+-----------------------------------------------
+                0.00    0.00       1/1           std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long) [46]
+[45]     0.0    0.00    0.00       1         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [45]
+                0.00    0.00     312/312         unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long) [42]
+                0.00    0.00     311/311         unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long) [44]
+-----------------------------------------------
+                0.00    0.00       1/1           __static_initialization_and_destruction_0(int, int) [29]
+[46]     0.0    0.00    0.00       1         std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long) [46]
+                0.00    0.00       1/1           std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long) [45]
+-----------------------------------------------
+                0.00    0.00       1/1           std::uniform_int_distribution<unsigned long long>::uniform_int_distribution(unsigned long long, unsigned long long) [48]
+[47]     0.0    0.00    0.00       1         std::uniform_int_distribution<unsigned long long>::param_type::param_type(unsigned long long, unsigned long long) [47]
+-----------------------------------------------
+                0.00    0.00       1/1           __static_initialization_and_destruction_0(int, int) [29]
+[48]     0.0    0.00    0.00       1         std::uniform_int_distribution<unsigned long long>::uniform_int_distribution(unsigned long long, unsigned long long) [48]
+                0.00    0.00       1/1           std::uniform_int_distribution<unsigned long long>::param_type::param_type(unsigned long long, unsigned long long) [47]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [28] _GLOBAL__sub_I_RNG     [12] Z2<256>::Z2(unsigned long) [16] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::_M_gen_rand()
+  [27] avx_memcpy(void*, void const*, unsigned long) [11] Z2<256>::Z2() [45] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::seed(unsigned long)
+  [15] avx_memzero(void*, unsigned long) [9] Z2<256>::Z2<long>(IntBase<long> const&) [46] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::mersenne_twister_engine(unsigned long)
+  [10] void mpn_mul_fixed_<4, 4, 4>(unsigned long*, unsigned long const*, unsigned long const*) [17] Z2<256>::operator+=(Z2<256> const&) [8] std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>::operator()()
+  [24] void mpn_add_fixed_n<4>(unsigned long*, unsigned long const*, unsigned long const*) [30] int128::int128() [47] std::uniform_int_distribution<unsigned long long>::param_type::param_type(unsigned long long, unsigned long long)
+  [25] inline_mpn_copyi(unsigned long*, unsigned long const*, long) [22] IntBase<long>::IntBase(long) [48] std::uniform_int_distribution<unsigned long long>::uniform_int_distribution(unsigned long long, unsigned long long)
+  [13] void mpn_addmul_1_fixed<4>(unsigned long*, unsigned long const*, unsigned long) [18] Integer::Integer(long) [3] unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&)
+  [19] void mpn_addmul_1_fixed_<5, 4>(unsigned long*, unsigned long const*, unsigned long) [2] Vector256::set_random() [4] unsigned long long std::uniform_int_distribution<unsigned long long>::operator()<std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul> >(std::mersenne_twister_engine<unsigned long, 64ul, 312ul, 156ul, 31ul, 13043109905998158313ul, 29ul, 6148914691236517205ul, 17ul, 8202884508482404352ul, 37ul, 18444473444759240704ul, 43ul, 6364136223846793005ul>&, std::uniform_int_distribution<unsigned long long>::param_type const&)
+  [29] __static_initialization_and_destruction_0(int, int) [32] Vector256::Vector256() [41] std::__detail::_Mod<unsigned long, 0ul, 1ul, 0ul, true, false>::__calc(unsigned long)
+  [14] Z2<256>::assign_zero()  [5] Vector256::operator*(Vector256 const&) [43] std::__detail::_Mod<unsigned long, 312ul, 1ul, 0ul, true, true>::__calc(unsigned long)
+   [7] Z2<256> Z2<256>::Mul<256, 256, false>(Z2<256> const&, Z2<256> const&) [6] Z2<(((256)>(256)))?(256) : (256)> Z2<256>::operator*<256>(Z2<256> const&) const [42] unsigned long std::__detail::__mod<unsigned long, 0ul, 1ul, 0ul>(unsigned long)
+  [26] Z2<256>::normalize()   [20] IntBase<long>::get() const [44] unsigned long std::__detail::__mod<unsigned long, 312ul, 1ul, 0ul>(unsigned long)
+  [33] Z2<256>::Z2(long)      [21] std::uniform_int_distribution<unsigned long long>::param_type::a() const
+  [34] Z2<256>::Z2(int)       [23] std::uniform_int_distribution<unsigned long long>::param_type::b() const

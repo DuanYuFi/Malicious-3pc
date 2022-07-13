@@ -1,0 +1,16 @@
+N_TIMES = 1000
+LENGTH = 1000
+
+a = sint.Array(LENGTH)
+b = sint.Array(LENGTH)
+
+for i in range(LENGTH):
+    a[i] = 1
+    b[i] = 2
+
+for i in range(N_TIMES - 1):
+    sint.dot_product(a, b)
+
+c = sint.dot_product(a, b)
+
+print_ln("%s", c.reveal())
