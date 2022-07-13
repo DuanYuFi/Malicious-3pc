@@ -10,3 +10,6 @@
 [submodule "simde"]
 	path = simde
 	url = https://github.com/simd-everywhere/simde
+[submodule "EzPC"]
+	path = EzPC
+	url = https://github.com/mkskeller/EzPC
