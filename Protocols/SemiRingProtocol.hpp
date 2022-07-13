@@ -29,9 +29,7 @@ void SemiRingProtocol<T>::thread_handler() {
 
 	if (os[1].empty())
 		P.receive_relative(1, os[1]);
-	// cout << std::chrono::system_clock::now().time_since_epoch().count() << endl;
-	// P.send_relative(1, octetStream("Copy"));
-	// cout << os[1].get_length() << endl;
+
 	while (true) {
 
 		wait();
@@ -39,9 +37,7 @@ void SemiRingProtocol<T>::thread_handler() {
 			signal2();
 			break;
 		}
-	
-		// cout << "Deal datas" << endl;
-		add_shares.push_back(tmp_shares[this->dealed * 2]);
+			add_shares.push_back(tmp_shares[this->dealed * 2]);
 		// tmp_shares.pop();
 		tmp.unpack(os[1], this->n_bits);
 		tmp += tmp_shares[this->dealed * 2 + 1];
@@ -49,12 +45,7 @@ void SemiRingProtocol<T>::thread_handler() {
 		add_shares.push_back(tmp);
 		tmp.pack(os[0], this->n_bits);
 		this->dealed ++;
-		// this->lock.lock();
-	
-		// else {
-		// 	sleep(0.01);
-		// 	cout << "recv_running = " << this->recv_running << endl;
-		// }
+
 	}
 
 	os[1].reset_read_head();
@@ -66,9 +57,6 @@ void SemiRingProtocol<T>::init_mul() {
 
 	if (LOG_LEVEL & SHOW_PROGRESS)
 		cout << "Init mul " << time(0) << endl;
-
-	// cout << typeid(typename T::value_type).name() << endl;
-	// cout << "Start init_mul" << endl;
 
     for (auto& o : os)
         o.reset_write_head();
@@ -89,33 +77,14 @@ void SemiRingProtocol<T>::init_mul() {
 	// cout << "Initial  end   at " << std::chrono::system_clock::now().time_since_epoch().count() << endl;
 }
 
-template <class T>
-void printShare(const T share, string prompt = "") {
-	cout << prompt << "(" << share[0] << ", " << share[1] << ")";
-
-	if (share.is_zero_share) {
-		cout << ", this is a zero share";
-	}
-	else {
-		cout << ", this is a non-zero share";
-	}
-	cout << endl;
-}
 
 template <class T>
 void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
-
-	// cout << "Start prepare at " << std::chrono::system_clock::now().time_since_epoch().count() << endl;
 	
 	this->n_bits = n;
 
-	// this->lock.lock();
-	// this->lock.unlock();
-
     typename T::value_type tmp[3], add_share, tmp_random;
 	int player_number = P.my_real_num();
-
-	// std::chrono::_V2::system_clock::time_point start, end;
 
 	if (LOG_LEVEL & SHOW_PROGRESS)
 		cout << "In prepare mul " << time(0) << endl;
@@ -125,9 +94,6 @@ void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 		printShare(y, "Source y: ");
 	}
 
-	// if (LOG_LEVEL & SHOW_TIME_LOG) {
-	// 	start = std::chrono::high_resolution_clock::now();
-	// }
 
 	/*
 	* For player 0:
@@ -147,25 +113,15 @@ void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 			add_shares.push_back(tmp[i]);
 		}
 
-		// if (x.is_zero_share or y.is_zero_share) {
-		// 	return ;
-		// }
-
 		tmp[2].randomize(shared_prngs[0], n);
-		tmp[2] = (x[0] + x[1]) * (y[0] + y[1]) - tmp[2];
-
-		// os[0].reset_write_head();		// I always forgot why I do this. But if don't, the result is wrong
-	
+		tmp[2] = (x[0] + x[1]) * (y[0] + y[1]) - tmp[2];	
 		tmp[2].pack(os[0], n);
-		// P.send_relative(-1, os[0]);
 
 		if (LOG_LEVEL & SHOW_COMMUNICATION)	
 			cout << "Send data" << tmp[2] << endl;
 
 	}
 	else if (player_number == 1) {
-	
-		// sleep(0.5);
 
 		tmp[0].randomize(shared_prngs[1], n);
 		add_shares.push_back(tmp[0]);
@@ -198,17 +154,12 @@ void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 			this->recv_thread = std::thread(&SemiRingProtocol<T>::thread_handler, this);
 		}
 
-		// sleep(0.5);
 		tmp[0].randomize(shared_prngs[0], n);
 		tmp_shares.push_back(tmp[0]);
 		tmp_random = tmp[0];
-			// P.receive_relative(1, os[1]);
-			// tmp[1].unpack(os[1], n);
 
 		if (LOG_LEVEL & SHOW_COMMUNICATION)
 			cout << "Receive data" << tmp[1] << endl;
-
-		// os[1].reset_write_head();	// I always forgot why I do this. But if don't, the result is wrong
 
 		add_share = x[0] * y[1] + x[1] * y[0] - tmp_random;
 		tmp_shares.push_back(add_share);
@@ -216,12 +167,6 @@ void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 		signal();
 	}
 
-	// if (LOG_LEVEL & SHOW_TIME_LOG) {
-	// 	end = std::chrono::high_resolution_clock::now();
-	// 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-	// 	cout << "Time for preparing mul: " << duration.count() << " microseconds" << endl;
-	// }
-	// cout << "End prepare at " << std::chrono::system_clock::now().time_since_epoch().count() << endl;
 }
 
 template <class T>
@@ -245,20 +190,11 @@ void SemiRingProtocol<T>::exchange2() {
 			another_player_number = 1;
 		}
 
-		// cout << "Start send" << endl;
-		// P.send_relative(another_player_number, os[0]);
-		// cout << "Start recv" << endl;
-		// P.receive_relative(another_player_number, os[1]);
-		// cout << "Finish" << endl;
-		// cout << "Rounds += 10" << endl;
-
 		P.exchange(another_player_number, os[0], os[1]);
 		
 		this->rounds ++;
 	}
 
-	// if (LOG_LEVEL & SHOW_PROGRESS)
-	// 	puts("Finished exchange");
 }
 
 
@@ -271,9 +207,6 @@ void SemiRingProtocol<T>::exchange1() {
 	}
 	else if (player_number == 0) {
 		P.send_relative(-1, os[0]);
-		// octetStream tmp;
-		// P.receive_relative(-1, tmp);
-		// putchar('.');
 	}
 	else {
 		this->waiting = true;
@@ -297,16 +230,11 @@ void SemiRingProtocol<T>::exchange() {
 	}
 
 	exchange1();
-
-	// cout << "mid" << endl;
-
 	exchange2();
 
 	if (LOG_LEVEL & SHOW_TIME_LOG) {
 		end = std::chrono::high_resolution_clock::now();
-		// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 		cout << "End   exchange at " << end.time_since_epoch().count() << endl;
-		// cout << "Exchange 1 costs " << std::chrono::duration_cast<std::chrono::microseconds>(mid - start).count() << endl;
 		cout << "Exchange costs " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << endl;
 	}
     
@@ -314,12 +242,6 @@ void SemiRingProtocol<T>::exchange() {
 
 template <class T>
 inline T SemiRingProtocol<T>::finalize_mul(int n) {
-
-	// std::chrono::_V2::system_clock::time_point start, end;
-
-	// if (LOG_LEVEL & SHOW_TIME_LOG) {
-	// 	start = std::chrono::high_resolution_clock::now();
-	// }
 
     int player_number = P.my_real_num();
 	T result;
@@ -352,17 +274,6 @@ inline T SemiRingProtocol<T>::finalize_mul(int n) {
 
 	if (LOG_LEVEL & SHOW_SHARE_DETAIL)
 		printShare(result, "Result: ");
-
-	// if (LOG_LEVEL & SHOW_PROGRESS)
-	// 	puts("Finished finalizing mul");
-
-	// cout << result << endl;
-
-	// if (LOG_LEVEL & SHOW_TIME_LOG) {
-	// 	end = std::chrono::high_resolution_clock::now();
-	// 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-	// 	cout << "Time for finalizing mul: " << duration.count() << " microseconds" << endl;
-	// }
 
 	return result;
 }
