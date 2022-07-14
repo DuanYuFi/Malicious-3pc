@@ -90,10 +90,10 @@ void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 	if (LOG_LEVEL & SHOW_PROGRESS)
 		cout << "In prepare mul " << time(0) << endl;
 
-	if (LOG_LEVEL & SHOW_SHARE_DETAIL) {
-		printShare(x, "Source x: ");
-		printShare(y, "Source y: ");
-	}
+	// if (LOG_LEVEL & SHOW_SHARE_DETAIL) {
+	// 	printShare(x, "Source x: ");
+	// 	printShare(y, "Source y: ");
+	// }
 
 
 	/*
@@ -273,8 +273,8 @@ inline T SemiRingProtocol<T>::finalize_mul(int n) {
 
 	result.is_zero_share = false;
 
-	if (LOG_LEVEL & SHOW_SHARE_DETAIL)
-		printShare(result, "Result: ");
+	// if (LOG_LEVEL & SHOW_SHARE_DETAIL)
+	// 	printShare(result, "Result: ");
 
 	return result;
 }
