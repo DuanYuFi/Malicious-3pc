@@ -1,5 +1,14 @@
 # Malicious-3PC
 
+Usage: After pull the repository, run:
+```
+sudo apt update
+sudo apt install automake build-essential git libboost-dev libboost-thread-dev libntl-dev libsodium-dev libssl-dev libtool m4 python3 texinfo yasm
+make tldr
+```
+
+then the environment will automatically prepared. And you can build other protocols.
+
 ## Semi-Honest
 
 Protocol name is semi-ring, and the protocol implementation is in:
@@ -15,3 +24,10 @@ make semi-ring
 ```
 
 and the script file is in `Scripts/semi-ring.sh`.
+
+## About mpir:
+
+If any error occurs in make. According to the error log, if it's about `mpir`, try to figure out the following:
+- mpir directory is not empty. If it is, you have to run `git clone https://github.com/wbhart/mpir.git`.
+- make sure mpir is correctly installed. You can check the INSTALL file in mpir.
+- Other errors mostly can be found in the issue of mpir project.
