@@ -37,7 +37,8 @@ void SemiRingProtocol<T>::thread_handler() {
 			signal2();
 			break;
 		}
-			add_shares.push_back(tmp_shares[this->dealed * 2]);
+		
+		add_shares.push_back(tmp_shares[this->dealed * 2]);
 		// tmp_shares.pop();
 		tmp.unpack(os[1], this->n_bits);
 		tmp += tmp_shares[this->dealed * 2 + 1];
