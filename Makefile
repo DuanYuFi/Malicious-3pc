@@ -103,6 +103,7 @@ mascot: mascot-party.x spdz2k mama-party.x
 test: semi3-field-party.x
 semi-ring: semi-ring-party.x
 ring: replicated-ring-party.x
+mal3pc: mal3pc-field-party.x
 
 ifeq ($(OS), Darwin)
 tldr: mac-setup

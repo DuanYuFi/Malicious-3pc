@@ -84,6 +84,10 @@ template<class T>
 void ShareThread<T>::and_(Processor<T>& processor,
         const vector<int>& args, bool repeat)
 {
+
+    cout << "In ShareThread<T>::and_" << endl;
+    // cout << typeid(T::super).name() << endl;
+
     auto& protocol = this->protocol;
     processor.check_args(args, 4);
     protocol->init_mul();
