@@ -48,6 +48,8 @@ void SpdzWise<T>::init_mul()
     maybe_check();
     internal.init_mul();
     internal2.init_mul();
+
+    cout << "Type of internal: " << typeid(internal).name() << endl;
 }
 
 template<class T>
@@ -115,6 +117,9 @@ void SpdzWise<T>::add_to_check(const T& x)
 template<class T>
 void SpdzWise<T>::check()
 {
+
+    // cout << "T type: " << typeid(T).name() << endl;
+
     if (results.empty())
         return;
 

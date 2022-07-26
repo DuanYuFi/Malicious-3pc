@@ -11,7 +11,9 @@
 #include "ThreadMaster.h"
 #include "Protocols/Beaver.h"
 #include "Protocols/MaliciousRepMC.h"
+#include "Protocols/SemiRingProtocol.h"
 #include "Processor/DummyProtocol.h"
+
 
 template<class T> class MaliciousRepMC;
 
@@ -102,6 +104,20 @@ public:
     MaliciousRepSecret() {}
     template<class T>
     MaliciousRepSecret(const T& other) : super(other) {}
+};
+
+class Mal3PCBinSecret: public MalRepSecretBase<Mal3PCBinSecret>
+{
+    typedef Mal3PCBinSecret This;
+    typedef MalRepSecretBase<This> super;
+
+public:
+    typedef SemiRingProtocol<Mal3PCBinSecret> Protocol;
+    typedef SmallMalRepSecret small_type;
+
+    Mal3PCBinSecret() {}
+    template <class T>
+    Mal3PCBinSecret(const T& other) : super(other) {}
 };
 
 }

@@ -647,7 +647,7 @@ void buffer_bits_from_players(vector<vector<T>> &player_bits,
     }
     else if (BIT_LOG_LEVEL & SHOW_BIT_PROCESS) {
         cout << "BitPrep::buffer_bits_from_players(vector<T> &bits, PRNG &G, int buffer_size, int n_bits)" << endl;
-        cout << typeid(typename T::value_type).name() << endl;
+        // cout << typeid(typename T::value_type).name() << endl;
     }
 }
 

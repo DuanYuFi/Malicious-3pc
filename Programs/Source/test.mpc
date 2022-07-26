@@ -1,9 +1,14 @@
-from Compiler.GC.types import *
+# from Compiler.GC.types import *
 
-si32 = sbitint.get_type(32)
-a = si32(0b110110)
-b = si32(0b101101)
+# si32 = sbitint.get_type(32)
+# a = si32(0b110110)
+# b = si32(0b101101)
 
-c = a & b
+# c = a & b
+
+a = sint(2)
+b = sint(3)
+
+c = a * b
 
 print_ln("%s", c.reveal())

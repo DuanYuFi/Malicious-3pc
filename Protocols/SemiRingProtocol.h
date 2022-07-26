@@ -7,7 +7,6 @@
 #define PROTOCOLS_SEMIRINGPROTOCOL_H_
 
 #define USE_MY_MULTIPLICATION
-#define USE_TRUNC
 
 #include "Protocols/Replicated.h"
 #include "Protocols/MAC_Check_Base.h"
@@ -48,15 +47,10 @@ class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
 
     pthread_mutex_t queue_lock;
 
-
-#ifdef USE_TRUNC
-
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, false_type);
-
-#endif
 
 public:
     
@@ -107,12 +101,8 @@ public:
 
 #endif
 
-#ifdef USE_TRUNC
-
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc);
-
-#endif
 
     // return next product
     T finalize_mul(int = -1);

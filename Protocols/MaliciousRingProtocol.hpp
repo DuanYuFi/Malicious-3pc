@@ -1,26 +1,54 @@
+#ifndef PROTOCOLS_MALICIOUSRINGPROTOCOL_HPP_
+#define PROTOCOLS_MALICIOUSRINGPROTOCOL_HPP_
 
-#ifndef PROTOCOLS_SEMIRINGPROTOCOL_HPP_
-#define PROTOCOLS_SEMIRINGPROTOCOL_HPP_
-
-#include "SemiRingProtocol.h"
-#include "Replicated.hpp"
-
-#include "Tools/benchmarking.h"
-#include "Tools/Bundle.h"
-
-#include "global_debug.hpp"
-#include <ctime>
-#include <chrono>
+#include "MaliciousRingProtocol.h"
 
 template <class T>
-SemiRingProtocol<T>::SemiRingProtocol(Player &P) : ReplicatedBase(P)
+MaliciousRingProtocol<T>::MaliciousRingProtocol(Player& P) :
+    SpdzWise<T>(P), zero_prep(0, zero_usage), zero_proc(zero_output, zero_prep, P)
 {
-	assert(T::vector_length == 2);
 }
 
+template<class T>
+void MaliciousRingProtocol<T>::zero_check(check_type t)
+{
+    int l = T::LENGTH + T::SECURITY;
+    vector<zero_check_type> bit_masks(l);
+    zero_check_type masked = t;
+    zero_prep.buffer_size = l;
+    for (int i = 0; i < l; i++)
+    {
+        bit_masks[i] = zero_prep.get_bit();
+        masked += bit_masks[i] << i;
+    }
+    auto& P = this->P;
+    auto opened = zero_output.open(masked, P);
+    vector<zero_check_type> bits(l);
+    for (int i = 0; i < l; i++)
+    {
+        auto b = opened.get_bit(i);
+        bits[i] = zero_check_type::constant(b, P.my_num()) + bits[i]
+                - 2 * b * bits[i];
+    }
+    while(bits.size() > 1)
+    {
+        auto& protocol = zero_proc.protocol;
+        protocol.init_mul();
+        for (int i = bits.size() - 2; i >= 0; i -= 2)
+            protocol.prepare_mul(bits[i], bits[i + 1]);
+        protocol.exchange();
+        int n_mults = bits.size() / 2;
+        bits.resize(bits.size() % 2);
+        for (int i = 0; i < n_mults; i++)
+            bits.push_back(protocol.finalize_mul());
+    }
+    zero_output.CheckFor(0, {bits[0]}, P);
+    zero_output.Check(P);
+    zero_proc.protocol.check();
+}
 
 template <class T>
-void SemiRingProtocol<T>::thread_handler() {
+void MaliciousRingProtocol<T>::thread_handler() {
 	typename T::value_type tmp;
 
 	// cout << "Running new thread" << endl;
@@ -52,10 +80,17 @@ void SemiRingProtocol<T>::thread_handler() {
 }
 
 template<class T>
-void SemiRingProtocol<T>::init_mul() {
+void MaliciousRingProtocol<T>::init_mul() {
 
 	if (LOG_LEVEL & SHOW_PROGRESS)
 		cout << "Init mul " << time(0) << endl;
+
+	if (T is binary_share) {
+		our_check
+	}
+	else {
+		SpdzWiseMC<U<T>>
+	}
 
     for (auto& o : os)
         o.reset_write_head();
@@ -78,7 +113,7 @@ void SemiRingProtocol<T>::init_mul() {
 
 
 template <class T>
-void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
+void MaliciousRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 	
 	this->n_bits = n;
 
@@ -169,7 +204,7 @@ void SemiRingProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
 }
 
 template <class T>
-void SemiRingProtocol<T>::exchange2() {
+void MaliciousRingProtocol<T>::exchange2() {
 	int player_number = P.my_real_num();
 	int another_player_number;
 	typename T::value_type tmp;
@@ -198,7 +233,7 @@ void SemiRingProtocol<T>::exchange2() {
 
 
 template <class T>
-void SemiRingProtocol<T>::exchange1() {
+void MaliciousRingProtocol<T>::exchange1() {
 	int player_number = P.my_real_num();
 
 	if (player_number == 1) {
@@ -219,7 +254,7 @@ void SemiRingProtocol<T>::exchange1() {
 }
 
 template <class T>
-void SemiRingProtocol<T>::exchange() {
+void MaliciousRingProtocol<T>::exchange() {
 
 	std::chrono::_V2::system_clock::time_point start, end;
 
@@ -240,7 +275,7 @@ void SemiRingProtocol<T>::exchange() {
 }
 
 template <class T>
-inline T SemiRingProtocol<T>::finalize_mul(int n) {
+inline T MaliciousRingProtocol<T>::finalize_mul(int n) {
 
     int player_number = P.my_real_num();
 	T result;
@@ -279,7 +314,7 @@ inline T SemiRingProtocol<T>::finalize_mul(int n) {
 
 
 template<class T>
-inline void SemiRingProtocol<T>::init_dotprod()
+inline void MaliciousRingProtocol<T>::init_dotprod()
 {
 	if (DOTPROD_LOG_LEVEL & SHOW_DOTPROD_PROCESS) {
         cout << "In init_dotprod()" << endl;
@@ -289,7 +324,7 @@ inline void SemiRingProtocol<T>::init_dotprod()
 	
 	if (P.my_real_num() == 2) {
 		this->recv_running = true;
-		this->recv_thread = std::thread(&SemiRingProtocol<T>::thread_handler, this);
+		this->recv_thread = std::thread(&MaliciousRingProtocol<T>::thread_handler, this);
 		this->waiting = false;
 	}
 
@@ -297,7 +332,7 @@ inline void SemiRingProtocol<T>::init_dotprod()
 }
 
 template<class T>
-inline void SemiRingProtocol<T>::prepare_dotprod(const T& x, const T& y)
+inline void MaliciousRingProtocol<T>::prepare_dotprod(const T& x, const T& y)
 {
 
 	if (DOTPROD_LOG_LEVEL & SHOW_DOTPROD_PROCESS) {
@@ -318,7 +353,7 @@ inline void SemiRingProtocol<T>::prepare_dotprod(const T& x, const T& y)
 }
 
 template<class T>
-inline void SemiRingProtocol<T>::next_dotprod()
+inline void MaliciousRingProtocol<T>::next_dotprod()
 {
 
 	if (DOTPROD_LOG_LEVEL & SHOW_DOTPROD_PROCESS) {
@@ -385,7 +420,7 @@ inline void SemiRingProtocol<T>::next_dotprod()
 }
 
 template<class T>
-inline T SemiRingProtocol<T>::finalize_dotprod(int length)
+inline T MaliciousRingProtocol<T>::finalize_dotprod(int length)
 {
 
 	if (DOTPROD_LOG_LEVEL & SHOW_DOTPROD_PROCESS) {
@@ -395,125 +430,6 @@ inline T SemiRingProtocol<T>::finalize_dotprod(int length)
     (void) length;
     this->dot_counter++;
     return finalize_mul();
-}
-
-template<class T>
-T SemiRingProtocol<T>::get_random() {
-	T res;
-	for (int i = 0; i < 2; i++) {
-		res[i].randomize(shared_prngs[i]);
-	}
-	return res;
-}
-
-template<class T>
-template<class U>
-void SemiRingProtocol<T>::trunc_pr(const vector<int>& regs, int size, U& proc,
-        false_type)
-{
-    assert(regs.size() % 4 == 0);
-    assert(proc.P.num_players() == 3);
-    assert(proc.Proc != 0);
-    typedef typename T::clear value_type;
-    int gen_player = 2;
-    int comp_player = 1;
-    bool generate = P.my_num() == gen_player;
-    bool compute = P.my_num() == comp_player;
-    ArgList<TruncPrTupleWithGap<value_type>> infos(regs);
-    auto& S = proc.get_S();
-
-    octetStream cs;
-    ReplicatedInput<T> input(P);
-
-    if (generate)
-    {
-        SeededPRNG G;
-        for (auto info : infos)
-            for (int i = 0; i < size; i++)
-            {
-                auto r = G.get<value_type>();
-                input.add_mine(info.upper(r));
-                if (info.small_gap())
-                    input.add_mine(info.msb(r));
-                (r + S[info.source_base + i][0]).pack(cs);
-            }
-        P.send_to(comp_player, cs);
-    }
-    else
-        input.add_other(gen_player);
-
-    if (compute)
-    {
-        P.receive_player(gen_player, cs);
-        for (auto info : infos)
-            for (int i = 0; i < size; i++)
-            {
-                auto c = cs.get<value_type>() + S[info.source_base + i].sum();
-                input.add_mine(info.upper(c));
-                if (info.small_gap())
-                    input.add_mine(info.msb(c));
-            }
-    }
-
-    input.add_other(comp_player);
-    input.exchange();
-    init_mul();
-
-    for (auto info : infos)
-        for (int i = 0; i < size; i++)
-        {
-            this->trunc_pr_counter++;
-            auto c_prime = input.finalize(comp_player);
-            auto r_prime = input.finalize(gen_player);
-            S[info.dest_base + i] = c_prime - r_prime;
-
-            if (info.small_gap())
-            {
-                auto c_dprime = input.finalize(comp_player);
-                auto r_msb = input.finalize(gen_player);
-                S[info.dest_base + i] += ((r_msb + c_dprime)
-                        << (info.k - info.m));
-                prepare_mul(r_msb, c_dprime);
-            }
-        }
-
-    exchange();
-
-    for (auto info : infos)
-        for (int i = 0; i < size; i++)
-            if (info.small_gap())
-                S[info.dest_base + i] -= finalize_mul()
-                        << (info.k - info.m + 1);
-}
-
-template<class T>
-template<class U>
-void SemiRingProtocol<T>::trunc_pr(const vector<int>& regs, int size, U& proc,
-        true_type)
-{
-    (void) regs, (void) size, (void) proc;
-    throw runtime_error("trunc_pr not implemented");
-}
-
-template<class T>
-template<class U>
-void SemiRingProtocol<T>::trunc_pr(const vector<int>& regs, int size,
-        U& proc)
-{
-
-	if (TRUNC_LOG_LEVEL & TRUNC_PROCESS) {
-		cout << "In trunc_pr()" << endl;
-	}
-	if (TRUNC_LOG_LEVEL & TRUNC_DETAIL) {
-		cout << "regs: ";
-		for (auto i : regs) {
-			cout << i << " ";
-		}
-		cout << endl << size << endl;
-	}
-
-    this->trunc_rounds++;
-    trunc_pr(regs, size, proc, T::clear::characteristic_two);
 }
 
 #endif
