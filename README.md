@@ -25,6 +25,10 @@ make semi-ring
 
 and the script file is in `Scripts/semi-ring.sh`.
 
+## Malicious
+
+Shits happening...
+
 ## About mpir:
 
 If any error occurs in make. According to the error log, if it's about `mpir`, try to figure out the following:
