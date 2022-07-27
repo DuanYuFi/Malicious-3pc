@@ -25,6 +25,8 @@ template<class T>
 class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
 {
 
+    typedef ReplicatedBase super;
+
     array<octetStream, 2> os;
     PointerVector<typename T::clear> add_shares;
     typename T::clear dotprod_share;
@@ -64,10 +66,7 @@ public:
     }
 
     // Init the protocol
-    SemiRingProtocol(const SemiRingProtocol<T> &other) :
-        os(other.os), add_shares(other.add_shares), dotprod_share(other.dotprod_share),
-        tmp_shares(other.tmp_shares), n_bits(other.n_bits), total_recv(other.total_recv),
-        dealed(other.dealed), waiting(other.waiting), recv_running(other.recv_running)
+    SemiRingProtocol(const SemiRingProtocol<T> &other) : super(other)
     {   
     }
 
