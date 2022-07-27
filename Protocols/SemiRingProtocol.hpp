@@ -60,10 +60,7 @@ void SemiRingProtocol<T>::init_mul() {
     for (auto& o : os)
         o.reset_write_head();
     add_shares.clear();
-	if (P.my_real_num() == 2) {
-		PointerVector<typename T::clear> empty;
-		swap(empty, tmp_shares);
-	}
+	tmp_shares.clear();
 
 	this->n_bits = -1;
 	this->n_times = 0;

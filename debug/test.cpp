@@ -1,11 +1,12 @@
 #include <queue>
 #include <iostream>
+#include <mutex>
 
 using namespace std;
 
 class A {
     
-
+    std::mutex mtx;
 public:
 
     int a;
@@ -21,6 +22,13 @@ class B : public A {
 
 public:
 
+    int x;
+
+    B() {}
+    B(const B& b) : super() {
+        a = b.a;
+    }
+
     void init() {
         super::init();
         a += 1;
@@ -31,6 +39,8 @@ public:
 int main() {
     B b;
     b.init();
-    cout << b.a << endl;
+    B c = b;
+    cout << b.x << endl;
+    cout << c.x << endl;
     return 0;
 }

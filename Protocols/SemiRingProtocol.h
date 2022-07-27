@@ -45,7 +45,7 @@ class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
     condition_variable cv2;
     int count2;
 
-    pthread_mutex_t queue_lock;
+    // pthread_mutex_t queue_lock;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -56,10 +56,19 @@ public:
     
     static const bool uses_triples = false;
 
+    SemiRingProtocol() {}
     SemiRingProtocol(Player& P);
     SemiRingProtocol(const ReplicatedBase &other) : 
         ReplicatedBase(other)
     {
+    }
+
+    // Init the protocol
+    SemiRingProtocol(const SemiRingProtocol<T> &other) :
+        os(other.os), add_shares(other.add_shares), dotprod_share(other.dotprod_share),
+        tmp_shares(other.tmp_shares), n_bits(other.n_bits), total_recv(other.total_recv),
+        dealed(other.dealed), waiting(other.waiting), recv_running(other.recv_running)
+    {   
     }
 
     ~SemiRingProtocol() {
