@@ -86,7 +86,7 @@ void ShareThread<T>::and_(Processor<T>& processor,
 {
 
     cout << "In ShareThread<T>::and_" << endl;
-    // cout << typeid(T::super).name() << endl;
+    cout << typeid(this->protocol).name() << endl;
 
     auto& protocol = this->protocol;
     processor.check_args(args, 4);

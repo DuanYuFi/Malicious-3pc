@@ -60,6 +60,7 @@ public:
     typedef T share_type;
 
     int counter;
+    int mul_counter;
 
     ProtocolBase();
     virtual ~ProtocolBase();

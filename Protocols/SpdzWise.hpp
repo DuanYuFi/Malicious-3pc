@@ -49,14 +49,14 @@ void SpdzWise<T>::init_mul()
     internal.init_mul();
     internal2.init_mul();
 
-    cout << "Type of internal: " << typeid(internal).name() << endl;
+    // cout << "Type of internal: " << typeid(internal).name() << endl;
 }
 
 template<class T>
 void SpdzWise<T>::prepare_mul(const T& x, const T& y, int)
 {
     internal.prepare_mul(x.get_share(), y.get_share());
-    internal.prepare_mul(x.get_mac(), y.get_share());
+    internal2.prepare_mul(x.get_mac(), y.get_share());
 }
 
 template<class T>
@@ -64,7 +64,7 @@ T SpdzWise<T>::finalize_mul(int)
 {
     T res;
     res.set_share(internal.finalize_mul());
-    res.set_mac(internal.finalize_mul());
+    res.set_mac(internal2.finalize_mul());
     results.push_back(res);
     return res;
 }

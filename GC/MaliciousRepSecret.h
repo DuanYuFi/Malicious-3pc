@@ -11,7 +11,8 @@
 #include "ThreadMaster.h"
 #include "Protocols/Beaver.h"
 #include "Protocols/MaliciousRepMC.h"
-#include "Protocols/SemiRingProtocol.h"
+#include "Protocols/Malicious3PCProtocol.h"
+#include "Protocols/Malicious3PCMC.h"
 #include "Processor/DummyProtocol.h"
 
 
@@ -106,18 +107,25 @@ public:
     MaliciousRepSecret(const T& other) : super(other) {}
 };
 
-class Mal3PCBinSecret: public MalRepSecretBase<Mal3PCBinSecret>
+class Malicious3PCSecret : public MalRepSecretBase<Malicious3PCSecret>
 {
-    typedef Mal3PCBinSecret This;
+    typedef Malicious3PCSecret This;
     typedef MalRepSecretBase<This> super;
 
 public:
-    typedef SemiRingProtocol<Mal3PCBinSecret> Protocol;
+    typedef Malicious3PCProtocol<This> Protocol;
+    typedef Malicious3PCMC<This> MC;
     typedef SmallMalRepSecret small_type;
 
-    Mal3PCBinSecret() {}
-    template <class T>
-    Mal3PCBinSecret(const T& other) : super(other) {}
+    Malicious3PCSecret() {}
+    template<class T>
+    Malicious3PCSecret(const T& other) : super(other) {}
+
+    static MC* new_mc(typename super::mac_key_type)
+    {
+        return new MC;
+    }
+
 };
 
 }

@@ -103,7 +103,8 @@ mascot: mascot-party.x spdz2k mama-party.x
 test: semi3-field-party.x
 semi-ring: semi-ring-party.x
 ring: replicated-ring-party.x
-mal3pc: mal3pc-ring-party.x
+mal3pc-ring: mal3pc-ring-party.x
+mal3pc-field: mal3pc-field-party.x
 
 ifeq ($(OS), Darwin)
 tldr: mac-setup
@@ -122,6 +123,7 @@ shamir: shamir-party.x malicious-shamir-party.x atlas-party.x galois-degree.x
 
 sy: sy-rep-field-party.x sy-rep-ring-party.x sy-shamir-party.x
 sy-ring: sy-rep-ring-party.x
+sy-field: sy-rep-field-party.x
 
 ecdsa: $(patsubst ECDSA/%.cpp,%.x,$(wildcard ECDSA/*-ecdsa-party.cpp)) Fake-ECDSA.x
 ecdsa-static: static-dir $(patsubst ECDSA/%.cpp,static/%.x,$(wildcard ECDSA/*-ecdsa-party.cpp))

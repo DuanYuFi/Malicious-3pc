@@ -19,23 +19,24 @@ template<class T> class MaliciousRepPrep;
 template<class T> class SpecificPrivateOutput;
 
 namespace GC {
-    class MaliciousRepSecret;
+    class Malicious3PCSecret;
 }
 
 template <class T>
-class Malicious3PCShare : public Semi3RingShare<T> {
+class Malicious3PCShare : public Rep3Share<T> {
 
-    typedef Semi3RingShare<T> super;
+    typedef Rep3Share<T> super;
     typedef Malicious3PCShare<T> This;
 
 public:
-    typedef SemiRingProtocol<This> Protocol;
-    typedef HashMaliciousRepMC<This> MAC_Check;
+
+    typedef Replicated<Malicious3PCShare<T>> Protocol;
+    typedef HashMaliciousRepMC<Malicious3PCShare<T>> MAC_Check;
     typedef MAC_Check Direct_MC;
-    typedef ReplicatedInput<This> Input;
+    typedef ReplicatedInput<Malicious3PCShare<T>> Input;
     typedef MaliciousRepPO<Malicious3PCShare> PO;
     typedef SpecificPrivateOutput<This> PrivateOutput;
-    typedef Semi3RingShare<T> Honest;
+    typedef Rep3Share<T> Honest;
     typedef MaliciousRepPrepWithBits<Malicious3PCShare> LivePrep;
     typedef MaliciousRepPrep<Malicious3PCShare> TriplePrep;
     typedef Malicious3PCShare prep_type;
@@ -44,14 +45,12 @@ public:
 
     typedef GC::MaliciousRepSecret bit_type;
 
+    // indicate security relevance of field size
     typedef T mac_key_type;
 
     const static bool expensive = true;
-    const static bool has_trunc_pr = true;
-    const static bool malicious = true;
-
-    // const static int LENGTH = 64;
-    // const static int SECURITY = 40;
+    static const bool has_trunc_pr = false;
+    static const bool malicious = true;
 
     static string type_short()
     {
@@ -80,6 +79,7 @@ template<class T> class SpdzWiseRingPrep;
 template<class T> class SpdzWiseRing;
 
 
+
 template <int K, int S>
 class Malicious3PCRingShare : public SpdzWiseShare<Malicious3PCShare<Z2<K + S>>> {
     typedef Malicious3PCRingShare This;
@@ -98,7 +98,7 @@ public:
     typedef SpdzWiseInput<This> Input;
     typedef ::PrivateOutput<This> PrivateOutput;
 
-    typedef GC::MaliciousRepSecret bit_type;
+    typedef GC::Malicious3PCSecret bit_type;
 
     static const int LENGTH = K;
     static const int SECURITY = S;

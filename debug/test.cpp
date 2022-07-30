@@ -6,7 +6,6 @@ using namespace std;
 
 class A {
     
-    std::mutex mtx;
 public:
 
     int a;
@@ -16,31 +15,26 @@ public:
 
 };
 
-class B : public A {
-
-    typedef A super;
+class B {
 
 public:
-
-    int x;
-
-    B() {}
-    B(const B& b) : super() {
-        a = b.a;
-    }
-
+    int a;
     void init() {
-        super::init();
-        a += 1;
+        a = 2;
     }
+};
 
+class C: public A, public B {
+public:
+int a;
+    void init() {
+        A::init();
+    }
 };
 
 int main() {
-    B b;
-    b.init();
-    B c = b;
-    cout << b.x << endl;
-    cout << c.x << endl;
+    C c;
+    c.init();
+    cout << c.a << endl;
     return 0;
 }

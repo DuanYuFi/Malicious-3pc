@@ -27,6 +27,9 @@ void SemiRingProtocol<T>::thread_handler() {
 
 	if (os[1].empty())
 		P.receive_relative(1, os[1]);
+	
+	// cout << T::clear::N_BYTES << endl;
+	// cout << os[1].get_length() << endl;
 
 	while (true) {
 
@@ -56,6 +59,8 @@ void SemiRingProtocol<T>::init_mul() {
 
 	if (LOG_LEVEL & SHOW_PROGRESS)
 		cout << "Init mul " << time(0) << endl;
+
+	// cout << mul_counter << endl;
 
     for (auto& o : os)
         o.reset_write_head();

@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef PROTOCOLS_SEMIRINGPROTOCOL_H_
-#define PROTOCOLS_SEMIRINGPROTOCOL_H_
+#ifndef PROTOCOLS_SEMIRINGPROTOCOL2_H_
+#define PROTOCOLS_SEMIRINGPROTOCOL2_H_
 
 #define USE_MY_MULTIPLICATION
 
@@ -22,7 +22,7 @@
 
 // multiplication protocol
 template<class T>
-class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
+class SemiRingProtocol2 : public ProtocolBase<T>, public ReplicatedBase
 {
 
     typedef ReplicatedBase super;
@@ -31,23 +31,6 @@ class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
     PointerVector<typename T::clear> add_shares;
     typename T::clear dotprod_share;
     PointerVector<typename T::clear> tmp_shares;
-    int n_bits;
-    int total_recv;
-    int dealed;
-    volatile bool waiting;
-    
-
-    std::thread recv_thread;
-    volatile bool recv_running;
-    std::mutex mtk;
-    condition_variable cv;
-    int n_times;
-
-    std::mutex mtk2;
-    condition_variable cv2;
-    int count2;
-
-    // pthread_mutex_t queue_lock;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -58,20 +41,19 @@ public:
     
     static const bool uses_triples = false;
 
-    SemiRingProtocol() {}
-    SemiRingProtocol(Player& P);
-    SemiRingProtocol(const ReplicatedBase &other) : 
+    SemiRingProtocol2() {}
+    SemiRingProtocol2(Player& P);
+    SemiRingProtocol2(const ReplicatedBase &other) : 
         ReplicatedBase(other)
     {
     }
 
     // Init the protocol
-    SemiRingProtocol(const SemiRingProtocol<T> &other) : super(other)
-    {
-        
+    SemiRingProtocol2(const SemiRingProtocol2<T> &other) : super(other)
+    {   
     }
 
-    ~SemiRingProtocol() {
+    ~SemiRingProtocol2() {
         if (this->recv_thread.joinable()) {
             this->recv_running = false;
             signal();
@@ -125,36 +107,6 @@ public:
     //         int begin, int end, SubProcessor<T>& proc);
 
     T get_random();
-
-    void thread_handler();
-
-    inline void wait() {
-        std::unique_lock<std::mutex> lk(this->mtk);
-        if (--this->n_times < 0 and this->recv_running) {
-            cv.wait(lk);
-        }
-    }
-
-    inline void signal() {
-        std::unique_lock<std::mutex> lk(this->mtk);
-        if (++this->n_times <= 0) {
-            cv.notify_one();
-        }
-    }
-
-    inline void wait2() {
-        std::unique_lock<std::mutex> lk(this->mtk2);
-        if (--this->count2 < 0) {
-            cv2.wait(lk);
-        }
-    }
-
-    inline void signal2() {
-        std::unique_lock<std::mutex> lk(this->mtk2);
-        if (++this->count2 <= 0) {
-            cv2.notify_one();
-        }
-    }
 
 };
 
