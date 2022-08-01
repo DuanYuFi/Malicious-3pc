@@ -20,7 +20,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 	P.receive_relative(-1, os);
 	shared_prngs[1].SetSeed(os.get_data());
 
-    os.clear();
+    os.reset_write_head();
     if (P.my_real_num() == 0) {
         global_prng.ReSeed();
         os.append(global_prng.get_seed(), SEED_SIZE);
@@ -43,15 +43,18 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 
 template <class T>
 void Malicious3PCProtocol<T>::maybe_check() {
+
+    cout << results.size() << endl;
+
     if ((int) results.size() >= BATCH_SIZE)
-        check();
+        Check();
 }
 
 template <class T>
 void Malicious3PCProtocol<T>::init_mul()
 {
 
-    // maybe_check();
+    maybe_check();
 
 	for (auto& o : os)
         o.reset_write_head();
@@ -59,7 +62,7 @@ void Malicious3PCProtocol<T>::init_mul()
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::check() {
+void Malicious3PCProtocol<T>::Check() {
     for (auto& o : os)
         o.reset_write_head();
 
@@ -133,6 +136,7 @@ void Malicious3PCProtocol<T>::check() {
     for (int i = 0; i < 3; i ++) {
         sid[i] = global_prng.get_word();
     }
+    // return ;
     
     DZKProof proof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
     proof.pack(os[0]);
@@ -224,6 +228,8 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
+
+    results.push(result);
     return result;
 }
 

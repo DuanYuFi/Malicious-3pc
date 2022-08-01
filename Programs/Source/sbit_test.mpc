@@ -3,13 +3,13 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-# ROUNDS = 1
+ROUNDS = 10000
 
-# for i in range(ROUNDS):
-#     a & b
+for i in range(ROUNDS):
+    a & b
 
-# c = a & b
+c = a & b
 
-# b = a & c
+b = a & c
 
-# print_ln("%s", b.reveal())
+print_ln("%s", b.reveal())

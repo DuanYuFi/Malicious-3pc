@@ -53,10 +53,8 @@ public:
     {
         assert(T::vector_length == 2);
         share.assign_zero();
-        if (my_num > 0)
-            share[my_num - 1] = value;
-
-        share.is_zero_share = true;
+        if (my_num < 2)
+            share[my_num] = value;
     }
 
     void init_mul();
@@ -84,7 +82,7 @@ public:
         return {P, shared_prngs};
     }
 
-    void check();
+    void Check();
     void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 };
