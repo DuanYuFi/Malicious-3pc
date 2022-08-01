@@ -1,40 +1,26 @@
-#include <queue>
+#include "Math/Z2k.hpp"
+#include "Math/gfp.hpp"
+#include "Math/bigint.hpp"
+#include "Math/BitVec.h"
+
 #include <iostream>
-#include <mutex>
+#include <random>
+#include <ctime>
+#include <chrono>
 
 using namespace std;
 
-class A {
-    
-public:
-
-    int a;
-    void init() {
-        a = 1;
-    }
-
-};
-
-class B {
-
-public:
-    int a;
-    void init() {
-        a = 2;
-    }
-};
-
-class C: public A, public B {
-public:
-int a;
-    void init() {
-        A::init();
-    }
-};
+typedef BitVec_<long> T;
 
 int main() {
-    C c;
-    c.init();
-    cout << c.a << endl;
+
+    T v1(1);
+
+    
+    unsigned long x = v1.get();
+
+
+    cout << x << endl;
+
     return 0;
 }

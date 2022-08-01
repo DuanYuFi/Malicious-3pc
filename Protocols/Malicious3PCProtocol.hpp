@@ -2,9 +2,36 @@
 #define PROTOCOLS_MALICIOUS3PCPROTOCOL_HPP_
 
 #include "Malicious3PCProtocol.h"
+#include "BinaryCheck.hpp"
+
+#include "Replicated.h"
+#include "Tools/octetStream.h"
 
 template <class T>
-Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : prep(0), MC(0), P(P) {}
+Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : prep(0), MC(0), P(P) {
+    assert(P.num_players() == 3);
+	if (not P.is_encrypted())
+		insecure("unencrypted communication");
+
+	shared_prngs[0].ReSeed();
+	octetStream os;
+	os.append(shared_prngs[0].get_seed(), SEED_SIZE);
+	P.send_relative(1, os);
+	P.receive_relative(-1, os);
+	shared_prngs[1].SetSeed(os.get_data());
+
+    os.clear();
+    if (P.my_real_num() == 0) {
+        global_prng.ReSeed();
+        os.append(global_prng.get_seed(), SEED_SIZE);
+        P.send_all(os);
+    }
+    else {
+        P.receive_player(0, os);
+        global_prng.SetSeed(os.get_data());
+    }
+
+}
 
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) :
@@ -16,7 +43,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 
 template <class T>
 void Malicious3PCProtocol<T>::maybe_check() {
-    if ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    if ((int) results.size() >= BATCH_SIZE)
         check();
 }
 
@@ -25,6 +52,9 @@ void Malicious3PCProtocol<T>::init_mul()
 {
 	assert(this->prep);
 	assert(this->MC);
+
+    maybe_check();
+
 	for (auto& o : os)
         o.reset_write_head();
     add_shares.clear();
@@ -50,7 +80,78 @@ template <class T>
 void Malicious3PCProtocol<T>::check() {
 	assert(MC);
     
-	MC->Check(P);
+    int k = 8, cols = BATCH_SIZE / k;
+
+    uint64_t **input_left, **input_right, **input_result1, **input_result2, **input_mono1, **input_mono2;
+    uint64_t *row_left, *row_right;
+
+    input_left = new uint64_t*[k];
+    input_right = new uint64_t*[k];
+
+    row_left = new uint64_t[cols * 2];
+    row_right = new uint64_t[cols * 2];
+
+    // int size = results.size();
+    for (int i = 0; i < k; i ++) {
+        row_left[i] = new uint64_t[cols * 2];
+        row_right[i] = new uint64_t[cols * 2];
+        input_result1[i] = new uint64_t[cols * 2];
+        input_result2[i] = new uint64_t[cols * 2];
+        input_mono1[i] = new uint64_t[cols];
+        input_mono2[i] = new uint64_t[cols];
+
+        for (int j = 0; j < cols; j ++) {
+            auto x = input1.front();    input1.pop();
+            auto y = input2.front();    input2.pop();
+            auto z = results.front();   results.pop();
+            auto rho = rhos.front();    rhos.pop();
+
+            uint64_t ti = (z[1] + x[1] * y[1] + rho[1]).get();
+            uint64_t v0 = y[0].get();
+            uint64_t v1 = (x[1] - 2 * ti * x[1]).get();
+            uint64_t v2 = y[1].get();
+            uint64_t v3 = (x[0] - 2 * rho[0] * x[0]).get();
+            uint64_t v4 = (rho[0]).get() - ti;
+
+            row_left[i][j * 2] = v0;
+            row_left[i][j * 2 + 1] = v2;
+            row_right[i][j * 2] = v1;
+            row_right[i][j * 2 + 1] = v3;
+
+            input_result1[i][j * 2] = v1;
+            input_result1[i][j * 2 + 1] = v2;
+            input_result2[i][j * 2] = v0;
+            input_result2[i][j * 2 + 1] = v3;
+
+            input_mono1[i][j] = ti;
+            input_mono2[i][j] = rho[0].get();
+        }
+    }
+
+    int cnt = log(BATCH_SIZE) / log(k) + 1;
+    uint64_t **masks, **mask_ss1, **mask_ss2;
+    masks = new uint64_t*[cnt];
+    mask_ss1 = new uint64_t*[cnt];
+    mask_ss2 = new uint64_t*[cnt];
+
+    for (int i = 0; i < cnt; i++) {
+        masks[i] = new uint64_t[2*k];
+        mask_ss1[i] = new uint64_t[2*k];
+        mask_ss2[i] = new uint64_t[2*k];
+        for (int j = 0; j < 2 * k - 1; j ++) {
+            mask_ss1[i][j] = shared_prngs[0].get_word();
+            mask_ss2[i][j] = shared_prngs[1].get_word();
+            masks[i][j] = Mersenne::add(mask_ss1[i][j], mask_ss2[i][j]);
+        }
+    }
+
+    uint64_t sid = global_prng.get_word();
+    
+    DZKProof proof = prove(input_left, input_right, BATCH_SIZE, k, sid, masks);
+    octetStream os;
+    
+
+	
 }
 
 
@@ -58,8 +159,10 @@ template<class T>
 void Malicious3PCProtocol<T>::prepare_mul(const T& x,
         const T& y, int n)
 {
-
+    cout << typeid(typename T::value_type).name() << endl;
     typename T::value_type add_share = x.local_mul(y);
+    input1.push(x);
+    input2.push(y);
     prepare_reshare(add_share, n);
 
 }
@@ -71,6 +174,12 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     typename T::value_type tmp[2];
     for (int i = 0; i < 2; i++)
         tmp[i].randomize(shared_prngs[i], n);
+    
+    rhos.push({});
+    auto &rho = rhos.back();
+    rho[0] = tmp[0];
+    rho[1] = tmp[1];
+
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
     add_shares.push_back(add_share);

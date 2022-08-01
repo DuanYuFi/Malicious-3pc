@@ -436,7 +436,7 @@ VerMsg gen_vermsg(
     return vermsg;
 }
 
-bool verify_and_gates(
+bool verify(
     DZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono, 

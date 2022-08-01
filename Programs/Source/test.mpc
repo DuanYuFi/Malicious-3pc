@@ -1,8 +1,7 @@
 from Compiler.GC.types import *
 
-si32 = sbitint.get_type(32)
-a = si32(0b110110)
-b = si32(0b101101)
+a = sbit(1)
+b = sbit(0)
 
 c = a & b
 
