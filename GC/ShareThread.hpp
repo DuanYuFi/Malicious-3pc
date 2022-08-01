@@ -85,7 +85,7 @@ void ShareThread<T>::and_(Processor<T>& processor,
         const vector<int>& args, bool repeat)
 {
 
-    cout << "In ShareThread<T>::and_" << endl;
+    // cout << "In ShareThread<T>::and_" << endl;
     // cout << typeid(this->protocol).name() << endl;
 
     auto& protocol = this->protocol;
@@ -123,6 +123,8 @@ void ShareThread<T>::and_(Processor<T>& processor,
             res.mask(res, n);
         }
     }
+
+    // cout << "Finish ShareThread<T>::and_" << endl;
 }
 
 template<class T>

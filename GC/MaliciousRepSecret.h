@@ -114,17 +114,17 @@ class Malicious3PCSecret : public MalRepSecretBase<Malicious3PCSecret>
 
 public:
     typedef Malicious3PCProtocol<This> Protocol;
-    typedef Malicious3PCMC<This> MC;
+    // typedef Malicious3PCMC<This> MC;
     typedef SmallMalRepSecret small_type;
 
     Malicious3PCSecret() {}
     template<class T>
     Malicious3PCSecret(const T& other) : super(other) {}
 
-    static MC* new_mc(typename super::mac_key_type)
-    {
-        return new MC;
-    }
+    // static MC* new_mc(typename super::mac_key_type)
+    // {
+    //     return new MC;
+    // }
 
 };
 

@@ -8,7 +8,7 @@
 #include "Tools/octetStream.h"
 
 template <class T>
-Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : prep(0), MC(0), P(P) {
+Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
@@ -50,10 +50,8 @@ void Malicious3PCProtocol<T>::maybe_check() {
 template <class T>
 void Malicious3PCProtocol<T>::init_mul()
 {
-	assert(this->prep);
-	assert(this->MC);
 
-    maybe_check();
+    // maybe_check();
 
 	for (auto& o : os)
         o.reset_write_head();
@@ -61,24 +59,7 @@ void Malicious3PCProtocol<T>::init_mul()
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::init(Preprocessing<T>& prep, typename T::MAC_Check& MC) {
-	this->prep = &prep;
-	this->MC = &MC;
-}
-
-template <class T>
-typename T::Protocol Malicious3PCProtocol<T>::branch() {
-	typename T::Protocol res(P);
-	res.prep = prep;
-	res.MC = MC;
-	res.shared_prngs = shared_prngs;
-	res.init_mul();
-	return res;
-}
-
-template <class T>
 void Malicious3PCProtocol<T>::check() {
-	assert(MC);
     for (auto& o : os)
         o.reset_write_head();
 
@@ -200,10 +181,10 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     for (int i = 0; i < 2; i++)
         tmp[i].randomize(shared_prngs[i], n);
     
-    rhos.push({});
-    auto &rho = rhos.back();
+    array<typename T::value_type, 2> rho;
     rho[0] = tmp[0];
     rho[1] = tmp[1];
+    rhos.push(rho);
 
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
@@ -213,6 +194,9 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
 template<class T>
 void Malicious3PCProtocol<T>::exchange()
 {
+
+    cout << "In Malicious3PCProtocol::exchange()" << endl;
+
     if (os[0].get_length() > 0)
         P.pass_around(os[0], os[1], 1);
     this->rounds++;

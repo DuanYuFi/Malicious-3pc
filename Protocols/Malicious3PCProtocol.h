@@ -21,8 +21,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     queue<T> results, input1, input2;
     queue<array<typename T::value_type, 2>> rhos;
     vector<typename T::open_type> opened;
-    Preprocessing<T>* prep;
-    typename T::MAC_Check* MC;
+    // Preprocessing<T>* prep;
+    // typename T::MAC_Check* MC;
 
     array<octetStream, 2> os;
     PointerVector<typename T::clear> add_shares, uids;
@@ -79,9 +79,11 @@ public:
 
     void start_exchange();
     void stop_exchange();
-    
-    void init(Preprocessing<T>& prep, typename T::MAC_Check& MC);
-    typename T::Protocol branch();
+        
+    Malicious3PCProtocol branch() {
+        return {P, shared_prngs};
+    }
+
     void check();
     void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
