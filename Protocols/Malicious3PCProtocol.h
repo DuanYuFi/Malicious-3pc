@@ -33,7 +33,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, false_type);
 
-    const int BATCH_SIZE = 100000;
+    const int BATCH_SIZE = 10000;
 
 public:
 

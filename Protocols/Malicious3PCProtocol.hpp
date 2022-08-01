@@ -79,22 +79,25 @@ typename T::Protocol Malicious3PCProtocol<T>::branch() {
 template <class T>
 void Malicious3PCProtocol<T>::check() {
 	assert(MC);
-    
+    for (auto& o : os)
+        o.reset_write_head();
+
     int k = 8, cols = BATCH_SIZE / k;
+    int my_number = P.my_real_num();
 
     uint64_t **input_left, **input_right, **input_result1, **input_result2, **input_mono1, **input_mono2;
-    uint64_t *row_left, *row_right;
 
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
-
-    row_left = new uint64_t[cols * 2];
-    row_right = new uint64_t[cols * 2];
+    input_result1 = new uint64_t*[k];
+    input_result2 = new uint64_t*[k];
+    input_mono1 = new uint64_t*[k];
+    input_mono2 = new uint64_t*[k];
 
     // int size = results.size();
     for (int i = 0; i < k; i ++) {
-        row_left[i] = new uint64_t[cols * 2];
-        row_right[i] = new uint64_t[cols * 2];
+        input_left[i] = new uint64_t[cols * 2];
+        input_right[i] = new uint64_t[cols * 2];
         input_result1[i] = new uint64_t[cols * 2];
         input_result2[i] = new uint64_t[cols * 2];
         input_mono1[i] = new uint64_t[cols];
@@ -104,19 +107,19 @@ void Malicious3PCProtocol<T>::check() {
             auto x = input1.front();    input1.pop();
             auto y = input2.front();    input2.pop();
             auto z = results.front();   results.pop();
-            auto rho = rhos.front();    rhos.pop();
+            array<typename T::value_type, 2> rho = rhos.front();    rhos.pop();
 
             uint64_t ti = (z[1] + x[1] * y[1] + rho[1]).get();
             uint64_t v0 = y[0].get();
-            uint64_t v1 = (x[1] - 2 * ti * x[1]).get();
+            uint64_t v1 = x[1].get() - 2 * ti * x[1].get();
             uint64_t v2 = y[1].get();
-            uint64_t v3 = (x[0] - 2 * rho[0] * x[0]).get();
-            uint64_t v4 = (rho[0]).get() - ti;
+            uint64_t v3 = x[0].get() - 2 * rho[0].get() * x[0].get();
+            // uint64_t v4 = (rho[0]).get() - ti;
 
-            row_left[i][j * 2] = v0;
-            row_left[i][j * 2 + 1] = v2;
-            row_right[i][j * 2] = v1;
-            row_right[i][j * 2 + 1] = v3;
+            input_left[i][j * 2] = v0;
+            input_left[i][j * 2 + 1] = v2;
+            input_right[i][j * 2] = v1;
+            input_right[i][j * 2 + 1] = v3;
 
             input_result1[i][j * 2] = v1;
             input_result1[i][j * 2 + 1] = v2;
@@ -145,13 +148,35 @@ void Malicious3PCProtocol<T>::check() {
         }
     }
 
-    uint64_t sid = global_prng.get_word();
+    uint64_t sid[3];
+    for (int i = 0; i < 3; i ++) {
+        sid[i] = global_prng.get_word();
+    }
     
-    DZKProof proof = prove(input_left, input_right, BATCH_SIZE, k, sid, masks);
-    octetStream os;
-    
+    DZKProof proof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
+    proof.pack(os[0]);
+    P.pass_around(os[0], os[1], 1);
 
-	
+    DZKProof received_proof;
+    received_proof.unpack(os[1]);
+
+    VerMsg vermsg = gen_vermsg(received_proof, input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
+
+    for (auto& o : os)
+        o.reset_write_head();
+
+    vermsg.pack(os[0]);
+    P.pass_around(os[0], os[1], 1);
+
+    VerMsg received_vermsg;
+    received_vermsg.unpack(os[1]);
+
+    bool res = verify(received_proof, input_result2, input_mono2, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss2, (my_number + 1) % 3, my_number);
+    if (!res) {
+        throw mac_fail("MAC check failed");
+    }
+
+    cout << "Check passed" << endl;
 }
 
 
@@ -159,7 +184,7 @@ template<class T>
 void Malicious3PCProtocol<T>::prepare_mul(const T& x,
         const T& y, int n)
 {
-    cout << typeid(typename T::value_type).name() << endl;
+    // cout << typeid(typename T::value_type).name() << endl;
     typename T::value_type add_share = x.local_mul(y);
     input1.push(x);
     input2.push(y);

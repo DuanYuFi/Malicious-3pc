@@ -1,0 +1,15 @@
+from Compiler.GC.types import *
+
+a = sbit(1)
+b = sbit(0)
+
+ROUNDS = 10000
+
+for i in range(ROUNDS):
+    a & b
+
+c = a & b
+
+b = a & c
+
+print_ln("%s", b.reveal())

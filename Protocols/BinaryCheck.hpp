@@ -16,6 +16,31 @@ typedef unsigned __int128 uint128_t;
 
 struct DZKProof {
     vector<vector<uint64_t>> p_evals_masked;
+
+public:
+    void pack(octetStream &os) {
+        os.store(p_evals_masked.size());
+        os.store(p_evals_masked[0].size());
+        for (auto each: p_evals_masked) {
+            for (uint64_t each_eval: each) {
+                os.store(each_eval);
+            }
+        }
+    }
+
+    void unpack(octetStream &os) {
+        size_t num_p_evals_masked = 0;
+        size_t num_p_evals_masked_each = 0;
+        os.consume(num_p_evals_masked);
+        os.consume(num_p_evals_masked_each);
+        p_evals_masked.resize(num_p_evals_masked);
+        for (size_t i = 0; i < num_p_evals_masked; i++) {
+            p_evals_masked[i].resize(num_p_evals_masked_each);
+            for (size_t j = 0; j < num_p_evals_masked_each; j++) {
+                os.consume(p_evals_masked[i][j]);
+            }
+        }
+    }
 };
 
 uint64_t get_rand() {
@@ -83,7 +108,7 @@ void append_one_msg(Hash* hash, uint64_t msg) {
 
 void append_msges(Hash* hash, vector<uint64_t> msges) {
     octetStream buffer;
-    for(int i = 0; i < msges.size() ; i++) {
+    for(uint64_t i = 0; i < msges.size() ; i++) {
         Z2<64>(msges[i]).pack(buffer);
         (*hash).update(buffer);
     }
@@ -138,7 +163,7 @@ DZKProof prove(
         eval_result[i] = new uint64_t[k];
     }
     uint64_t* eval_p_poly = new uint64_t[2 * k - 1];
-    uint64_t r;
+    // uint64_t r;
     uint128_t temp_result;
     uint64_t index;
 
@@ -247,6 +272,36 @@ struct VerMsg {
     vector<uint64_t> p_eval_r_ss;
     uint64_t final_input;
     uint64_t final_result_ss;
+
+public:
+    void pack(octetStream &os) {
+        os.store(p_eval_ksum_ss.size());
+        for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
+            os.store(p_eval_ksum_ss[i]);
+        }
+        os.store(p_eval_r_ss.size());
+        for(uint64_t i = 0; i < p_eval_r_ss.size(); i++) {
+            os.store(p_eval_r_ss[i]);
+        }
+        os.store(final_input);
+        os.store(final_result_ss);
+    }
+
+    void unpack(octetStream &os) {
+        uint64_t size = 0;
+        os.consume(size);
+        p_eval_ksum_ss.resize(size);
+        for(uint64_t i = 0; i < size; i++) {
+            os.consume(p_eval_ksum_ss[i]);
+        }
+        os.consume(size);
+        p_eval_r_ss.resize(size);
+        for(uint64_t i = 0; i < size; i++) {
+            os.consume(p_eval_r_ss[i]);
+        }
+        os.consume(final_input);
+        os.consume(final_result_ss);
+    }
 };
 
 VerMsg gen_vermsg(
@@ -363,7 +418,7 @@ VerMsg gen_vermsg(
         append_msges(&transcript_hash, proof.p_evals_masked[cnt - 1]);
 
         uint64_t* p_evals_ss = new uint64_t[2 * k - 1]; 
-        for(int i = 0; i < 2 * k - 1; i++) { // Assume k < 8
+        for(uint64_t i = 0; i < 2 * k - 1; i++) { // Assume k < 8
             p_evals_ss[i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt][i]);
         } 
 
