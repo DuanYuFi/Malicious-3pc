@@ -2,6 +2,8 @@
 #define PROTOCOLS_BINSRYCHECK_HPP_
 
 #include "Math/mersenne.hpp"
+#include "Math/Z2k.h"
+#include "Tools/Hash.h"
 #include <cstdlib>
 #include <ctime>
 #include <vector>
@@ -13,8 +15,7 @@ typedef unsigned __int128 uint128_t;
 // clock_t begin_time, finish_time;
 
 struct DZKProof {
-    vector<vector<uint64_t>> p_evlas_ss1;
-    vector<vector<uint64_t>> p_evlas_ss2;
+    vector<vector<uint64_t>> p_evals_masked;
 };
 
 uint64_t get_rand() {
@@ -74,21 +75,44 @@ uint64_t* evaluate_bases(uint64_t n, uint64_t r) {
     return result;
 }
 
+void append_one_msg(Hash* hash, uint64_t msg) {
+    octetStream buffer;
+    Z2<64>(msg).pack(buffer);
+    (*hash).update(buffer);
+}
+
+void append_msges(Hash* hash, vector<uint64_t> msges) {
+    octetStream buffer;
+    for(int i = 0; i < msges.size() ; i++) {
+        Z2<64>(msges[i]).pack(buffer);
+        (*hash).update(buffer);
+    }
+}
+
+uint64_t get_challenge(Hash hash) {
+    octetStream buffer;
+    hash.final(buffer);
+    Z2<64> eta_2k;
+    eta_2k.unpack(buffer);
+    uint64_t eta = eta_2k.get_limb(0);
+    return eta;
+}
 
 DZKProof prove(
     uint64_t** input_left, 
     uint64_t** input_right, 
-    // uint64_t var, 
-    uint64_t copy, 
+    uint64_t batch_size, 
     uint64_t k, 
-    // uint64_t sid, 
-    uint64_t* rands
+    uint64_t sid,
+    uint64_t** masks
 ) {
-    // uint64_t L = var;
-    uint64_t T = copy;
+    uint64_t T = batch_size;
     uint64_t s = T / k;
-    // uint64_t eta = generate_challenge();
-    uint64_t eta = rands[0];
+
+    Hash transcript_hash;
+
+    append_one_msg(&transcript_hash, sid);
+    uint64_t eta = get_challenge(transcript_hash);
 
     //Prepare Input
     // begin_time = clock();
@@ -104,8 +128,8 @@ DZKProof prove(
     // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
 
     s *= 2;
-    vector<vector<uint64_t>> p_evlas_ss1;
-    vector<vector<uint64_t>> p_evlas_ss2;
+    vector<vector<uint64_t>> p_evals_masked;
+    // vector<vector<uint64_t>> p_evals_masked2;
     uint64_t** base = get_bases(k);
     uint64_t* eval_base;
     uint64_t s0;
@@ -148,22 +172,29 @@ DZKProof prove(
 
         //generate proof
         // begin_time = clock();
-        vector<uint64_t> ss1(2 * k - 1), ss2(2 * k - 1);
-        uint64_t temp;
-        for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            ss1[i] = get_rand();
-            if(eval_p_poly[i] > ss1[i]) {
-                temp = eval_p_poly[i] - ss1[i];
-            }
-            else {
-                temp = Mersenne::PR - ss1[i] + eval_p_poly[i];
-            }
-            ss2[i] = temp;
-        }
-        p_evlas_ss1.push_back(ss1);
-        p_evlas_ss2.push_back(ss2);
+        // vector<uint64_t> ss1(2 * k - 1), ss2(2 * k - 1);
+        // uint64_t temp;
+        // for(uint64_t i = 0; i < 2 * k - 1; i++) {
+        //     ss1[i] = get_rand();
+        //     if(eval_p_poly[i] > ss1[i]) {
+        //         temp = eval_p_poly[i] - ss1[i];
+        //     }
+        //     else {
+        //         temp = Mersenne::PR - ss1[i] + eval_p_poly[i];
+        //     }
+        //     ss2[i] = temp;
+        // }
+        // p_evals_masked1.push_back(ss1);
+        // p_evals_masked2.push_back(ss2);
         // finish_time = clock();
         // cout<<"Generate DZKProof Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
+
+        vector<uint64_t> ss(2 * k - 1);
+        for(uint64_t i = 0; i < 2 * k - 1; i++) {
+            ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt - 1][i]);
+        }
+        p_evals_masked.push_back(ss);
+        append_msges(&transcript_hash, ss);
 
         if (s == 1) {
             break;
@@ -171,7 +202,8 @@ DZKProof prove(
 
         // Prepare Next Input
         // begin_time = clock();
-        r = rands[cnt];
+        // r = masks[cnt];
+        uint64_t r = get_challenge(transcript_hash);
         eval_base = evaluate_bases(k, r);
 
         s0 = s;
@@ -205,8 +237,7 @@ DZKProof prove(
     }
 
     DZKProof proof = { 
-        p_evlas_ss1, 
-        p_evlas_ss2
+        p_evals_masked,
     };
     return proof;
 }
@@ -219,22 +250,27 @@ struct VerMsg {
 };
 
 VerMsg gen_vermsg(
-    vector<vector<uint64_t>> p_eval_ss, 
+    DZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono, 
     // uint64_t var, 
-    uint64_t copy, 
+    uint64_t batch_size, 
     uint64_t k, 
-    // uint64_t sid, 
-    uint64_t* rands,
+    uint64_t sid, 
+    uint64_t** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
     // uint64_t L = var;
-    uint64_t T = copy;
+    uint64_t T = batch_size;
     uint64_t s = T / k;
 
-    uint64_t eta = rands[0];
+    Hash transcript_hash;
+
+    append_one_msg(&transcript_hash, sid);
+    uint64_t eta = get_challenge(transcript_hash);
+
+    // uint64_t eta = rands[0];
 
     uint64_t* eval_base;
     uint64_t r, s0, index, cnt = 1;
@@ -323,16 +359,25 @@ VerMsg gen_vermsg(
     {
         // cout<<"s : "<<s<<endl;
         // cout<<"k : "<<k<<endl;
+        
+        append_msges(&transcript_hash, proof.p_evals_masked[cnt - 1]);
+
+        uint64_t* p_evals_ss = new uint64_t[2 * k - 1]; 
+        for(int i = 0; i < 2 * k - 1; i++) { // Assume k < 8
+            p_evals_ss[i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt][i]);
+        } 
 
         // Compute share of sum of p's evaluations over [0, k - 1]
         uint64_t res = 0;
         for(uint64_t j = 0; j < k; j++) { // Assume k < 8
-            res += p_eval_ss[cnt - 1][j];
+            res += p_evals_ss[j];
         }
         p_eval_ksum_ss[cnt - 1] = Mersenne::modp(res);
 
+        // r = rands[cnt];
+        r = get_challenge(transcript_hash);
+
         if(s == 1) {
-            r = rands[cnt];
             eval_base = evaluate_bases(k, r);
             temp_result = 0;
             for(uint64_t i = 0; i < k; i++) {
@@ -342,18 +387,17 @@ VerMsg gen_vermsg(
             eval_base = evaluate_bases(2 * k - 1, r);
             temp_result = 0;
             for(uint64_t i = 0; i < 2 * k - 1; i++) {
-                temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_eval_ss[cnt - 1][i]);
+                temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
             }
             final_result_ss = Mersenne::modp_128(temp_result);
             break;
         }
 
         // Compute share of p's evaluation at r
-        r = rands[cnt];
         eval_base = evaluate_bases(2 * k - 1, r);
         temp_result = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_eval_ss[cnt - 1][i]);
+            temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
         }
         p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
 
@@ -393,25 +437,24 @@ VerMsg gen_vermsg(
 }
 
 bool verify_and_gates(
-    vector<vector<uint64_t>> p_eval_ss, 
+    DZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono, 
     VerMsg other_vermsg, 
-    // uint64_t var, 
-    uint64_t copy, 
+    uint64_t batch_size, 
     uint64_t k, 
-    // uint64_t sid, 
-    uint64_t* rands,
+    uint64_t sid, 
+    uint64_t** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
     // uint64_t L = var;
-    uint64_t T = copy;
+    uint64_t T = batch_size;
     // uint64_t s = T / k;
     uint64_t len = log(2 * T) / log(k) + 2;
     
-    // VerMsg self_vermsg = gen_vermsg(p_eval_ss, input, input_mono, var, copy, k, sid, rands, prover_ID, party_ID);
-    VerMsg self_vermsg = gen_vermsg(p_eval_ss, input, input_mono, copy, k, rands, prover_ID, party_ID);
+    // VerMsg self_vermsg = gen_vermsg(p_eval_ss, input, input_mono, var, batch_size, k, sid, rands, prover_ID, party_ID);
+    VerMsg self_vermsg = gen_vermsg(proof, input, input_mono, batch_size, k, sid, masks_ss, prover_ID, party_ID);
     // cout << "size of p_eval_ksum_ss: " << self_vermsg.p_eval_ksum_ss.size() << endl;
     // cout << "size of p_eval_r_ss: " << self_vermsg.p_eval_r_ss.size() << endl;
 
@@ -585,8 +628,8 @@ bool verify_and_gates(
 //     cout<<endl;
 
 //     start = clock();
-//     VerMsg other_vermsg = gen_vermsg(proof.p_evlas_ss1, input_left_copy, input_mono_ss1, L, T, k, sid, rands, 1, 0);
-//     bool res = verify_and_gates(proof.p_evlas_ss2, input_right_copy, input_mono_ss2, other_vermsg, L, T, k, sid, rands, 1, 2);
+//     VerMsg other_vermsg = gen_vermsg(proof.p_evals_masked1, input_left_copy, input_mono_ss1, L, T, k, sid, rands, 1, 0);
+//     bool res = verify_and_gates(proof.p_evals_masked2, input_right_copy, input_mono_ss2, other_vermsg, L, T, k, sid, rands, 1, 2);
 //     end = clock();
 //     cout<<"Total Verification Time = "<<double(end-start)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
 //     cout<<"Verified = "<<res<<endl;
