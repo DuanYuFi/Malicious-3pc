@@ -66,7 +66,7 @@ void Malicious3PCProtocol<T>::Check() {
     for (auto& o : os)
         o.clear();
 
-    int k = 8, cols = BATCH_SIZE / k;
+    int k = 8, cols = (BATCH_SIZE - 1) / k + 1;
     int my_number = P.my_real_num();
 
     uint64_t **input_left, **input_right, **input_result1, **input_result2, **input_mono1, **input_mono2;

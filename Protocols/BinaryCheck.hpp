@@ -134,7 +134,7 @@ DZKProof prove(
     // cout<<"in prove"<<endl;
 
     uint64_t T = batch_size;
-    uint64_t s = T / k;
+    uint64_t s = (T - 1) / k + 1;
 
     // cout<<"T : "<<s<<endl;
 
@@ -337,7 +337,8 @@ VerMsg gen_vermsg(
 
     // uint64_t L = var;
     uint64_t T = batch_size;
-    uint64_t s = T / k;
+    // uint64_t s = T / k;
+    uint64_t s = (T - 1) / k + 1;
 
     Hash transcript_hash;
 
@@ -434,8 +435,10 @@ VerMsg gen_vermsg(
     {
         cout<<"s : "<<s<<endl;
         cout<<"k : "<<k<<endl;
+        cout << "cnt:" << cnt << endl;
         
         cout << "proof.p_evals_masked.size(): " << proof.p_evals_masked.size() << endl;
+        cout << "proof.p_evals_masked[cnt - 1].size(): " << proof.p_evals_masked[cnt - 1].size() << endl;
 
         append_msges(&transcript_hash, proof.p_evals_masked[cnt - 1]);
 
@@ -486,7 +489,6 @@ VerMsg gen_vermsg(
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt - 1][i]);
         }
-        cout<<"cnt: " << cnt << endl;
         cout<<"p_eval_r_ss.size(): " << p_eval_r_ss.size() << endl;
         p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
         cout<<"checkpoint 4"<<endl;
