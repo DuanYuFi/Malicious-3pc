@@ -272,6 +272,12 @@ DZKProof prove(
         cnt++;
     }
 
+    for(uint64_t i = 0; i < k; i++) {
+        delete[] eval_result[i];
+    }
+    delete[] eval_result;
+    delete[] eval_p_poly;
+    
     DZKProof proof = { 
         p_evals_masked,
     };
@@ -350,48 +356,48 @@ VerMsg gen_vermsg(
     uint64_t final_input;
     uint64_t final_result_ss;
 
-    if(false) {
-        // Compute ETA
-        // begin_time = clock();
-        uint64_t** eta_power = new uint64_t*[k];
-        for(uint64_t i = 0; i < k; i++) {
-            eta_power [i] = new uint64_t[s];
-            if (i == 0) {
-                eta_power[i][0] = 1;
-            }
-            else {
-                eta_power[i][0] = Mersenne::mul(eta_power[i - 1][s - 1], eta); 
-            }
-            for(uint64_t j = 1; j < s; j ++) {
-                eta_power[i][j] = Mersenne::mul(eta_power[i][j - 1], eta);
-            }
-        }
-        // finish_time = clock();
-        // cout<<"Compute ETA Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
+    // if(false) {
+    //     // Compute ETA
+    //     // begin_time = clock();
+    //     uint64_t** eta_power = new uint64_t*[k];
+    //     for(uint64_t i = 0; i < k; i++) {
+    //         eta_power [i] = new uint64_t[s];
+    //         if (i == 0) {
+    //             eta_power[i][0] = 1;
+    //         }
+    //         else {
+    //             eta_power[i][0] = Mersenne::mul(eta_power[i - 1][s - 1], eta); 
+    //         }
+    //         for(uint64_t j = 1; j < s; j ++) {
+    //             eta_power[i][j] = Mersenne::mul(eta_power[i][j - 1], eta);
+    //         }
+    //     }
+    //     // finish_time = clock();
+    //     // cout<<"Compute ETA Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
         
-        // Prepare Input
-        if ((party_ID + 1 - prover_ID) % 3 == 0) {
-            // begin_time = clock();
-            for(uint64_t i = 0; i < k; i++) {
-                for(uint64_t j = 0; j < s; j++) {
-                    input[i][2 * j] = Mersenne::mul(input[i][2 * j], eta_power[i][j]);
-                    input[i][2 * j + 1] = Mersenne::mul(input[i][2 * j + 1], eta_power[i][j]);
-                }
-            }
-            // finish_time = clock();
-            // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-        }
+    //     // Prepare Input
+    //     if ((party_ID + 1 - prover_ID) % 3 == 0) {
+    //         // begin_time = clock();
+    //         for(uint64_t i = 0; i < k; i++) {
+    //             for(uint64_t j = 0; j < s; j++) {
+    //                 input[i][2 * j] = Mersenne::mul(input[i][2 * j], eta_power[i][j]);
+    //                 input[i][2 * j + 1] = Mersenne::mul(input[i][2 * j + 1], eta_power[i][j]);
+    //             }
+    //         }
+    //         // finish_time = clock();
+    //         // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
+    //     }
 
-        // begin_time = clock();
-        p_eval_r_ss[0] = 0;
-        for(uint64_t i = 0; i < k; i++) {
-            p_eval_r_ss[0] += Mersenne::inner_product(eta_power[i], input_mono[i], s);
-        }
-        p_eval_r_ss[0] = Mersenne::modp(p_eval_r_ss[0]);
-        // finish_time = clock();
-        // cout<<"Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-    }
-    else {
+    //     // begin_time = clock();
+    //     p_eval_r_ss[0] = 0;
+    //     for(uint64_t i = 0; i < k; i++) {
+    //         p_eval_r_ss[0] += Mersenne::inner_product(eta_power[i], input_mono[i], s);
+    //     }
+    //     p_eval_r_ss[0] = Mersenne::modp(p_eval_r_ss[0]);
+    //     // finish_time = clock();
+    //     // cout<<"Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
+    // }
+    // else {
         // begin_time = clock();
         if ((party_ID + 1 - prover_ID) % 3 == 0) {
             temp_result = 0;
@@ -419,7 +425,7 @@ VerMsg gen_vermsg(
         }
         // finish_time = clock();
         // cout<<"Prepare Input + Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-    }
+    // }
 
     s *= 2;
     while(true)
@@ -465,6 +471,7 @@ VerMsg gen_vermsg(
                 temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
             }
             final_result_ss = Mersenne::modp_128(temp_result);
+            // delete[] p_evals_ss;
             break;
         }
 
@@ -511,6 +518,7 @@ VerMsg gen_vermsg(
         final_input,
         final_result_ss
     };
+
     return vermsg;
 }
 
