@@ -457,8 +457,6 @@ VerMsg gen_vermsg(
         r = get_challenge(transcript_hash);
 
         if(s == 1) {
-            cout<<"breaking..."<<endl;
-
             eval_base = evaluate_bases(k, r);
             temp_result = 0;
             for(uint64_t i = 0; i < k; i++) {
@@ -472,6 +470,7 @@ VerMsg gen_vermsg(
             }
             final_result_ss = Mersenne::modp_128(temp_result);
             // delete[] p_evals_ss;
+            cout<<"breaking..."<<endl;
             break;
         }
 
@@ -518,7 +517,7 @@ VerMsg gen_vermsg(
         final_input,
         final_result_ss
     };
-
+    
     return vermsg;
 }
 
