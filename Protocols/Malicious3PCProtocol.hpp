@@ -115,16 +115,16 @@ void Malicious3PCProtocol<T>::Check() {
         }
     }
 
-    int cnt = log(BATCH_SIZE) / log(k) + 1;
+    int cnt = log(2 * BATCH_SIZE) / log(k) + 2;
     uint64_t **masks, **mask_ss1, **mask_ss2;
     masks = new uint64_t*[cnt];
     mask_ss1 = new uint64_t*[cnt];
     mask_ss2 = new uint64_t*[cnt];
 
     for (int i = 0; i < cnt; i++) {
-        masks[i] = new uint64_t[2*k];
-        mask_ss1[i] = new uint64_t[2*k];
-        mask_ss2[i] = new uint64_t[2*k];
+        masks[i] = new uint64_t[2*k-1];
+        mask_ss1[i] = new uint64_t[2*k-1];
+        mask_ss2[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
             mask_ss1[i][j] = shared_prngs[0].get_word();
             mask_ss2[i][j] = shared_prngs[1].get_word();

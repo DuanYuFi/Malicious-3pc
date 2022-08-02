@@ -131,8 +131,12 @@ DZKProof prove(
     uint64_t sid,
     uint64_t** masks
 ) {
+    cout<<"in prove"<<endl;
+
     uint64_t T = batch_size;
     uint64_t s = T / k;
+
+    cout<<"T : "<<s<<endl;
 
     Hash transcript_hash;
 
@@ -170,8 +174,8 @@ DZKProof prove(
     uint16_t cnt = 1;
 
     while(true){
-        // cout<<"s : "<<s<<endl;
-        // cout<<"k : "<<k<<endl;
+        cout<<"s : "<<s<<endl;
+        cout<<"k : "<<k<<endl;
 
         //Compute P(X)
         // begin_time = clock();
@@ -180,6 +184,8 @@ DZKProof prove(
                 eval_result[i][j] = Mersenne::inner_product(input_left[i], input_right[j], s);
             }
         }
+
+        cout<<"checkpoint 1"<<endl;
 
         for(uint64_t i = 0; i < k; i++) {
             eval_p_poly[i] = eval_result[i][i];
@@ -192,6 +198,8 @@ DZKProof prove(
                 }
             }
         }
+        cout<<"checkpoint 2"<<endl;
+
         // finish_time = clock();
         // cout<<"Interpolation Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
 
@@ -221,7 +229,10 @@ DZKProof prove(
         p_evals_masked.push_back(ss);
         append_msges(&transcript_hash, ss);
 
+        cout<<"checkpoint 3"<<endl;
+
         if (s == 1) {
+            cout << "breaking.. cnt: " << cnt << endl;
             break;
         }
 
@@ -316,6 +327,8 @@ VerMsg gen_vermsg(
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
+    cout<<"in gen_vermsg"<<endl;
+
     // uint64_t L = var;
     uint64_t T = batch_size;
     uint64_t s = T / k;
@@ -412,15 +425,20 @@ VerMsg gen_vermsg(
     s *= 2;
     while(true)
     {
-        // cout<<"s : "<<s<<endl;
-        // cout<<"k : "<<k<<endl;
+        cout<<"s : "<<s<<endl;
+        cout<<"k : "<<k<<endl;
         
+        cout << "proof.p_evals_masked.size(): " << proof.p_evals_masked.size() << endl;
+
         append_msges(&transcript_hash, proof.p_evals_masked[cnt - 1]);
+
+        cout<<"checkpoint 1"<<endl;
 
         uint64_t* p_evals_ss = new uint64_t[2 * k - 1]; 
         for(uint64_t i = 0; i < 2 * k - 1; i++) { // Assume k < 8
-            p_evals_ss[i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt][i]);
+            p_evals_ss[i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt - 1][i]);
         } 
+        cout<<"checkpoint 2"<<endl;
 
         // Compute share of sum of p's evaluations over [0, k - 1]
         uint64_t res = 0;
@@ -428,11 +446,14 @@ VerMsg gen_vermsg(
             res += p_evals_ss[j];
         }
         p_eval_ksum_ss[cnt - 1] = Mersenne::modp(res);
+        cout<<"checkpoint 3"<<endl;
 
         // r = rands[cnt];
         r = get_challenge(transcript_hash);
 
         if(s == 1) {
+            cout<<"breaking..."<<endl;
+
             eval_base = evaluate_bases(k, r);
             temp_result = 0;
             for(uint64_t i = 0; i < k; i++) {
@@ -455,6 +476,7 @@ VerMsg gen_vermsg(
             temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
         }
         p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
+        cout<<"checkpoint 4"<<endl;
 
         // Compute New Input
         // begin_time = clock();
@@ -476,6 +498,8 @@ VerMsg gen_vermsg(
                 }
             }
         }
+        cout<<"checkpoint 5"<<endl;
+
         // finish_time = clock();
         // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
 
@@ -503,6 +527,8 @@ bool verify(
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
+    cout<<"in verify"<<endl;
+
     // uint64_t L = var;
     uint64_t T = batch_size;
     // uint64_t s = T / k;
