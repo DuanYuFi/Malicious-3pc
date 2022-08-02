@@ -426,7 +426,7 @@ VerMsg gen_vermsg(
         // finish_time = clock();
         // cout<<"Prepare Input + Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
     // }
-
+    
     s *= 2;
     while(true)
     {
@@ -439,8 +439,8 @@ VerMsg gen_vermsg(
 
         cout<<"checkpoint 1"<<endl;
 
-        uint64_t* p_evals_ss = new uint64_t[2 * k - 1]; 
-        for(uint64_t i = 0; i < 2 * k - 1; i++) { // Assume k < 8
+        vector<uint64_t> p_evals_ss(2 * k - 1);
+        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
             p_evals_ss[i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt - 1][i]);
         } 
         cout<<"checkpoint 2"<<endl;
@@ -457,13 +457,16 @@ VerMsg gen_vermsg(
         r = get_challenge(transcript_hash);
 
         if(s == 1) {
-            cout<<"breaking..."<<endl;
+            cout<<"in s== 1 loop..."<<endl;
 
             eval_base = evaluate_bases(k, r);
             temp_result = 0;
+
             for(uint64_t i = 0; i < k; i++) {
                 temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) input[i][0]);
             }
+            cout<<"checkpoint 6"<<endl;
+
             final_input = Mersenne::modp_128(temp_result);
             eval_base = evaluate_bases(2 * k - 1, r);
             temp_result = 0;
@@ -471,7 +474,7 @@ VerMsg gen_vermsg(
                 temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
             }
             final_result_ss = Mersenne::modp_128(temp_result);
-            // delete[] p_evals_ss;
+            cout<<"breaking..."<<endl;
             break;
         }
 
@@ -481,6 +484,8 @@ VerMsg gen_vermsg(
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
         }
+        cout<<"cnt: " << cnt << endl;
+        cout<<"p_eval_r_ss.size(): " << p_eval_r_ss.size() << endl;
         p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
         cout<<"checkpoint 4"<<endl;
 
@@ -512,13 +517,16 @@ VerMsg gen_vermsg(
         cnt++;
     }
 
+    // delete[] p_evals_ss;
+    cout<<"constructing vermsg"<<endl;
+
     VerMsg vermsg = {
         p_eval_ksum_ss,
         p_eval_r_ss,
         final_input,
         final_result_ss
     };
-
+    cout<<"returning..."<<endl;
     return vermsg;
 }
 
@@ -578,150 +586,4 @@ bool verify(
 }
 
 #endif
-
-// void shape(
-//     uint64_t** input, 
-//     uint64_t L, 
-//     uint64_t T, 
-//     uint64_t k, 
-//     uint64_t** &input_left,
-//     uint64_t** &input_left_copy,
-//     uint64_t** &input_right, 
-//     uint64_t** &input_right_copy,
-//     uint64_t** &input_mono_left,
-//     uint64_t** &input_mono_right
-// ) {
-//     uint64_t s = (T - 1) / k + 1;
-
-//     uint64_t* meta_left = new uint64_t[2 * s * k];
-//     input_left = new uint64_t*[k];
-//     input_left_copy = new uint64_t*[k];
-//     for(uint64_t i = 0; i < k; i++) {
-//         input_left[i] = meta_left + i * 2 * s;
-//         input_left_copy[i] = new uint64_t[2 * s];
-//         for(uint64_t j = 0; j < s; j++) {
-//             if(i * s + j >= T) {
-//                 input_left[i][2 * j] = 0;
-//                 input_left[i][2 * j + 1] = 0;
-//                 input_left_copy[i][2 * j] = input_left[i][2 * j];
-//                 input_left_copy[i][2 * j + 1] = input_left[i][2 * j + 1];
-//             }
-//             else {
-//                 input_left[i][2 * j] = input[0][i * s + j];
-//                 input_left[i][2 * j + 1] = input[2][i * s + j];
-//                 input_left_copy[i][2 * j] = input_left[i][2 * j];
-//                 input_left_copy[i][2 * j + 1] = input_left[i][2 * j + 1];
-//             }
-//         }
-//     }
-
-//     uint64_t* meta_right = new uint64_t[2 * s * k];
-//     input_right = new uint64_t*[k];
-//     input_right_copy = new uint64_t*[k];
-//     for(uint64_t i = 0; i < k; i++) {
-//         input_right[i] = meta_right + i * 2 * s;
-//         input_right_copy[i] = new uint64_t[2 * s];
-//         for(uint64_t j = 0; j < s; j++) {
-//             if(i * s + j >= T) {
-//                 input_right[i][2 * j] = 0;
-//                 input_right[i][2 * j + 1] = 0;
-//                 input_right_copy[i][2 * j] = input_right[i][2 * j];
-//                 input_right_copy[i][2 * j + 1] = input_right[i][2 * j + 1];
-//             }
-//             else {
-//                 input_right[i][2 * j] = input[1][i * s + j];
-//                 input_right[i][2 * j + 1] = input[3][i * s + j];
-//                 input_right_copy[i][2 * j] = input_right[i][2 * j];
-//                 input_right_copy[i][2 * j + 1] = input_right[i][2 * j + 1];
-//             }
-//         }
-//     }
-
-//     uint64_t* meta_mono_left = new uint64_t[s * k];
-//     input_mono_left = new uint64_t*[k];
-//     for(uint64_t i = 0; i < k; i++) {
-//         input_mono_left[i] = meta_mono_left + i * s;
-//         for(uint64_t j = 0; j < s; j++) {
-//             if(i * s + j >= T) {
-//                 input_mono_left[i][j] = 0;
-//             }
-//             else {
-//                 input_mono_left[i][j] = input[4][i * s + j];
-//             }
-//         }
-//     }
-
-//     uint64_t* meta_mono_right = new uint64_t[s * k];
-//     input_mono_right = new uint64_t*[k];
-//     for(uint64_t i = 0; i < k; i++) {
-//         input_mono_right[i] = meta_mono_right + i * s;
-//         for(uint64_t j = 0; j < s; j++) {
-//             if(i * s + j >= T) {
-//                 input_mono_right[i][j] = 0;
-//             }
-//             else {
-//                 input_mono_right[i][j] = input[5][i * s + j];
-//             }
-//         }
-//     }
-// }
-
-// int main() {
-//     uint64_t T = 10000000;
-//     uint64_t L = 6;
-//     uint64_t k = 4;
-//     uint64_t _party_id = 1;
-//     srand((unsigned)time(NULL));
-//     uint64_t sid = get_rand();
-
-//     uint64_t cnt = log(2 * T)/log(k) + 1 + 2; // log_k 2T + 2 rounds plus 1 eta
-//     //cout<<"Total Randomness : "<<cnt<<endl;
-//     uint64_t* rands = new uint64_t[cnt];
-//     for(uint64_t i = 0; i < cnt; i++) {
-//         rands[i] = get_rand();
-//     }
-
-//     // Generate satisfying inputs
-//     uint64_t** input = new uint64_t*[L];
-//     for(uint64_t i = 0; i < L - 1; i++) {
-//         input[i] = new uint64_t[T];
-//         for(uint64_t j = 0; j < T; j++) {
-//             input[i][j] = get_rand();
-//         }
-//     }
-//     input[L - 1] = new uint64_t[T];
-//     for(uint64_t j = 0; j < T; j++) {
-//         uint128_t temp_res = (uint128_t)input[0][j] * (uint128_t)input[1][j] + (uint128_t)input[2][j] * (uint128_t)input[3][j];   
-//         input[L - 1][j] = Mersenne::modp_128(temp_res);
-//         if (input[L-1][j] > input[L-2][j]) {
-//             input[L-1][j] = input[L-1][j] - input[L-2][j];
-//         }
-//         else {
-//             input[L-1][j] = Mersenne::PR - input[L-2][j] +input[L-1][j];
-//         }
-//     }
-
-//     uint64_t** input_left, **input_right, **input_mono_ss1, **input_mono_ss2, **input_left_copy, **input_right_copy;
-
-//     shape(input, L, T, k, input_left, input_left_copy, input_right, input_right_copy, input_mono_ss1, input_mono_ss2);
-
-//     cout<<"T: "<<T<<endl;
-//     T = ((T - 1) / k + 1) * k; // Update T to include pMersenne::adding triples
-//     clock_t start, end;
-
-//     start = clock();
-//     DZKProof proof = prove_and_gate(_party_id, input_left, input_right, L, T, k, sid, rands);
-//     end = clock();
-//     cout<<"Total Proving Time = "<<double(end-start)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-//     cout<<endl;
-
-//     start = clock();
-//     VerMsg other_vermsg = gen_vermsg(proof.p_evals_masked1, input_left_copy, input_mono_ss1, L, T, k, sid, rands, 1, 0);
-//     bool res = verify_and_gates(proof.p_evals_masked2, input_right_copy, input_mono_ss2, other_vermsg, L, T, k, sid, rands, 1, 2);
-//     end = clock();
-//     cout<<"Total Verification Time = "<<double(end-start)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-//     cout<<"Verified = "<<res<<endl;
-
-//     return 0;
-// }
 
