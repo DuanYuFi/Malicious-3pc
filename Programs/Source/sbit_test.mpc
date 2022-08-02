@@ -3,7 +3,7 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-ROUNDS = 10000
+ROUNDS = 1000
 
 for i in range(ROUNDS):
     a & b

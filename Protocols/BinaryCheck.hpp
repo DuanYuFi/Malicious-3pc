@@ -333,6 +333,7 @@ VerMsg gen_vermsg(
     uint64_t party_ID
 ) {
     cout<<"in gen_vermsg"<<endl;
+    cout<<"masks_ss[0][0]"<<masks_ss[0][0]<<endl;
 
     // uint64_t L = var;
     uint64_t T = batch_size;
@@ -426,6 +427,7 @@ VerMsg gen_vermsg(
         // finish_time = clock();
         // cout<<"Prepare Input + Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
     // }
+    //  vector<uint64_t> proof.p_evals_masked[cnt - 1](2 * k - 1);
     
     s *= 2;
     while(true)
@@ -439,16 +441,15 @@ VerMsg gen_vermsg(
 
         cout<<"checkpoint 1"<<endl;
 
-        vector<uint64_t> p_evals_ss(2 * k - 1);
         for(uint64_t i = 0; i < 2 * k - 1; i++) { 
-            p_evals_ss[i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt - 1][i]);
+            proof.p_evals_masked[cnt - 1][i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt - 1][i]);
         } 
         cout<<"checkpoint 2"<<endl;
 
         // Compute share of sum of p's evaluations over [0, k - 1]
         uint64_t res = 0;
         for(uint64_t j = 0; j < k; j++) { // Assume k < 8
-            res += p_evals_ss[j];
+            res += proof.p_evals_masked[cnt - 1][j];
         }
         p_eval_ksum_ss[cnt - 1] = Mersenne::modp(res);
         cout<<"checkpoint 3"<<endl;
@@ -471,9 +472,10 @@ VerMsg gen_vermsg(
             eval_base = evaluate_bases(2 * k - 1, r);
             temp_result = 0;
             for(uint64_t i = 0; i < 2 * k - 1; i++) {
-                temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
+                temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt - 1][i]);
             }
             final_result_ss = Mersenne::modp_128(temp_result);
+            // delete[] proof.p_evals_masked[cnt - 1];
             cout<<"breaking..."<<endl;
             break;
         }
@@ -482,7 +484,7 @@ VerMsg gen_vermsg(
         eval_base = evaluate_bases(2 * k - 1, r);
         temp_result = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) p_evals_ss[i]);
+            temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt - 1][i]);
         }
         cout<<"cnt: " << cnt << endl;
         cout<<"p_eval_r_ss.size(): " << p_eval_r_ss.size() << endl;
@@ -517,7 +519,7 @@ VerMsg gen_vermsg(
         cnt++;
     }
 
-    // delete[] p_evals_ss;
+    // delete[] proof.p_evals_masked[cnt - 1];
     cout<<"constructing vermsg"<<endl;
 
     VerMsg vermsg = {

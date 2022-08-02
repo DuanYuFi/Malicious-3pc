@@ -64,7 +64,7 @@ void Malicious3PCProtocol<T>::init_mul()
 template <class T>
 void Malicious3PCProtocol<T>::Check() {
     for (auto& o : os)
-        o.reset_write_head();
+        o.clear();
 
     int k = 8, cols = BATCH_SIZE / k;
     int my_number = P.my_real_num();
@@ -137,19 +137,19 @@ void Malicious3PCProtocol<T>::Check() {
         sid[i] = global_prng.get_word();
     }
     
-    
     DZKProof dzkproof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
-    
     dzkproof.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
 
     DZKProof received_proof;
     received_proof.unpack(os[1]);
+    cout << received_proof.p_evals_masked.size() << endl;
     // return ;
 
     cout << "Next: gen_vermsg" << endl;
     VerMsg vermsg = gen_vermsg(received_proof, input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
-    
+
+    cout << "Next: reset_write_head" << endl;
     for (auto& o : os)
         o.reset_write_head();
 
