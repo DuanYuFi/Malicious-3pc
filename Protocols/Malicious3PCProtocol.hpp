@@ -153,6 +153,7 @@ void Malicious3PCProtocol<T>::Check() {
     for (auto& o : os)
         o.reset_write_head();
 
+    cout << "Next: pack" << endl;
     vermsg.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
 
