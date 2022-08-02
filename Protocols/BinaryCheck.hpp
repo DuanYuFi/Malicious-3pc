@@ -17,7 +17,6 @@ typedef unsigned __int128 uint128_t;
 struct DZKProof {
     vector<vector<uint64_t>> p_evals_masked;
 
-public:
     void pack(octetStream &os) {
         os.store(p_evals_masked.size());
         os.store(p_evals_masked[0].size());
@@ -31,13 +30,14 @@ public:
     void unpack(octetStream &os) {
         size_t num_p_evals_masked = 0;
         size_t num_p_evals_masked_each = 0;
-        os.consume(num_p_evals_masked);
-        os.consume(num_p_evals_masked_each);
+
+        os.get(num_p_evals_masked);
+        os.get(num_p_evals_masked_each);
         p_evals_masked.resize(num_p_evals_masked);
         for (size_t i = 0; i < num_p_evals_masked; i++) {
             p_evals_masked[i].resize(num_p_evals_masked_each);
             for (size_t j = 0; j < num_p_evals_masked_each; j++) {
-                os.consume(p_evals_masked[i][j]);
+                os.get(p_evals_masked[i][j]);
             }
         }
     }
@@ -131,12 +131,12 @@ DZKProof prove(
     uint64_t sid,
     uint64_t** masks
 ) {
-    cout<<"in prove"<<endl;
+    // cout<<"in prove"<<endl;
 
     uint64_t T = batch_size;
     uint64_t s = T / k;
 
-    cout<<"T : "<<s<<endl;
+    // cout<<"T : "<<s<<endl;
 
     Hash transcript_hash;
 
@@ -174,8 +174,8 @@ DZKProof prove(
     uint16_t cnt = 1;
 
     while(true){
-        cout<<"s : "<<s<<endl;
-        cout<<"k : "<<k<<endl;
+        // cout<<"s : "<<s<<endl;
+        // cout<<"k : "<<k<<endl;
 
         //Compute P(X)
         // begin_time = clock();
@@ -185,7 +185,7 @@ DZKProof prove(
             }
         }
 
-        cout<<"checkpoint 1"<<endl;
+        // cout<<"checkpoint 1"<<endl;
 
         for(uint64_t i = 0; i < k; i++) {
             eval_p_poly[i] = eval_result[i][i];
@@ -198,7 +198,7 @@ DZKProof prove(
                 }
             }
         }
-        cout<<"checkpoint 2"<<endl;
+        // cout<<"checkpoint 2"<<endl;
 
         // finish_time = clock();
         // cout<<"Interpolation Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
@@ -229,10 +229,10 @@ DZKProof prove(
         p_evals_masked.push_back(ss);
         append_msges(&transcript_hash, ss);
 
-        cout<<"checkpoint 3"<<endl;
+        // cout<<"checkpoint 3"<<endl;
 
         if (s == 1) {
-            cout << "breaking.. cnt: " << cnt << endl;
+            // cout << "breaking.. cnt: " << cnt << endl;
             break;
         }
 
@@ -284,7 +284,6 @@ struct VerMsg {
     uint64_t final_input;
     uint64_t final_result_ss;
 
-public:
     void pack(octetStream &os) {
         os.store(p_eval_ksum_ss.size());
         for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
@@ -300,18 +299,18 @@ public:
 
     void unpack(octetStream &os) {
         uint64_t size = 0;
-        os.consume(size);
+        os.get(size);
         p_eval_ksum_ss.resize(size);
         for(uint64_t i = 0; i < size; i++) {
-            os.consume(p_eval_ksum_ss[i]);
+            os.get(p_eval_ksum_ss[i]);
         }
-        os.consume(size);
+        os.get(size);
         p_eval_r_ss.resize(size);
         for(uint64_t i = 0; i < size; i++) {
-            os.consume(p_eval_r_ss[i]);
+            os.get(p_eval_r_ss[i]);
         }
-        os.consume(final_input);
-        os.consume(final_result_ss);
+        os.get(final_input);
+        os.get(final_result_ss);
     }
 };
 

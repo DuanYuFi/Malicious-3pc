@@ -136,29 +136,34 @@ void Malicious3PCProtocol<T>::Check() {
     for (int i = 0; i < 3; i ++) {
         sid[i] = global_prng.get_word();
     }
-    // return ;
     
-    DZKProof proof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
-    proof.pack(os[0]);
+    
+    DZKProof dzkproof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
+    
+    dzkproof.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
 
     DZKProof received_proof;
     received_proof.unpack(os[1]);
+    // return ;
 
+    cout << "Next: gen_vermsg" << endl;
     VerMsg vermsg = gen_vermsg(received_proof, input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
-
+    
     for (auto& o : os)
         o.reset_write_head();
 
     vermsg.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
 
+    cout << "Next: unpack" << endl;
     VerMsg received_vermsg;
     received_vermsg.unpack(os[1]);
 
+    cout << "Next: verify" << endl;
     bool res = verify(received_proof, input_result2, input_mono2, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss2, (my_number + 1) % 3, my_number);
     if (!res) {
-        throw mac_fail("MAC check failed");
+        throw mac_fail("ZKP check failed");
     }
 
     cout << "Check passed" << endl;
