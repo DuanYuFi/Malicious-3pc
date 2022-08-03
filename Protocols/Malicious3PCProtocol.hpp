@@ -69,23 +69,23 @@ void Malicious3PCProtocol<T>::Check() {
     int k = 8, cols = (BATCH_SIZE - 1) / k + 1;
     int my_number = P.my_real_num();
 
-    uint64_t **input_left, **input_right, **input_result1, **input_result2, **input_mono1, **input_mono2;
+    uint64_t **input_left, **input_right, **input_result_up, **input_result_down, **input_mono_up, **input_mono_down;
 
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
-    input_result1 = new uint64_t*[k];
-    input_result2 = new uint64_t*[k];
-    input_mono1 = new uint64_t*[k];
-    input_mono2 = new uint64_t*[k];
+    input_result_up = new uint64_t*[k];
+    input_result_down = new uint64_t*[k];
+    input_mono_up = new uint64_t*[k];
+    input_mono_down = new uint64_t*[k];
 
     // int size = results.size();
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 2];
         input_right[i] = new uint64_t[cols * 2];
-        input_result1[i] = new uint64_t[cols * 2];
-        input_result2[i] = new uint64_t[cols * 2];
-        input_mono1[i] = new uint64_t[cols];
-        input_mono2[i] = new uint64_t[cols];
+        input_result_up[i] = new uint64_t[cols * 2];
+        input_result_down[i] = new uint64_t[cols * 2];
+        input_mono_up[i] = new uint64_t[cols];
+        input_mono_down[i] = new uint64_t[cols];
 
         for (int j = 0; j < cols; j ++) {
             auto x = input1.front();    input1.pop();
@@ -99,48 +99,59 @@ void Malicious3PCProtocol<T>::Check() {
             assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
             
             uint64_t ti = (z[0] + x[0] * y[0] + rho[0]).get();
+            // shared vars between P_i and P_{i-1}
             uint64_t v0 = y[1].get();
+            // shared vars between P_i and P_{i+1}
             uint64_t v1 = Mersenne::sub(x[0].get(), 2 * ti * x[0].get());
+            uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
+            // shared vars between P_i and P_{i-1}
             uint64_t v2 = Mersenne::sub(x[1].get(), 2 * rho[1].get() * x[1].get());
+            uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
+            // shared vars between P_i and P_{i+1}
             uint64_t v3 = y[0].get();
+            uint64_t v4 = rho[1].get() - ti;
+            assert(v0 * v11 + v22 * v3 == v4);
+
             
             input_left[i][j * 2] = v0;
             input_left[i][j * 2 + 1] = v2;
             input_right[i][j * 2] = v1;
             input_right[i][j * 2 + 1] = v3;
 
-            // shared vars between P_i and P_{i+1}
-            input_result1[i][j * 2] = v1;
-            input_result1[i][j * 2 + 1] = v3;
             // shared vars between P_i and P_{i-1}
-            input_result2[i][j * 2] = v0;
-            input_result2[i][j * 2 + 1] = v2;
+            input_result_down[i][j * 2] = v0;
+            input_result_down[i][j * 2 + 1] = v2;
+            // shared vars between P_i and P_{i+1}
+            input_result_up[i][j * 2] = v1;
+            input_result_up[i][j * 2 + 1] = v3;
 
-            input_mono1[i][j] = Mersenne::neg(ti);
-            input_mono2[i][j] = rho[1].get();
+            // shared vars between P_i and P_{i-1}
+            input_mono_down[i][j] = rho[1].get();
+            // shared vars between P_i and P_{i+1}
+            input_mono_up[i][j] = Mersenne::neg(ti);
 
             // Check inputs
-            assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono1[i][j], input_mono2[i][j]));
-            assert(Mersenne::add(Mersenne::mul(input_result1[i][j * 2], input_result2[i][j * 2]), Mersenne::mul(input_result1[i][j * 2 + 1], input_result2[i][j * 2 + 1])) == Mersenne::add(input_mono1[i][j], input_mono2[i][j]));
+            assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
+            assert(Mersenne::add(Mersenne::mul(input_result_up[i][j * 2], input_result_down[i][j * 2]), Mersenne::mul(input_result_up[i][j * 2 + 1], input_result_down[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
         }
     }
 
     int cnt = log(2 * BATCH_SIZE) / log(k) + 2;
-    uint64_t **masks, **mask_ss1, **mask_ss2;
+    uint64_t **masks, **mask_ss_up, **mask_ss_down;
     masks = new uint64_t*[cnt];
-    mask_ss1 = new uint64_t*[cnt];
-    mask_ss2 = new uint64_t*[cnt];
+    mask_ss_up = new uint64_t*[cnt];
+    mask_ss_down = new uint64_t*[cnt];
 
     for (int i = 0; i < cnt; i++) {
         masks[i] = new uint64_t[2*k-1];
-        mask_ss1[i] = new uint64_t[2*k-1];
-        mask_ss2[i] = new uint64_t[2*k-1];
+        mask_ss_up[i] = new uint64_t[2*k-1];
+        mask_ss_down[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
             // P_i and P_{i+1}
-            mask_ss1[i][j] = Mersenne::modp(shared_prngs[0].get_word());
+            mask_ss_up[i][j] = Mersenne::modp(shared_prngs[0].get_word());
             // P_i and P_{i-1}
-            mask_ss2[i][j] = Mersenne::modp(shared_prngs[1].get_word());
-            masks[i][j] = Mersenne::add(mask_ss1[i][j], mask_ss2[i][j]);
+            mask_ss_down[i][j] = Mersenne::modp(shared_prngs[1].get_word());
+            masks[i][j] = Mersenne::add(mask_ss_up[i][j], mask_ss_down[i][j]);
         }
     }
 
@@ -168,7 +179,7 @@ void Malicious3PCProtocol<T>::Check() {
     // return ;
 
     // cout << "Next: gen_vermsg" << endl;
-    VerMsg vermsg = gen_vermsg(received_proof[0], input_result2, input_mono2, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss2, (my_number - 1) % 3, my_number);
+    VerMsg vermsg = gen_vermsg(received_proof[0], input_result_down, input_mono_down, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss_down, (my_number - 1) % 3, my_number);
 
     // cout << "Next: reset_write_head" << endl;
     for (auto& o : os)
@@ -183,7 +194,7 @@ void Malicious3PCProtocol<T>::Check() {
     received_vermsg.unpack(os[1]);
 
     // cout << "Next: verify" << endl;
-    bool res = verify(received_proof[1], input_result1, input_mono1, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss1, (my_number + 1) % 3, my_number);
+    bool res = verify(received_proof[1], input_result_up, input_mono_up, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss_up, (my_number + 1) % 3, my_number);
     if (!res) {
         throw mac_fail("ZKP check failed");
     }

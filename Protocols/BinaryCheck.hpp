@@ -166,6 +166,11 @@ DZKProof prove(
     vector<vector<uint64_t>> p_evals_masked;
     // vector<vector<uint64_t>> p_evals_masked2;
     uint64_t** base = get_bases(k);
+    for(uint64_t i = 0; i < k - 1; i++) {
+        for (uint64_t l = 0; l < k; l++) {
+            cout << "base[" << i << "][" << l << "]: " << base[i][l] << endl;
+        }
+    }
     uint64_t* eval_base;
     uint64_t s0;
     uint64_t** eval_result = new uint64_t*[k];
@@ -196,6 +201,11 @@ DZKProof prove(
         for(uint64_t i = 0; i < k; i++) {
             eval_p_poly[i] = eval_result[i][i];
         }
+
+        for(uint64_t j = 0; j < 2 * k - 1; j++) {
+            cout << "1: eval_p_poly[" << j << "]: " << eval_p_poly[j] << endl;
+        }
+
         for(uint64_t i = 0; i < k - 1; i++) {
             eval_p_poly[i + k] = 0;
             for(uint64_t j = 0; j < k; j++) {
@@ -204,6 +214,11 @@ DZKProof prove(
                 }
             }
         }
+
+        for(uint64_t j = 0; j < 2 * k - 1; j++) {
+            cout << "2: eval_p_poly[" << j << "]: " << eval_p_poly[j] << endl;
+        }
+
         // cout<<"checkpoint 2"<<endl;
 
         // finish_time = clock();
@@ -232,6 +247,7 @@ DZKProof prove(
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt - 1][i]);
         }
+
 
         uint64_t res = 0;
         for(uint64_t j = 0; j < k; j++) {
