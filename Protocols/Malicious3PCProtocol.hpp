@@ -96,10 +96,14 @@ void Malicious3PCProtocol<T>::Check() {
             uint64_t ti = (z[1] + x[1] * y[1] + rho[1]).get();
             uint64_t v0 = y[0].get();
             uint64_t v1 = Mersenne::sub(x[1].get(), 2 * ti * x[1].get());
+            uint64_t v11 = x[1].get() - 2 * ti * x[1].get();
             uint64_t v2 = y[1].get();
             uint64_t v3 = Mersenne::sub(x[0].get(), 2 * rho[0].get() * x[0].get());
-            // uint64_t v4 = (rho[0]).get() - ti;
+            uint64_t v33 = x[0].get() - 2 * rho[0].get() * x[0].get();
+            uint64_t v4 = (rho[0]).get() - ti;
 
+            assert(v0 * v11 + v2 * v33 == v4);
+            
             input_left[i][j * 2] = v0;
             input_left[i][j * 2 + 1] = v2;
             input_right[i][j * 2] = v1;
@@ -110,8 +114,12 @@ void Malicious3PCProtocol<T>::Check() {
             input_result2[i][j * 2] = v0;
             input_result2[i][j * 2 + 1] = v3;
 
-            input_mono1[i][j] = ti;
-            input_mono2[i][j] = Mersenne::neg(rho[0].get());
+            input_mono1[i][j] = Mersenne::neg(ti);
+            input_mono2[i][j] = rho[0].get();
+
+            // Check inputs
+            assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono1[i][j], input_mono2[i][j]));
+            assert(Mersenne::add(Mersenne::mul(input_result1[i][j * 2], input_result2[i][j * 2]), Mersenne::mul(input_result1[i][j * 2 + 1], input_result2[i][j * 2 + 1])) == Mersenne::add(input_mono1[i][j], input_mono2[i][j]));
         }
     }
 
@@ -126,8 +134,8 @@ void Malicious3PCProtocol<T>::Check() {
         mask_ss1[i] = new uint64_t[2*k-1];
         mask_ss2[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
-            mask_ss1[i][j] = shared_prngs[0].get_word();
-            mask_ss2[i][j] = shared_prngs[1].get_word();
+            mask_ss1[i][j] = Mersenne::modp(shared_prngs[0].get_word());
+            mask_ss2[i][j] = Mersenne::modp(shared_prngs[1].get_word());
             masks[i][j] = Mersenne::add(mask_ss1[i][j], mask_ss2[i][j]);
         }
     }
