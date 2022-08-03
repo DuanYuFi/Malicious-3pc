@@ -93,7 +93,7 @@ void Malicious3PCProtocol<T>::Check() {
             auto z = results.front();   results.pop();
             array<typename T::value_type, 2> rho = rhos.front();    rhos.pop();
 
-            assert(z[1] == x[1] * y[1] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
+            assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
 
             uint64_t ti = (z[1] + x[1] * y[1] + rho[1]).get();
             uint64_t v0 = y[0].get();
