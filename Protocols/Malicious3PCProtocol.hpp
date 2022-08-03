@@ -44,7 +44,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 template <class T>
 void Malicious3PCProtocol<T>::maybe_check() {
 
-    cout << results.size() << endl;
+    // cout << results.size() << endl;
 
     if ((int) results.size() >= BATCH_SIZE)
         Check();
@@ -95,9 +95,9 @@ void Malicious3PCProtocol<T>::Check() {
 
             uint64_t ti = (z[1] + x[1] * y[1] + rho[1]).get();
             uint64_t v0 = y[0].get();
-            uint64_t v1 = x[1].get() - 2 * ti * x[1].get();
+            uint64_t v1 = Mersenne::sub(x[1].get(), 2 * ti * x[1].get());
             uint64_t v2 = y[1].get();
-            uint64_t v3 = x[0].get() - 2 * rho[0].get() * x[0].get();
+            uint64_t v3 = Mersenne::sub(x[0].get(), 2 * rho[0].get() * x[0].get());
             // uint64_t v4 = (rho[0]).get() - ti;
 
             input_left[i][j * 2] = v0;
@@ -111,7 +111,7 @@ void Malicious3PCProtocol<T>::Check() {
             input_result2[i][j * 2 + 1] = v3;
 
             input_mono1[i][j] = ti;
-            input_mono2[i][j] = rho[0].get();
+            input_mono2[i][j] = Mersenne::neg(rho[0].get());
         }
     }
 
@@ -143,29 +143,29 @@ void Malicious3PCProtocol<T>::Check() {
     // return ;
     dzkproof.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
-    cout << dzkproof.p_evals_masked.size() << endl;
+    // cout << dzkproof.p_evals_masked.size() << endl;
 
     DZKProof received_proof;
     received_proof.unpack(os[1]);
     cout << received_proof.p_evals_masked.size() << endl;
     // return ;
 
-    cout << "Next: gen_vermsg" << endl;
+    // cout << "Next: gen_vermsg" << endl;
     VerMsg vermsg = gen_vermsg(received_proof, input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
 
-    cout << "Next: reset_write_head" << endl;
+    // cout << "Next: reset_write_head" << endl;
     for (auto& o : os)
         o.reset_write_head();
 
-    cout << "Next: pack" << endl;
+    // cout << "Next: pack" << endl;
     vermsg.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
 
-    cout << "Next: unpack" << endl;
+    // cout << "Next: unpack" << endl;
     VerMsg received_vermsg;
     received_vermsg.unpack(os[1]);
 
-    cout << "Next: verify" << endl;
+    // cout << "Next: verify" << endl;
     bool res = verify(received_proof, input_result2, input_mono2, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss2, (my_number + 1) % 3, my_number);
     if (!res) {
         throw mac_fail("ZKP check failed");
