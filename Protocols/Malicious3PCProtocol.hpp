@@ -93,31 +93,31 @@ void Malicious3PCProtocol<T>::Check() {
             auto z = results.front();   results.pop();
             array<typename T::value_type, 2> rho = rhos.front();    rhos.pop();
 
+            // x[0]: x_i, x[1]: x_{i-1}
+            // y[0]: y_i, y[1]: y_{i-1}
+            // z[0]: z_i, z[1]: z_{i-1}
             assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
-
-            uint64_t ti = (z[1] + x[1] * y[1] + rho[1]).get();
-            uint64_t v0 = y[0].get();
-            uint64_t v1 = Mersenne::sub(x[1].get(), 2 * ti * x[1].get());
-            uint64_t v11 = x[1].get() - 2 * ti * x[1].get();
-            uint64_t v2 = y[1].get();
-            uint64_t v3 = Mersenne::sub(x[0].get(), 2 * rho[0].get() * x[0].get());
-            uint64_t v33 = x[0].get() - 2 * rho[0].get() * x[0].get();
-            uint64_t v4 = (rho[0]).get() - ti;
-
-            assert(v0 * v11 + v2 * v33 == v4);
+            
+            uint64_t ti = (z[0] + x[0] * y[0] + rho[0]).get();
+            uint64_t v0 = y[1].get();
+            uint64_t v1 = Mersenne::sub(x[0].get(), 2 * ti * x[0].get());
+            uint64_t v2 = Mersenne::sub(x[1].get(), 2 * rho[1].get() * x[1].get());
+            uint64_t v3 = y[0].get();
             
             input_left[i][j * 2] = v0;
             input_left[i][j * 2 + 1] = v2;
             input_right[i][j * 2] = v1;
             input_right[i][j * 2 + 1] = v3;
 
+            // shared vars between P_i and P_{i+1}
             input_result1[i][j * 2] = v1;
-            input_result1[i][j * 2 + 1] = v2;
+            input_result1[i][j * 2 + 1] = v3;
+            // shared vars between P_i and P_{i-1}
             input_result2[i][j * 2] = v0;
-            input_result2[i][j * 2 + 1] = v3;
+            input_result2[i][j * 2 + 1] = v2;
 
             input_mono1[i][j] = Mersenne::neg(ti);
-            input_mono2[i][j] = rho[0].get();
+            input_mono2[i][j] = rho[1].get();
 
             // Check inputs
             assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono1[i][j], input_mono2[i][j]));
@@ -136,7 +136,9 @@ void Malicious3PCProtocol<T>::Check() {
         mask_ss1[i] = new uint64_t[2*k-1];
         mask_ss2[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
+            // P_i and P_{i+1}
             mask_ss1[i][j] = Mersenne::modp(shared_prngs[0].get_word());
+            // P_i and P_{i-1}
             mask_ss2[i][j] = Mersenne::modp(shared_prngs[1].get_word());
             masks[i][j] = Mersenne::add(mask_ss1[i][j], mask_ss2[i][j]);
         }
@@ -154,9 +156,11 @@ void Malicious3PCProtocol<T>::Check() {
     // return ;
     dzkproof.pack(os[0]);
 
+    // P_i sends proof_i to P_{i+1}, receives proof_{i-1} from P_{i-1}
     P.pass_around(os[0], os[1], 1);    
     // cout << dzkproof.p_evals_masked.size() << endl;
 
+    // received_proof[0] is proof_{i-1}
     received_proof[0].unpack(os[1]);
 
     P.pass_around(os[0], os[1], -1);
@@ -164,7 +168,7 @@ void Malicious3PCProtocol<T>::Check() {
     // return ;
 
     // cout << "Next: gen_vermsg" << endl;
-    VerMsg vermsg = gen_vermsg(received_proof[0], input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
+    VerMsg vermsg = gen_vermsg(received_proof[0], input_result2, input_mono2, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss2, (my_number - 1) % 3, my_number);
 
     // cout << "Next: reset_write_head" << endl;
     for (auto& o : os)
@@ -179,7 +183,7 @@ void Malicious3PCProtocol<T>::Check() {
     received_vermsg.unpack(os[1]);
 
     // cout << "Next: verify" << endl;
-    bool res = verify(received_proof[1], input_result2, input_mono2, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss2, (my_number + 1) % 3, my_number);
+    bool res = verify(received_proof[1], input_result1, input_mono1, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss1, (my_number + 1) % 3, my_number);
     if (!res) {
         throw mac_fail("ZKP check failed");
     }

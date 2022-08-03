@@ -232,6 +232,14 @@ DZKProof prove(
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt - 1][i]);
         }
+
+        uint64_t res = 0;
+        for(uint64_t j = 0; j < k; j++) {
+            res += eval_p_poly[j];
+        }
+        res = Mersenne::modp(res);
+        cout << "p_eval_ksum should be: " << res << endl;
+
         p_evals_masked.push_back(ss);
         append_msges(transcript_hash, ss);
 
@@ -339,7 +347,6 @@ VerMsg gen_vermsg(
     DZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono, 
-    // uint64_t var, 
     uint64_t batch_size, 
     uint64_t k, 
     uint64_t sid, 
@@ -429,7 +436,7 @@ VerMsg gen_vermsg(
                 }
             }
             p_eval_r_ss[0] = Mersenne::modp_128(temp_result);
-            cout << "p_eval_r_ss[0]: " << p_eval_r_ss[0] << endl;
+            // cout << "p_eval_r_ss[0]: " << p_eval_r_ss[0] << endl;
         }
         else {
             temp_result = 0;
@@ -441,7 +448,7 @@ VerMsg gen_vermsg(
                 }
             }
             p_eval_r_ss[0] = Mersenne::modp_128(temp_result);
-            cout << "p_eval_r_ss[0]: " << p_eval_r_ss[0] << endl;
+            // cout << "p_eval_r_ss[0]: " << p_eval_r_ss[0] << endl;
         }
         // finish_time = clock();
         // cout<<"Prepare Input + Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
