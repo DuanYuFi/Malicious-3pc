@@ -137,9 +137,13 @@ void Malicious3PCProtocol<T>::Check() {
         sid[i] = global_prng.get_word();
     }
     
+    // return;
+
     DZKProof dzkproof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
+    // return ;
     dzkproof.pack(os[0]);
     P.pass_around(os[0], os[1], 1);
+    cout << dzkproof.p_evals_masked.size() << endl;
 
     DZKProof received_proof;
     received_proof.unpack(os[1]);

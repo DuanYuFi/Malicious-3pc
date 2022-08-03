@@ -100,10 +100,10 @@ uint64_t* evaluate_bases(uint64_t n, uint64_t r) {
     return result;
 }
 
-void append_one_msg(Hash* hash, uint64_t msg) {
+void append_one_msg(Hash &hash, uint64_t msg) {
     octetStream buffer;
-    Z2<64>(msg).pack(buffer);
-    (*hash).update(buffer);
+    buffer.store(msg);
+    hash.update(buffer);
 }
 
 void append_msges(Hash* hash, vector<uint64_t> msges) {
@@ -114,12 +114,14 @@ void append_msges(Hash* hash, vector<uint64_t> msges) {
     }
 }
 
-uint64_t get_challenge(Hash hash) {
+uint64_t get_challenge(Hash &hash) {
     octetStream buffer;
     hash.final(buffer);
-    Z2<64> eta_2k;
-    eta_2k.unpack(buffer);
-    uint64_t eta = eta_2k.get_limb(0);
+    // Z2<64> eta_2k;
+    // eta_2k.unpack(buffer);
+    // uint64_t eta = eta_2k.get_limb(0);
+    uint64_t eta;
+    buffer.get(eta);
     return eta;
 }
 
@@ -140,9 +142,10 @@ DZKProof prove(
 
     Hash transcript_hash;
 
-    append_one_msg(&transcript_hash, sid);
+    append_one_msg(transcript_hash, sid);
     uint64_t eta = get_challenge(transcript_hash);
 
+    // return DZKProof();
     //Prepare Input
     // begin_time = clock();
     uint64_t eta_power = 1;
@@ -290,6 +293,14 @@ struct VerMsg {
     uint64_t final_input;
     uint64_t final_result_ss;
 
+    VerMsg() {}
+    VerMsg(vector<uint64_t> p_eval_ksum_ss, vector<uint64_t> p_eval_r_ss, uint64_t final_input, uint64_t final_result_ss) {
+        this->p_eval_ksum_ss = p_eval_ksum_ss;
+        this->p_eval_r_ss = p_eval_r_ss;
+        this->final_input = final_input;
+        this->final_result_ss = final_result_ss;
+    }
+
     void pack(octetStream &os) {
         os.store(p_eval_ksum_ss.size());
         for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
@@ -342,7 +353,7 @@ VerMsg gen_vermsg(
 
     Hash transcript_hash;
 
-    append_one_msg(&transcript_hash, sid);
+    append_one_msg(transcript_hash, sid);
     uint64_t eta = get_challenge(transcript_hash);
 
     // uint64_t eta = rands[0];
@@ -460,6 +471,7 @@ VerMsg gen_vermsg(
         // r = rands[cnt];
         r = get_challenge(transcript_hash);
 
+        cout << "checkpoint 3.1" << endl;
         if(s == 1) {
             cout<<"in s== 1 loop..."<<endl;
 
@@ -498,6 +510,7 @@ VerMsg gen_vermsg(
         eval_base = evaluate_bases(k, r);
         s0 = s;
         s = (s - 1) / k + 1;
+        cout << "checkpoint 4.1" << endl;
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < s; j++) {
                 index = i * s + j;
@@ -524,12 +537,12 @@ VerMsg gen_vermsg(
     // delete[] proof.p_evals_masked[cnt - 1];
     cout<<"constructing vermsg"<<endl;
 
-    VerMsg vermsg = {
+    VerMsg vermsg(
         p_eval_ksum_ss,
         p_eval_r_ss,
         final_input,
         final_result_ss
-    };
+    );
     cout<<"returning..."<<endl;
     return vermsg;
 }
