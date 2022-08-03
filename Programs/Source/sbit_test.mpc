@@ -1,9 +1,9 @@
 from Compiler.GC.types import *
 
 a = sbit(1)
-b = sbit(0)
+b = sbit(1)
 
-ROUNDS = 1000
+ROUNDS = 500
 
 for i in range(ROUNDS):
     a & b
