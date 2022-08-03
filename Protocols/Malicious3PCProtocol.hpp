@@ -140,18 +140,21 @@ void Malicious3PCProtocol<T>::Check() {
     // return;
 
     DZKProof dzkproof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
+    DZKProof received_proof[2];
     // return ;
     dzkproof.pack(os[0]);
-    P.pass_around(os[0], os[1], 1);
+
+    P.pass_around(os[0], os[1], 1);    
     // cout << dzkproof.p_evals_masked.size() << endl;
 
-    DZKProof received_proof;
-    received_proof.unpack(os[1]);
-    cout << received_proof.p_evals_masked.size() << endl;
+    received_proof[0].unpack(os[1]);
+
+    P.pass_around(os[0], os[1], -1);
+    received_proof[1].unpack(os[1]);
     // return ;
 
     // cout << "Next: gen_vermsg" << endl;
-    VerMsg vermsg = gen_vermsg(received_proof, input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
+    VerMsg vermsg = gen_vermsg(received_proof[0], input_result1, input_mono1, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss1, (my_number - 1) % 3, my_number);
 
     // cout << "Next: reset_write_head" << endl;
     for (auto& o : os)
@@ -166,7 +169,7 @@ void Malicious3PCProtocol<T>::Check() {
     received_vermsg.unpack(os[1]);
 
     // cout << "Next: verify" << endl;
-    bool res = verify(received_proof, input_result2, input_mono2, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss2, (my_number + 1) % 3, my_number);
+    bool res = verify(received_proof[1], input_result2, input_mono2, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss2, (my_number + 1) % 3, my_number);
     if (!res) {
         throw mac_fail("ZKP check failed");
     }
