@@ -106,12 +106,12 @@ void append_one_msg(Hash &hash, uint64_t msg) {
     hash.update(buffer);
 }
 
-void append_msges(Hash* hash, vector<uint64_t> msges) {
+void append_msges(Hash &hash, vector<uint64_t> msges) {
     octetStream buffer;
-    for(uint64_t i = 0; i < msges.size() ; i++) {
-        Z2<64>(msges[i]).pack(buffer);
-        (*hash).update(buffer);
+    for(uint64_t msg: msges) {
+        buffer.store(msg);
     }
+    hash.update(buffer);
 }
 
 uint64_t get_challenge(Hash &hash) {
@@ -230,7 +230,7 @@ DZKProof prove(
             ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt - 1][i]);
         }
         p_evals_masked.push_back(ss);
-        append_msges(&transcript_hash, ss);
+        append_msges(transcript_hash, ss);
 
         // cout<<"checkpoint 3"<<endl;
 
@@ -451,7 +451,7 @@ VerMsg gen_vermsg(
         cout << "proof.p_evals_masked.size(): " << proof.p_evals_masked.size() << endl;
         cout << "proof.p_evals_masked[cnt - 1].size(): " << proof.p_evals_masked[cnt - 1].size() << endl;
 
-        append_msges(&transcript_hash, proof.p_evals_masked[cnt - 1]);
+        append_msges(transcript_hash, proof.p_evals_masked[cnt - 1]);
 
         cout<<"checkpoint 1"<<endl;
 
