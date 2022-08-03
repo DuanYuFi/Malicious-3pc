@@ -98,20 +98,22 @@ void Malicious3PCProtocol<T>::Check() {
             // z[0]: z_i, z[1]: z_{i-1}
             assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
             
-            uint64_t ti = (z[0] + x[0] * y[0] + rho[0]).get();
+            uint64_t ti = (z[0] - x[0] * y[0] - rho[0]).get();
             // shared vars between P_i and P_{i-1}
             uint64_t v0 = y[1].get();
             // shared vars between P_i and P_{i+1}
             uint64_t v1 = Mersenne::sub(x[0].get(), 2 * ti * x[0].get());
-            uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
+            // uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
             // shared vars between P_i and P_{i-1}
             uint64_t v2 = Mersenne::sub(x[1].get(), 2 * rho[1].get() * x[1].get());
-            uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
+            // uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
             // shared vars between P_i and P_{i+1}
             uint64_t v3 = y[0].get();
-            uint64_t v4 = rho[1].get() - ti;
-            assert(v0 * v11 + v22 * v3 == v4);
+            uint64_t v4 = Mersenne::sub(rho[1].get(), ti);
 
+            assert(Mersenne::sub(Mersenne::mul(v0, v1), Mersenne::mul(v2, v3)) == v4);
+            // assert(v0 * v11 + v22 * v3 == v4);
+            
             
             input_left[i][j * 2] = v0;
             input_left[i][j * 2 + 1] = v2;
