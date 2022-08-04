@@ -3,7 +3,7 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-ROUNDS = 1000
+ROUNDS = 500
 
 import random
 
@@ -11,6 +11,5 @@ for i in range(ROUNDS):
     random.choice([a, b]) & random.choice([a, b])
 
 c = a & b
-b = a & c
 
 print_ln("%s", c.reveal())

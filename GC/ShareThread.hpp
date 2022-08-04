@@ -124,6 +124,8 @@ void ShareThread<T>::and_(Processor<T>& processor,
         }
     }
 
+    protocol->Check();
+
     // cout << "Finish ShareThread<T>::and_" << endl;
 }
 
