@@ -85,6 +85,7 @@ void Malicious3PCProtocol<T>::Check() {
     input_mono_up = new uint64_t*[k];
     input_mono_down = new uint64_t*[k];
 
+    int cnt_non_zeros = 0;
     // int size = results.size();
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 2];
@@ -110,18 +111,21 @@ void Malicious3PCProtocol<T>::Check() {
             uint64_t v0 = y[1].get();
             // shared vars between P_i and P_{i+1}
             uint64_t v1 = Mersenne::sub(x[0].get(), 2 * ti * x[0].get());
-            uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
+            // uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
             // shared vars between P_i and P_{i-1}
             uint64_t v2 = Mersenne::sub(2 * rho[1].get() * x[1].get(), x[1].get());
-            uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
+            // uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
             // shared vars between P_i and P_{i+1}
             uint64_t v3 = y[0].get();
-            uint64_t v4 = Mersenne::sub(rho[1].get(), ti);
-            uint64_t v44 = rho[1].get() - ti;
+            // uint64_t v4 = Mersenne::sub(rho[1].get(), ti);
+            // uint64_t v44 = rho[1].get() - ti;
 
-            assert(Mersenne::add(Mersenne::mul(v0, v1), Mersenne::mul(v2, v3)) == v4);
-            assert(v0 * v11 - v22 * v3 == v44);
-            
+            // assert(Mersenne::add(Mersenne::mul(v0, v1), Mersenne::mul(v2, v3)) == v4);
+            // assert(v0 * v11 - v22 * v3 == v44);
+            if(ti != 0) {
+                cnt_non_zeros++;
+            }
+
             input_left[i][j * 2] = v0;
             input_left[i][j * 2 + 1] = v2;
             input_right[i][j * 2] = v1;
@@ -134,16 +138,31 @@ void Malicious3PCProtocol<T>::Check() {
             input_result_up[i][j * 2] = v1;
             input_result_up[i][j * 2 + 1] = v3;
 
-            // shared vars between P_i and P_{i-1}
-            input_mono_down[i][j] = rho[1].get();
-            // shared vars between P_i and P_{i+1}
-            input_mono_up[i][j] = Mersenne::neg(ti);
 
-            // Check inputs
-            assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
-            assert(Mersenne::add(Mersenne::mul(input_result_up[i][j * 2], input_result_down[i][j * 2]), Mersenne::mul(input_result_up[i][j * 2 + 1], input_result_down[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
+            // cout << "v0: " << v0 << endl;
+            // cout << "v1: " << v1 << endl;
+            // cout << "v2: " << v2 << endl;
+            // cout << "v3: " << v3 << endl;
+
+            uint64_t tii = (z[1] - x[1] * y[1] - rho[1]).get();
+
+            // shared vars between P_i and P_{i-1}
+            input_mono_down[i][j] = Mersenne::neg(tii);
+            // shared vars between P_i and P_{i+1}
+            input_mono_up[i][j] = rho[0].get();
+
+            cout << "rho: " << input_mono_down[i][j] << endl;
+            cout << "-ti: " << input_mono_up[i][j] << endl;
+
+            // // Check inputs
+            // cout << "left: " << Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) << endl;
+            // cout << "right: " << Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]) << endl;
+            // assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
+            // assert(Mersenne::add(Mersenne::mul(input_result_up[i][j * 2], input_result_down[i][j * 2]), Mersenne::mul(input_result_up[i][j * 2 + 1], input_result_down[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
         }
     }
+
+    cout << "prover's non-zeros: " << cnt_non_zeros << endl;
 
     int cnt = log(2 * sz) / log(k) + 2;
     uint64_t **masks, **mask_ss_up, **mask_ss_down;
@@ -157,10 +176,15 @@ void Malicious3PCProtocol<T>::Check() {
         mask_ss_down[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
             // P_i and P_{i+1}
-            mask_ss_up[i][j] = Mersenne::modp(shared_prngs[0].get_word());
+            // mask_ss_up[i][j] = shared_prngs[0].get_word() && Mersenne::PR;
+            // mask_ss_up[i][j] = Mersenne::modp(shared_prngs[0].get_word());
+            mask_ss_up[i][j] = 0;
             // P_i and P_{i-1}
-            mask_ss_down[i][j] = Mersenne::modp(shared_prngs[1].get_word());
-            masks[i][j] = Mersenne::add(mask_ss_up[i][j], mask_ss_down[i][j]);
+            // mask_ss_down[i][j] = shared_prngs[1].get_word() && Mersenne::PR;
+            // mask_ss_down[i][j] = Mersenne::modp(shared_prngs[1].get_word());
+            mask_ss_down[i][j] = 0;
+            masks[i][j] = 0;
+            // masks[i][j] = Mersenne::add(mask_ss_up[i][j], mask_ss_down[i][j]);
         }
     }
 
