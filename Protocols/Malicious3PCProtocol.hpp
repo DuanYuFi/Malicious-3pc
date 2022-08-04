@@ -44,7 +44,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 template <class T>
 void Malicious3PCProtocol<T>::maybe_check() {
 
-    // cout << results.size() << endl;
+    cout << results.size() << endl;
 
     if ((int) results.size() >= BATCH_SIZE)
         Check();
@@ -66,7 +66,9 @@ void Malicious3PCProtocol<T>::Check() {
     for (auto& o : os)
         o.clear();
 
-    int k = 8, cols = (BATCH_SIZE - 1) / k + 1;
+    int T = min(BATCH_SIZE, results.size());
+
+    int k = 8, cols = (T - 1) / k + 1;
     int my_number = P.my_real_num();
 
     uint64_t **input_left, **input_right, **input_result_up, **input_result_down, **input_mono_up, **input_mono_down;
@@ -138,7 +140,7 @@ void Malicious3PCProtocol<T>::Check() {
         }
     }
 
-    int cnt = log(2 * BATCH_SIZE) / log(k) + 2;
+    int cnt = log(2 * T) / log(k) + 2;
     uint64_t **masks, **mask_ss_up, **mask_ss_down;
     masks = new uint64_t*[cnt];
     mask_ss_up = new uint64_t*[cnt];
@@ -164,7 +166,7 @@ void Malicious3PCProtocol<T>::Check() {
     
     // return;
 
-    DZKProof dzkproof = prove(input_left, input_right, BATCH_SIZE, k, sid[my_number], masks);
+    DZKProof dzkproof = prove(input_left, input_right, T, k, sid[my_number], masks);
     DZKProof received_proof[2];
     // return ;
     dzkproof.pack(os[0]);
@@ -181,7 +183,7 @@ void Malicious3PCProtocol<T>::Check() {
     // return ;
 
     // cout << "Next: gen_vermsg" << endl;
-    VerMsg vermsg = gen_vermsg(received_proof[0], input_result_down, input_mono_down, BATCH_SIZE, k, sid[(my_number - 1) % 3], mask_ss_down, (my_number - 1) % 3, my_number);
+    VerMsg vermsg = gen_vermsg(received_proof[0], input_result_down, input_mono_down, T, k, sid[(my_number - 1) % 3], mask_ss_down, (my_number - 1) % 3, my_number);
 
     // cout << "Next: reset_write_head" << endl;
     for (auto& o : os)
@@ -196,7 +198,7 @@ void Malicious3PCProtocol<T>::Check() {
     received_vermsg.unpack(os[1]);
 
     // cout << "Next: verify" << endl;
-    bool res = verify(received_proof[1], input_result_up, input_mono_up, received_vermsg, BATCH_SIZE, k, sid[(my_number + 1) % 3], mask_ss_up, (my_number + 1) % 3, my_number);
+    bool res = verify(received_proof[1], input_result_up, input_mono_up, received_vermsg, T, k, sid[(my_number + 1) % 3], mask_ss_up, (my_number + 1) % 3, my_number);
     if (!res) {
         throw mac_fail("ZKP check failed");
     }

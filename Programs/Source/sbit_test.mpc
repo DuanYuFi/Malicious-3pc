@@ -3,15 +3,14 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-ROUNDS = 500
+ROUNDS = 1000
+
+import random
 
 for i in range(ROUNDS):
-    a & b
+    random.choice([a, b]) & random.choice([a, b])
 
-c = sbit(1)
-for i in range(ROUNDS):
-    a & c
+c = a & b
+b = a & c
 
-a = b & c
-
-print_ln("%s", b.reveal())
+print_ln("%s", c.reveal())
