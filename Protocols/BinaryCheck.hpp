@@ -13,6 +13,22 @@ using namespace std;
 typedef unsigned __int128 uint128_t;
 
 // clock_t begin_time, finish_time;
+class LocalHash {
+    octetStream buffer;
+public:
+    template <typename T>
+    void update(T data) {
+        buffer.store(data);
+    }
+
+    uint64_t final() {
+        Hash hash;
+        hash.update(buffer);
+        uint64_t result;
+        hash.final().get(result);
+        return result;
+    }
+};
 
 struct DZKProof {
     vector<vector<uint64_t>> p_evals_masked;
@@ -100,28 +116,21 @@ uint64_t* evaluate_bases(uint64_t n, uint64_t r) {
     return result;
 }
 
-void append_one_msg(Hash &hash, uint64_t msg) {
-    octetStream buffer;
-    buffer.store(msg);
-    hash.update(buffer);
+void append_one_msg(LocalHash &hash, uint64_t msg) {
+    hash.update(msg);
 }
 
-void append_msges(Hash &hash, vector<uint64_t> msges) {
-    octetStream buffer;
+void append_msges(LocalHash &hash, vector<uint64_t> msges) {
     for(uint64_t msg: msges) {
-        buffer.store(msg);
+        hash.update(msg);
     }
-    hash.update(buffer);
 }
 
-uint64_t get_challenge(Hash &hash) {
-    octetStream buffer;
-    hash.final(buffer);
-    // Z2<64> eta_2k;
-    // eta_2k.unpack(buffer);
-    // uint64_t eta = eta_2k.get_limb(0);
-    uint64_t eta;
-    buffer.get(eta);
+uint64_t get_challenge(LocalHash &hash) {
+    // octetStream buffer;
+    // hash.final(buffer);
+
+    uint64_t eta = hash.final();
     // return Mersenne::modp(eta);
     return eta & Mersenne::PR;
 }
@@ -134,28 +143,21 @@ DZKProof prove(
     uint64_t sid,
     uint64_t** masks
 ) {
-    cout<<"in prove"<<endl;
-    cout<<"sid: "<< sid << endl;
+    // cout<<"in prove"<<endl;
+    // cout<<"sid: "<< sid << endl;
 
     uint64_t T = batch_size;
     uint64_t s = (T - 1) / k + 1;
-    // uint64_t s = T / k;
 
-    // cout<<"T : "<<s<<endl;
-
-    Hash transcript_hash;
+    LocalHash transcript_hash;
 
     append_one_msg(transcript_hash, sid);
-    // uint64_t eta = get_challenge(transcript_hash);
+    uint64_t eta = get_challenge(transcript_hash);
     // uint64_t eta = 1;
-    uint64_t eta = 200;
-    cout << "eta: " << eta << endl;
+    // uint64_t eta = 200;
+    // cout << "eta: " << eta << endl;
     assert(eta < Mersenne::PR);
 
-
-    // return DZKProof();
-    //Prepare Input
-    // begin_time = clock();
     uint64_t eta_power = 1;
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
@@ -164,18 +166,10 @@ DZKProof prove(
             eta_power = Mersenne::mul(eta_power, eta);
         }
     }
-    // finish_time = clock();
-    // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
 
     s *= 2;
     vector<vector<uint64_t>> p_evals_masked;
-    // vector<vector<uint64_t>> p_evals_masked2;
     uint64_t** base = get_bases(k);
-    for(uint64_t i = 0; i < k - 1; i++) {
-        for (uint64_t l = 0; l < k; l++) {
-            cout << "base[" << i << "][" << l << "]: " << base[i][l] << endl;
-        }
-    }
     uint64_t* eval_base;
     uint64_t s0;
     uint64_t** eval_result = new uint64_t*[k];
@@ -190,25 +184,15 @@ DZKProof prove(
     uint16_t cnt = 1;
 
     while(true){
-        // cout<<"s : "<<s<<endl;
-        // cout<<"k : "<<k<<endl;
 
-        //Compute P(X)
-        // begin_time = clock();
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
                 eval_result[i][j] = Mersenne::inner_product(input_left[i], input_right[j], s);
             }
         }
 
-        // cout<<"checkpoint 1"<<endl;
-
         for(uint64_t i = 0; i < k; i++) {
             eval_p_poly[i] = eval_result[i][i];
-        }
-
-        for(uint64_t j = 0; j < 2 * k - 1; j++) {
-            cout << "1: eval_p_poly[" << j << "]: " << eval_p_poly[j] << endl;
         }
 
         for(uint64_t i = 0; i < k - 1; i++) {
@@ -220,37 +204,9 @@ DZKProof prove(
             }
         }
 
-        for(uint64_t j = 0; j < 2 * k - 1; j++) {
-            cout << "2: eval_p_poly[" << j << "]: " << eval_p_poly[j] << endl;
-        }
-
-        // cout<<"checkpoint 2"<<endl;
-
-        // finish_time = clock();
-        // cout<<"Interpolation Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-
-        //generate proof
-        // begin_time = clock();
-        // vector<uint64_t> ss1(2 * k - 1), ss2(2 * k - 1);
-        // uint64_t temp;
-        // for(uint64_t i = 0; i < 2 * k - 1; i++) {
-        //     ss1[i] = get_rand();
-        //     if(eval_p_poly[i] > ss1[i]) {
-        //         temp = eval_p_poly[i] - ss1[i];
-        //     }
-        //     else {
-        //         temp = Mersenne::PR - ss1[i] + eval_p_poly[i];
-        //     }
-        //     ss2[i] = temp;
-        // }
-        // p_evals_masked1.push_back(ss1);
-        // p_evals_masked2.push_back(ss2);
-        // finish_time = clock();
-        // cout<<"Generate DZKProof Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-
         vector<uint64_t> ss(2 * k - 1);
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            cout << "masks[" << cnt - 1 << "][" << i << "]: " << masks[cnt - 1][i] << endl;
+            // cout << "masks[" << cnt - 1 << "][" << i << "]: " << masks[cnt - 1][i] << endl;
             ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt - 1][i]);
         }
 
@@ -259,28 +215,19 @@ DZKProof prove(
             res += eval_p_poly[j];
         }
         res = Mersenne::modp(res);
-        cout << "p_eval_ksum should be: " << res << endl;
 
         p_evals_masked.push_back(ss);
 
-        // cout<<"checkpoint 3"<<endl;
-
         if (s == 1) {
-            // cout << "breaking.. cnt: " << cnt << endl;
             break;
         }
-
-        // Prepare Next Input
-        // begin_time = clock();
-        // r = masks[cnt];
+        
         append_msges(transcript_hash, ss);
-        // uint64_t r = (unsigned int)1 << 31;
-        // uint64_t r = get_challenge(transcript_hash);
-        uint64_t r = 200;
+        uint64_t r = get_challenge(transcript_hash);
+        // uint64_t r = 200;
         assert(r < Mersenne::PR);
 
-        // uint64_t r = 1;
-        cout << "r: " << r << endl;
+        // cout << "r: " << r << endl;
         eval_base = evaluate_bases(k, r);
 
         s0 = s;
@@ -307,9 +254,6 @@ DZKProof prove(
                 }
             }
         }
-        // finish_time = clock();
-        // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-
         cnt++;
     }
 
@@ -380,21 +324,21 @@ VerMsg gen_vermsg(
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
-    cout<<"in gen_vermsg"<<endl;
-    cout<<"sid: "<< sid << endl;
+    // cout<<"in gen_vermsg"<<endl;
+    // cout<<"sid: "<< sid << endl;
 
     // uint64_t L = var;
     uint64_t T = batch_size;
     // uint64_t s = T / k;
     uint64_t s = (T - 1) / k + 1;
 
-    Hash transcript_hash;
+    LocalHash transcript_hash;
 
     append_one_msg(transcript_hash, sid);
-    // uint64_t eta = get_challenge(transcript_hash);
+    uint64_t eta = get_challenge(transcript_hash);
     // uint64_t eta = 1;
-    uint64_t eta = 200;
-    cout << "eta: " << eta << endl;
+    // uint64_t eta = 200;
+    // cout << "eta: " << eta << endl;
     assert(eta < Mersenne::PR);
 
     // uint64_t eta = rands[0];
@@ -426,41 +370,29 @@ VerMsg gen_vermsg(
                 eta_power[i][j] = Mersenne::mul(eta_power[i][j - 1], eta);
             }
         }
-        // finish_time = clock();
-        // cout<<"Compute ETA Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-        
-        // Prepare Input
+
         if ((party_ID + 1 - prover_ID) % 3 == 0) {
-            // begin_time = clock();
             for(uint64_t i = 0; i < k; i++) {
                 for(uint64_t j = 0; j < s; j++) {
                     input[i][2 * j] = Mersenne::mul(input[i][2 * j], eta_power[i][j]);
                     input[i][2 * j + 1] = Mersenne::mul(input[i][2 * j + 1], eta_power[i][j]);
                 }
             }
-            // finish_time = clock();
-            // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
         }
 
-        // begin_time = clock();
         p_eval_r_ss[0] = 0;
         for(uint64_t i = 0; i < k; i++) {
             p_eval_r_ss[0] += Mersenne::inner_product(eta_power[i], input_mono[i], s);
         }
         p_eval_r_ss[0] = Mersenne::modp(p_eval_r_ss[0]);
-        // finish_time = clock();
-        // cout<<"Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
     }
     else {
-        // begin_time = clock();
         if ((party_ID + 1 - prover_ID) % 3 == 0) {
             temp_result = 0;
             uint64_t eta_temp = 1;
             int cnt_num = 0;
             for(uint64_t i = 0; i < k; i++) {
                 for(uint64_t j = 0; j < s; j++) {
-                    cout << "P_{i-1}, input_mono[" << i << "][" << j << "]: " << input_mono[i][j] << endl;
-                    cout << "eta_temp: " << eta_temp << endl;
                     if(input_mono[i][j] != 0) {
                         cnt_num++;
                     }
@@ -471,8 +403,6 @@ VerMsg gen_vermsg(
                 }
             }
             p_eval_r_ss[0] = Mersenne::modp_128(temp_result);
-            cout << "num of non-zeros: " << cnt_num << endl;
-            cout << "p_eval_r_ss[0]: " << p_eval_r_ss[0] << endl;
         }
         else {
             temp_result = 0;
@@ -480,8 +410,6 @@ VerMsg gen_vermsg(
             int cnt_num = 0;
             for(uint64_t i = 0; i < k; i++) {
                 for(uint64_t j = 0; j < s; j++) {
-                    cout << "P_{i+1}, input_mono[" << i << "][" << j << "]: " << input_mono[i][j] << endl;
-                    cout << "eta_temp: " << eta_temp << endl;
                     if(input_mono[i][j] != 0) {
                         cnt_num++;
                     }
@@ -490,57 +418,37 @@ VerMsg gen_vermsg(
                 }
             }
             p_eval_r_ss[0] = Mersenne::modp_128(temp_result);
-            cout << "num of non-zeros: " << cnt_num << endl;
-            cout << "p_eval_r_ss[0]: " << p_eval_r_ss[0] << endl;
+            
         }
-        // finish_time = clock();
-        // cout<<"Prepare Input + Compute Monomial Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
     }
-    //  vector<uint64_t> proof.p_evals_masked[cnt - 1](2 * k - 1);
     
     s *= 2;
     while(true)
     {
-        cout<<"s : "<<s<<endl;
-        cout<<"k : "<<k<<endl;
-        cout << "cnt:" << cnt << endl;
         
-        // cout << "proof.p_evals_masked.size(): " << proof.p_evals_masked.size() << endl;
-        // cout << "proof.p_evals_masked[cnt - 1].size(): " << proof.p_evals_masked[cnt - 1].size() << endl;
-
         append_msges(transcript_hash, proof.p_evals_masked[cnt - 1]);
 
-        // cout<<"checkpoint 1"<<endl;
 
         for(uint64_t i = 0; i < 2 * k - 1; i++) { 
-            cout << "masks_ss[" << cnt - 1 << "][" << i << "]: " << masks_ss[cnt - 1][i] << endl;
             proof.p_evals_masked[cnt - 1][i] = Mersenne::add(proof.p_evals_masked[cnt - 1][i], masks_ss[cnt - 1][i]);
         } 
-        // cout<<"checkpoint 2"<<endl;
-
-        // Compute share of sum of p's evaluations over [0, k - 1]
         uint64_t res = 0;
         for(uint64_t j = 0; j < k; j++) { // Assume k < 8
             res += proof.p_evals_masked[cnt - 1][j];
         }
         p_eval_ksum_ss[cnt - 1] = Mersenne::modp(res);
-        // cout<<"checkpoint 3"<<endl;
-
-        // cout << "checkpoint 3.1" << endl;
         if(s == 1) {
-            // cout<<"in s== 1 loop..."<<endl;
-            // r = get_challenge(transcript_hash);
-            r = 200;
+            r = get_challenge(transcript_hash);
+            // r = 200;
             assert(r < Mersenne::PR);
             // r = 1;
-            cout << "r: " << r << endl;
+            // cout << "r: " << r << endl;
             eval_base = evaluate_bases(k, r);
             temp_result = 0;
 
             for(uint64_t i = 0; i < k; i++) {
                 temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) input[i][0]);
             }
-            // cout<<"checkpoint 6"<<endl;
 
             final_input = Mersenne::modp_128(temp_result);
             eval_base = evaluate_bases(2 * k - 1, r);
@@ -549,34 +457,24 @@ VerMsg gen_vermsg(
                 temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt - 1][i]);
             }
             final_result_ss = Mersenne::modp_128(temp_result);
-            // delete[] proof.p_evals_masked[cnt - 1];
-            // cout<<"breaking..."<<endl;
             break;
         }
 
-        // Compute share of p's evaluation at r
-        // r = get_challenge(transcript_hash);
-        r = 200;
+        r = get_challenge(transcript_hash);
+        // r = 200;
         assert(r < Mersenne::PR);
         // r = 1;
-        cout << "r: " << r << endl;
+        // cout << "r: " << r << endl;
         eval_base = evaluate_bases(2 * k - 1, r);
         temp_result = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt - 1][i]);
         }
-        // cout<<"p_eval_r_ss.size(): " << p_eval_r_ss.size() << endl;
         p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
-        cout << "p_eval_r_ss[" << cnt << "]: " << p_eval_r_ss[cnt] << endl;
 
-        // cout<<"checkpoint 4"<<endl;
-
-        // Compute New Input
-        // begin_time = clock();
         eval_base = evaluate_bases(k, r);
         s0 = s;
         s = (s - 1) / k + 1;
-        // cout << "checkpoint 4.1" << endl;
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < s; j++) {
                 index = i * s + j;
@@ -592,16 +490,9 @@ VerMsg gen_vermsg(
                 }
             }
         }
-        // cout<<"checkpoint 5"<<endl;
-
-        // finish_time = clock();
-        // cout<<"Prepare Input Time = "<<double(finish_time-begin_time)/CLOCKS_PER_SEC * 1000<<"ms"<<endl;
-
+        
         cnt++;
     }
-
-    // delete[] proof.p_evals_masked[cnt - 1];
-    // cout<<"constructing vermsg"<<endl;
 
     VerMsg vermsg(
         p_eval_ksum_ss,
@@ -609,7 +500,6 @@ VerMsg gen_vermsg(
         final_input,
         final_result_ss
     );
-    // cout<<"returning..."<<endl;
     return vermsg;
 }
 
@@ -625,34 +515,22 @@ bool verify(
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
-    cout<<"in verify"<<endl;
-    cout<<"sid: "<< sid << endl;
+    // cout<<"in verify"<<endl;
+    // cout<<"sid: "<< sid << endl;
 
-    // uint64_t L = var;
     uint64_t T = batch_size;
-    // uint64_t s = T / k;
     uint64_t len = log(2 * T) / log(k) + 2;
-    cout << "len: " << len << endl;
     
-    // VerMsg self_vermsg = gen_vermsg(p_eval_ss, input, input_mono, var, batch_size, k, sid, rands, prover_ID, party_ID);
     VerMsg self_vermsg = gen_vermsg(proof, input, input_mono, batch_size, k, sid, masks_ss, prover_ID, party_ID);
-    cout << "size of p_eval_ksum_ss: " << self_vermsg.p_eval_ksum_ss.size() << endl;
-    cout << "size of p_eval_r_ss: " << self_vermsg.p_eval_r_ss.size() << endl;
-
+    
     uint64_t p_eval_ksum, p_eval_r;
 
     for(uint64_t i = 0; i < len; i++) {
         p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[i], other_vermsg.p_eval_ksum_ss[i]);
-
-        cout << "self_vermsg.p_eval_r_ss[" << i << "]: " << self_vermsg.p_eval_r_ss[i] << endl;
-        cout << "other_vermsg.p_eval_r_ss[" << i << "]: " << other_vermsg.p_eval_r_ss[i] << endl;
-
         p_eval_r = Mersenne::add(self_vermsg.p_eval_r_ss[i], other_vermsg.p_eval_r_ss[i]);
-        cout << "p_eval_ksum: " << p_eval_ksum << endl;
-        cout << "p_eval_r: " << p_eval_r << endl;
         
         if(p_eval_ksum != p_eval_r) {
-            cout << i << "-th sum check didn't pass" << endl;
+            // cout << i << "-th sum check didn't pass" << endl;
             return false;
         }
     }
@@ -669,12 +547,9 @@ bool verify(
     uint64_t res = Mersenne::mul(last_input_left, last_input_right);
     p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
     
-    cout << "res: " << res << endl;
-    cout << "p_eval_r: " << p_eval_r << endl;
-
     if(res != p_eval_r) {
-        cout << "last check didn't pass" << endl;
-        // return false;
+        // cout << "last check didn't pass" << endl;
+        return false;
     }
     
     return true;

@@ -18,7 +18,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    queue<T> results, input1, input2;
+    queue<T> input1, input2;
     queue<array<typename T::value_type, 2>> rhos;
     vector<typename T::open_type> opened;
     // Preprocessing<T>* prep;
@@ -33,7 +33,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, false_type);
 
-    const static int BATCH_SIZE = 1000;
+    const static int BATCH_SIZE = 100000;
 
 public:
 
@@ -41,6 +41,7 @@ public:
 
     array<PRNG, 2> shared_prngs;
     PRNG global_prng;
+    queue<T> results;
 
     Player& P;
 

@@ -3,7 +3,7 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-ROUNDS = 500
+ROUNDS = 500000
 
 import random
 
