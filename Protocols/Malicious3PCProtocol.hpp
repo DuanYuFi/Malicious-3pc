@@ -103,17 +103,17 @@ void Malicious3PCProtocol<T>::Check() {
             uint64_t v0 = y[1].get();
             // shared vars between P_i and P_{i+1}
             uint64_t v1 = Mersenne::sub(x[0].get(), 2 * ti * x[0].get());
-            // uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
+            uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
             // shared vars between P_i and P_{i-1}
-            uint64_t v2 = Mersenne::sub(x[1].get(), 2 * rho[1].get() * x[1].get());
-            // uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
+            uint64_t v2 = Mersenne::sub(2 * rho[1].get() * x[1].get(), x[1].get());
+            uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
             // shared vars between P_i and P_{i+1}
             uint64_t v3 = y[0].get();
             uint64_t v4 = Mersenne::sub(rho[1].get(), ti);
+            uint64_t v44 = rho[1].get() - ti;
 
-            assert(Mersenne::sub(Mersenne::mul(v0, v1), Mersenne::mul(v2, v3)) == v4);
-            // assert(v0 * v11 + v22 * v3 == v4);
-            
+            assert(Mersenne::add(Mersenne::mul(v0, v1), Mersenne::mul(v2, v3)) == v4);
+            assert(v0 * v11 - v22 * v3 == v44);
             
             input_left[i][j * 2] = v0;
             input_left[i][j * 2 + 1] = v2;

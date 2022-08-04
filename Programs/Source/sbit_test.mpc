@@ -1,15 +1,17 @@
 from Compiler.GC.types import *
 
 a = sbit(1)
-b = sbit(1)
+b = sbit(0)
 
 ROUNDS = 500
 
 for i in range(ROUNDS):
     a & b
 
-c = a & b
+c = sbit(1)
+for i in range(ROUNDS):
+    a & c
 
-b = a & c
+a = b & c
 
 print_ln("%s", b.reveal())
