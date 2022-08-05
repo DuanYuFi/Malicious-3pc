@@ -44,10 +44,10 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 template <class T>
 void Malicious3PCProtocol<T>::maybe_check() {
 
-    cout << results.size() << endl;
-
-    while ((int) results.size() >= BATCH_SIZE)
+    // cout << results.size() << endl;
+    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
         Check();
+    
 }
 
 template <class T>
@@ -62,9 +62,16 @@ void Malicious3PCProtocol<T>::init_mul()
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::Check() {
+void Malicious3PCProtocol<T>::check() {
+    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+        Check();
+    Check();
+}
 
-    int sz = min(BATCH_SIZE, (int)results.size());
+template <class T>
+void Malicious3PCProtocol<T>::Check() {
+    
+    int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
     if (sz == 0) {
         return;
     }
@@ -73,7 +80,7 @@ void Malicious3PCProtocol<T>::Check() {
         o.clear();
 
 
-    int k = 8, cols = (sz - 1) / k + 1;
+    int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
     int my_number = P.my_real_num();
     int prev_number = my_number == 0 ? 2 : my_number - 1;
     int next_number = my_number == 2 ? 0 : my_number + 1;
@@ -272,7 +279,7 @@ template<class T>
 void Malicious3PCProtocol<T>::exchange()
 {
 
-    cout << "In Malicious3PCProtocol::exchange()" << endl;
+    // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
     if (os[0].get_length() > 0)
         P.pass_around(os[0], os[1], 1);

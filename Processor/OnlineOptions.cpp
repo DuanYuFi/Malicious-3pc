@@ -23,6 +23,7 @@ OnlineOptions::OnlineOptions() : playerno(-1)
     lgp = gfp0::MAX_N_BITS;
     live_prep = true;
     batch_size = 10000;
+    k_size = 8;
     memtype = "empty";
     bits_from_squares = false;
     direct = false;
@@ -219,6 +220,17 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
             "-b", // Flag token.
             "--batch-size" // Flag token.
     );
+
+    opt.add(
+            to_string(8).c_str(), // Default.
+            0, // Required?
+            1, // Number of args expected.
+            0, // Delimiter if expecting multiple args.
+            ("Rows of checking matrix (default: " + to_string(8) + ")").c_str(), // Help description.
+            "-k", // Flag token.
+            "--k-rows" // Flag token.
+    );
+
     opt.add(
             memtype.c_str(), // Default.
             0, // Required?
@@ -270,6 +282,7 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
         file_prep_per_thread = true;
     }
     opt.get("-b")->getInt(batch_size);
+    opt.get("-k")->getInt(k_size);
     opt.get("--memory")->getString(memtype);
     bits_from_squares = opt.isSet("-Q");
 
