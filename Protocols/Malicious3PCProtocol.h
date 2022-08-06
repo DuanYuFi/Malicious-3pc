@@ -2,16 +2,38 @@
 #define PROTOCOLS_MALICIOUS3PCPROTOCOL_H_
 
 #include "Replicated.h"
+#include "BinaryCheck.h"
 #include "Processor/Data_Files.h"
 
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
-#include <mutex>
+
+#define USE_THREAD
+
+#ifdef USE_THREAD
+#define Queue SafeQueue
+#else
+#define Queue queue
+#endif
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
 class Player;
+
+
+struct StatusData {
+    DZKProof proof;
+    uint64_t **input_result_up, **input_result_down, **input_mono_up, **input_mono_down;
+    uint64_t **mask_ss_up, **mask_ss_down;
+    uint64_t *sid;
+    int sz;
+
+    StatusData() {}
+    StatusData(DZKProof proof, uint64_t **input_result_up, uint64_t **input_result_down, uint64_t **input_mono_up, uint64_t **input_mono_down, uint64_t **mask_ss_up, uint64_t **mask_ss_down, uint64_t *sid, int sz) :
+        proof(proof), input_result_up(input_result_up), input_result_down(input_result_down), input_mono_up(input_mono_up), input_mono_down(input_mono_down), mask_ss_up(mask_ss_up), mask_ss_down(mask_ss_down), sid(sid), sz(sz) {}
+};
+
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -21,8 +43,11 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    SafeQueue<T> input1, input2, results;;
-    SafeQueue<array<typename T::value_type, 2>> rhos;
+    Queue<T> input1, input2, results;
+    Queue<array<typename T::value_type, 2>> rhos;
+
+    vector<StatusData> status_queue;
+    // Queue<VerMsg> vermsg_queue;
     vector<typename T::open_type> opened;
     // Preprocessing<T>* prep;
     // typename T::MAC_Check* MC;
@@ -33,7 +58,6 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typename T::clear dotprod_share;
 
     bool returned;
-    std::mutex mtk;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -45,6 +69,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 public:
 
     static const bool uses_triples = false;
+
+    int cost_in_comm, cost_in_gen_proof, cost_in_gen_vermsg, cost_in_verify;
 
     array<PRNG, 2> shared_prngs;
     PRNG global_prng;
@@ -90,9 +116,10 @@ public:
     }
 
     void check();
-    void Check();
+    void finalize_check();
     void Check_one();
-    void maybe_check();
+    void final_verify();
+    // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 };
 

@@ -2,18 +2,22 @@
 #define PROTOCOLS_MALICIOUS3PCPROTOCOL_HPP_
 
 #include "Malicious3PCProtocol.h"
-#include "BinaryCheck.hpp"
+
 
 #include "Replicated.h"
 #include "Tools/octetStream.h"
 
-#define USE_THREAD
+#include <chrono>
 
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
 
     returned = true;
+    cost_in_comm = 0;
+    cost_in_gen_proof = 0;
+    cost_in_gen_vermsg = 0;
+    cost_in_verify = 0;
 
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
@@ -47,7 +51,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::maybe_check() {
+void Malicious3PCProtocol<T>::check() {
     
     if ((int) results.size() < OnlineOptions::singleton.batch_size)
         return;
@@ -55,21 +59,21 @@ void Malicious3PCProtocol<T>::maybe_check() {
     #ifdef USE_THREAD
 
     if (!returned) {
-        cout << "Thread already running" << endl;
+        // cout << "Thread already running" << endl;
         return ;
     }
 
     returned = false;
     
     if (check_thread.joinable()) {
-        cout << "Join last thread" << endl;
+        // cout << "Join last thread" << endl;
         check_thread.join();
     }
 
-    cout << "Create thread" << endl;
-    check_thread = std::thread(&Malicious3PCProtocol<T>::Check, this);
+    // cout << "Create thread" << endl;
+    check_thread = std::thread(&Malicious3PCProtocol<T>::check, this);
     #else
-    Check();
+    check();
     #endif
     
 }
@@ -78,7 +82,7 @@ template <class T>
 void Malicious3PCProtocol<T>::init_mul()
 {
 
-    maybe_check();
+    check();
     // cout << "In initmul" << endl;
 
 	for (auto& o : os)
@@ -87,7 +91,7 @@ void Malicious3PCProtocol<T>::init_mul()
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::check() {
+void Malicious3PCProtocol<T>::finalize_check() {
     while ((int) results.size() >= OnlineOptions::singleton.batch_size)
         Check_one();
     Check_one();
@@ -97,33 +101,103 @@ void Malicious3PCProtocol<T>::check() {
         check_thread.join();
     }
     #endif
+
+    final_verify();
 }
 
+// template <class T>
+// void Malicious3PCProtocol<T>::check() {
+//     while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+//         Check_one();
+//     returned = true;
+// }
+
 template <class T>
-void Malicious3PCProtocol<T>::Check() {
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
-        Check_one();
-    returned = true;
+void Malicious3PCProtocol<T>::final_verify() {
+
+    int my_number = P.my_real_num();
+    int prev_number = my_number == 0 ? 2 : my_number - 1;
+    int next_number = my_number == 2 ? 0 : my_number + 1;
+
+    array<octetStream, 2> proof_os, vermsg_os;
+
+    for (auto& o : proof_os)
+        o.reset_write_head();
+    
+    for (auto& o : vermsg_os)
+        o.reset_write_head();
+    
+    for (auto data: status_queue) {
+        DZKProof proof = data.proof;
+        proof.pack(proof_os[0]);
+    }
+
+    P.pass_around(proof_os[0], proof_os[1], 1);
+
+    for (auto data: status_queue) {
+        DZKProof proof;
+        uint64_t **input_result_down = data.input_result_down;
+        uint64_t **input_mono_down = data.input_mono_down;
+        uint64_t **mask_ss_down = data.mask_ss_down;
+        uint64_t *sid = data.sid;
+        int sz = data.sz;
+        int k = OnlineOptions::singleton.k_size;
+
+        proof.unpack(proof_os[1]);
+        VerMsg vermsg = gen_vermsg(proof, input_result_down, input_mono_down, sz, k, sid[prev_number], mask_ss_down, prev_number, my_number);
+        vermsg.pack(vermsg_os[0]);
+    }
+
+    proof_os[0].reset_read_head();
+    proof_os[1].reset_write_head();
+
+    P.pass_around(proof_os[0], proof_os[1], -1);
+    P.pass_around(vermsg_os[0], vermsg_os[1], 1);
+
+    for (auto data: status_queue) {
+
+        uint64_t **input_result_up = data.input_result_up;
+        uint64_t **input_mono_up = data.input_mono_up;
+        uint64_t **mask_ss_up = data.mask_ss_up;
+        uint64_t *sid = data.sid;
+
+        int sz = data.sz;
+        int k = OnlineOptions::singleton.k_size;
+
+        VerMsg received_vermsg;
+        received_vermsg.unpack(vermsg_os[1]);
+
+        DZKProof proof;
+        proof.unpack(proof_os[1]);
+
+        // cout << "Next: verify" << endl;
+        bool res = verify(proof, input_result_up, input_mono_up, received_vermsg, sz, k, sid[next_number], mask_ss_up, next_number, my_number);
+            
+        if (!res) {
+            // throw mac_fail("ZKP check failed");
+            // cout << "ZKP check failed" << endl;
+        }
+        else {
+            // cout << "Check passed" << endl;
+        }
+
+        // cout << "Checked one batch" << endl;
+    }
+
+    status_queue.clear();
 }
 
 template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
-    cout << "In check_one" << endl;
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
-    cout << sz << endl;
+    // cout << sz << endl;
     if (sz == 0) {
         return;
     }
 
-    for (auto& o : os)
-        o.clear();
-
-
     int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
     int my_number = P.my_real_num();
-    int prev_number = my_number == 0 ? 2 : my_number - 1;
-    int next_number = my_number == 2 ? 0 : my_number + 1;
 
     uint64_t **input_left, **input_right, **input_result_up, **input_result_down, **input_mono_up, **input_mono_down;
 
@@ -144,7 +218,12 @@ void Malicious3PCProtocol<T>::Check_one() {
         input_mono_up[i] = new uint64_t[cols];
         input_mono_down[i] = new uint64_t[cols];
 
-        for (int j = 0; j < min(cols, (int) results.size()); j ++) {
+        for (int j = 0; j < cols; j ++) {
+
+            if (i == k - 1 && j >= sz % cols) {
+                break;
+            }
+
             auto x = input1.front();    input1.pop();
             auto y = input2.front();    input2.pop();
             auto z = results.front();   results.pop();
@@ -153,6 +232,12 @@ void Malicious3PCProtocol<T>::Check_one() {
             // x[0]: x_i, x[1]: x_{i-1}
             // y[0]: y_i, y[1]: y_{i-1}
             // z[0]: z_i, z[1]: z_{i-1}
+            if (z[0] != x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]) {
+                cout << "x: " << x[0] << " " << x[1] << endl;
+                cout << "y: " << y[0] << " " << y[1] << endl;
+                cout << "z: " << z[0] << " " << z[1] << endl;
+                cout << "rho: " << rho[0] << " " << rho[1] << endl;
+            }
             assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
             
             uint64_t ti = (z[0] - x[0] * y[0] - rho[0]).get();
@@ -237,65 +322,38 @@ void Malicious3PCProtocol<T>::Check_one() {
         }
     }
 
-    uint64_t sid[3];
+    uint64_t *sid = new uint64_t[3];
     for (int i = 0; i < 3; i ++) {
         sid[i] = global_prng.get_word();
     }
     
     // return;
     DZKProof dzkproof = prove(input_left, input_right, sz, k, sid[my_number], masks);
-    DZKProof received_proof[2];
-    // return ;
-    dzkproof.pack(os[0]);
 
-    // P_i sends proof_i to P_{i+1}, receives proof_{i-1} from P_{i-1}
-    mtk.lock();
-    cout << "Thread exchange dzkproof1 start" << endl;
-    P.pass_around(os[0], os[1], 1);
-    cout << "Thread exchange dzkproof1 finish" << endl;
-    mtk.unlock();
-    // cout << dzkproof.p_evals_masked.size() << endl;
+    status_queue.push_back(StatusData(dzkproof,
+                                    input_result_up, 
+                                    input_result_down, 
+                                    input_mono_up,
+                                    input_mono_down,
+                                    mask_ss_up,
+                                    mask_ss_down,
+                                    sid,
+                                    sz));
 
-    // received_proof[0] is proof_{i-1}
-    received_proof[0].unpack(os[1]);
-
-    mtk.lock();
-    cout << "Thread exchange dzkproof2 start" << endl;
-    P.pass_around(os[0], os[1], -1);
-    cout << "Thread exchange dzkproof2 finish" << endl;
-    mtk.unlock();
-
-    received_proof[1].unpack(os[1]);
-    // return ;
-    // cout << "Next: gen_vermsg" << endl;
-    VerMsg vermsg = gen_vermsg(received_proof[0], input_result_down, input_mono_down, sz, k, sid[prev_number], mask_ss_down, prev_number, my_number);
-
-    // cout << "Next: reset_write_head" << endl;
-    for (auto& o : os)
-        o.reset_write_head();
-
-    // cout << "Next: pack" << endl;
-    vermsg.pack(os[0]);
-
-    mtk.lock();
-    cout << "Thread exchange vermsg start" << endl;
-    P.pass_around(os[0], os[1], 1);
-    cout << "Thread exchange vermsg finish" << endl;
-    mtk.unlock();
-
-    // cout << "Next: unpack" << endl;
-    VerMsg received_vermsg;
-    received_vermsg.unpack(os[1]);
-
-    // cout << "Next: verify" << endl;
-    bool res = verify(received_proof[1], input_result_up, input_mono_up, received_vermsg, sz, k, sid[next_number], mask_ss_up, next_number, my_number);
-    if (!res) {
-        // throw mac_fail("ZKP check failed");
-        // cout << "ZKP check failed" << endl;
+    for (int i = 0; i < k; i ++) {
+        delete[] input_left[i];
+        delete[] input_right[i];
     }
-    else {
-        // cout << "Check passed" << endl;
+
+    delete[] input_left;
+    delete[] input_right;
+
+    for (int i = 0; i < cnt; i ++) {
+        delete[] masks[i];
     }
+
+    delete[] masks;
+
 }
 
 
@@ -336,11 +394,7 @@ void Malicious3PCProtocol<T>::exchange()
     // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
     if (os[0].get_length() > 0) {
-        mtk.lock();
-        cout << "Main thread exchange start" << endl;
         P.pass_around(os[0], os[1], 1);
-        cout << "Main thread exchange finish" << endl;
-        mtk.unlock();
     }
         
     this->rounds++;

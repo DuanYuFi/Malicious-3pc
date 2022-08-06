@@ -76,7 +76,12 @@ void StandaloneShareThread<T>::pre_run()
 template<class T>
 void ShareThread<T>::post_run()
 {
-    protocol->check();
+    // cout << "Calling final check" << endl;
+    protocol->finalize_check();
+    // cout << "Cost in communication: " << protocol->cost_in_comm << endl;
+    // cout << "Cost in gen proof: " << protocol->cost_in_gen_proof << endl;
+    // cout << "Cost in gen verify: " << protocol->cost_in_gen_vermsg << endl;
+    // cout << "Cost in verify: " << protocol->cost_in_verify << endl;
     MC->Check(*this->P);
 }
 

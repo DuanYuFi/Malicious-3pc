@@ -7,7 +7,7 @@ ROUNDS = 100000
 
 import random
 
-for _ in range(5):
+for _ in range(1):
     for i in range(ROUNDS - 1):
         a & b
     c = a & b

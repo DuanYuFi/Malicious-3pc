@@ -13,6 +13,7 @@
 #include "Processor/RingOptions.h"
 #include "GC/MaliciousCcdSecret.h"
 
+#include "Protocols/BinaryCheck.hpp"
 #include "Processor/RingMachine.hpp"
 #include "Protocols/Replicated.hpp"
 #include "Protocols/MaliciousRepMC.hpp"
