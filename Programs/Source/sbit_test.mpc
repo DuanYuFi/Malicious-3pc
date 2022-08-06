@@ -3,13 +3,19 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-ROUNDS = 2000000
+ROUNDS = 100000
 
 import random
 
-for i in range(ROUNDS):
-    random.choice([a, b]) & random.choice([a, b])
+for _ in range(5):
+    for i in range(ROUNDS - 1):
+        a & b
+    c = a & b
 
-c = a & b
+    for i in range(ROUNDS - 1):
+        b & c
+    a = b & c
 
-print_ln("%s", c.reveal())
+# c = a & b
+
+# print_ln("%s", c.reveal())

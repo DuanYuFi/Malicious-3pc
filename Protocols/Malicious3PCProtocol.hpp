@@ -7,9 +7,14 @@
 #include "Replicated.h"
 #include "Tools/octetStream.h"
 
+#define USE_THREAD
+
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
+
+    returned = true;
+
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
 
@@ -43,10 +48,29 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 
 template <class T>
 void Malicious3PCProtocol<T>::maybe_check() {
+    
+    if ((int) results.size() < OnlineOptions::singleton.batch_size)
+        return;
 
-    // cout << results.size() << endl;
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
-        Check();
+    #ifdef USE_THREAD
+
+    if (!returned) {
+        cout << "Thread already running" << endl;
+        return ;
+    }
+
+    returned = false;
+    
+    if (check_thread.joinable()) {
+        cout << "Join last thread" << endl;
+        check_thread.join();
+    }
+
+    cout << "Create thread" << endl;
+    check_thread = std::thread(&Malicious3PCProtocol<T>::Check, this);
+    #else
+    Check();
+    #endif
     
 }
 
@@ -55,6 +79,7 @@ void Malicious3PCProtocol<T>::init_mul()
 {
 
     maybe_check();
+    // cout << "In initmul" << endl;
 
 	for (auto& o : os)
         o.reset_write_head();
@@ -64,14 +89,29 @@ void Malicious3PCProtocol<T>::init_mul()
 template <class T>
 void Malicious3PCProtocol<T>::check() {
     while ((int) results.size() >= OnlineOptions::singleton.batch_size)
-        Check();
-    Check();
+        Check_one();
+    Check_one();
+
+    #ifdef USE_THREAD
+    if (check_thread.joinable()) {
+        check_thread.join();
+    }
+    #endif
 }
 
 template <class T>
 void Malicious3PCProtocol<T>::Check() {
+    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+        Check_one();
+    returned = true;
+}
+
+template <class T>
+void Malicious3PCProtocol<T>::Check_one() {
     
+    cout << "In check_one" << endl;
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
+    cout << sz << endl;
     if (sz == 0) {
         return;
     }
@@ -209,13 +249,22 @@ void Malicious3PCProtocol<T>::Check() {
     dzkproof.pack(os[0]);
 
     // P_i sends proof_i to P_{i+1}, receives proof_{i-1} from P_{i-1}
-    P.pass_around(os[0], os[1], 1);    
+    mtk.lock();
+    cout << "Thread exchange dzkproof1 start" << endl;
+    P.pass_around(os[0], os[1], 1);
+    cout << "Thread exchange dzkproof1 finish" << endl;
+    mtk.unlock();
     // cout << dzkproof.p_evals_masked.size() << endl;
 
     // received_proof[0] is proof_{i-1}
     received_proof[0].unpack(os[1]);
 
+    mtk.lock();
+    cout << "Thread exchange dzkproof2 start" << endl;
     P.pass_around(os[0], os[1], -1);
+    cout << "Thread exchange dzkproof2 finish" << endl;
+    mtk.unlock();
+
     received_proof[1].unpack(os[1]);
     // return ;
     // cout << "Next: gen_vermsg" << endl;
@@ -227,7 +276,12 @@ void Malicious3PCProtocol<T>::Check() {
 
     // cout << "Next: pack" << endl;
     vermsg.pack(os[0]);
+
+    mtk.lock();
+    cout << "Thread exchange vermsg start" << endl;
     P.pass_around(os[0], os[1], 1);
+    cout << "Thread exchange vermsg finish" << endl;
+    mtk.unlock();
 
     // cout << "Next: unpack" << endl;
     VerMsg received_vermsg;
@@ -281,8 +335,14 @@ void Malicious3PCProtocol<T>::exchange()
 
     // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
-    if (os[0].get_length() > 0)
+    if (os[0].get_length() > 0) {
+        mtk.lock();
+        cout << "Main thread exchange start" << endl;
         P.pass_around(os[0], os[1], 1);
+        cout << "Main thread exchange finish" << endl;
+        mtk.unlock();
+    }
+        
     this->rounds++;
 }
 

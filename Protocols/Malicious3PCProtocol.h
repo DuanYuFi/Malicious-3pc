@@ -5,6 +5,9 @@
 #include "Processor/Data_Files.h"
 
 #include "queue"
+#include "SafeQueue.h"
+#include <thread>
+#include <mutex>
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
@@ -18,15 +21,19 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    queue<T> input1, input2, results;;
-    queue<array<typename T::value_type, 2>> rhos;
+    SafeQueue<T> input1, input2, results;;
+    SafeQueue<array<typename T::value_type, 2>> rhos;
     vector<typename T::open_type> opened;
     // Preprocessing<T>* prep;
     // typename T::MAC_Check* MC;
+    std::thread check_thread;
 
     array<octetStream, 2> os;
     PointerVector<typename T::clear> add_shares, uids;
     typename T::clear dotprod_share;
+
+    bool returned;
+    std::mutex mtk;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -84,6 +91,7 @@ public:
 
     void check();
     void Check();
+    void Check_one();
     void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 };
