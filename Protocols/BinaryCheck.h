@@ -29,6 +29,10 @@ public:
 struct DZKProof {
     vector<vector<uint64_t>> p_evals_masked;
 
+    inline void get_size() {
+        cout << p_evals_masked.size() << "*" << p_evals_masked[0].size() << endl;
+    }
+
     void pack(octetStream &os) {
         os.store(p_evals_masked.size());
         os.store(p_evals_masked[0].size());

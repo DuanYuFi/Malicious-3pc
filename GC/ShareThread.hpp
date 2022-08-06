@@ -78,10 +78,9 @@ void ShareThread<T>::post_run()
 {
     // cout << "Calling final check" << endl;
     protocol->finalize_check();
-    // cout << "Cost in communication: " << protocol->cost_in_comm << endl;
-    // cout << "Cost in gen proof: " << protocol->cost_in_gen_proof << endl;
-    // cout << "Cost in gen verify: " << protocol->cost_in_gen_vermsg << endl;
-    // cout << "Cost in verify: " << protocol->cost_in_verify << endl;
+    // protocol->check();
+    cout << "Total and gates: " << protocol->total_and_gates << endl;
+    cout << "Total comm: " << protocol->total_comm << endl;
     MC->Check(*this->P);
 }
 

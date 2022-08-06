@@ -70,7 +70,7 @@ public:
 
     static const bool uses_triples = false;
 
-    int cost_in_comm, cost_in_gen_proof, cost_in_gen_vermsg, cost_in_verify;
+    int total_and_gates, total_comm;
 
     array<PRNG, 2> shared_prngs;
     PRNG global_prng;

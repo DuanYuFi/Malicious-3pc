@@ -72,7 +72,7 @@ T SpdzWise<T>::finalize_mul(int)
 template<class T>
 void SpdzWise<T>::exchange()
 {
-    cout << "In SpdzWise::exchange()" << endl;
+    // cout << "In SpdzWise::exchange()" << endl;
 
     internal.exchange();
     internal2.exchange();

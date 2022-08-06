@@ -14,10 +14,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
 
     returned = true;
-    cost_in_comm = 0;
-    cost_in_gen_proof = 0;
-    cost_in_gen_vermsg = 0;
-    cost_in_verify = 0;
+    total_and_gates = 0;
+    total_comm = 0;
 
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
@@ -52,6 +50,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 
 template <class T>
 void Malicious3PCProtocol<T>::check() {
+
+    // return ;
     
     if ((int) results.size() < OnlineOptions::singleton.batch_size)
         return;
@@ -92,6 +92,9 @@ void Malicious3PCProtocol<T>::init_mul()
 
 template <class T>
 void Malicious3PCProtocol<T>::finalize_check() {
+
+    // return ;
+
     while ((int) results.size() >= OnlineOptions::singleton.batch_size)
         Check_one();
     Check_one();
@@ -130,7 +133,10 @@ void Malicious3PCProtocol<T>::final_verify() {
     for (auto data: status_queue) {
         DZKProof proof = data.proof;
         proof.pack(proof_os[0]);
+        // proof.get_size();
     }
+
+    total_comm += proof_os[0].get_length();
 
     P.pass_around(proof_os[0], proof_os[1], 1);
 
@@ -144,6 +150,7 @@ void Malicious3PCProtocol<T>::final_verify() {
         int k = OnlineOptions::singleton.k_size;
 
         proof.unpack(proof_os[1]);
+        // proof.get_size();
         VerMsg vermsg = gen_vermsg(proof, input_result_down, input_mono_down, sz, k, sid[prev_number], mask_ss_down, prev_number, my_number);
         vermsg.pack(vermsg_os[0]);
     }
@@ -153,6 +160,9 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
+
+    total_comm += vermsg_os[0].get_length();
+    total_comm += vermsg_os[0].get_length();
 
     for (auto data: status_queue) {
 
@@ -191,6 +201,7 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
+    total_and_gates += sz;
     // cout << sz << endl;
     if (sz == 0) {
         return;
@@ -394,6 +405,7 @@ void Malicious3PCProtocol<T>::exchange()
     // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
     if (os[0].get_length() > 0) {
+        total_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
     }
         
