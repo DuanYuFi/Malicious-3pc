@@ -50,6 +50,14 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 }
 
 template <class T>
+Malicious3PCProtocol<T>::~Malicious3PCProtocol() {
+    cout << "Binary part: " << endl;
+    cout << "Total and gates: " << total_and_gates << endl;
+    cout << "Check comm: " << check_comm << endl;
+    cout << "Exchange comm: " << exchange_comm << endl;
+}
+
+template <class T>
 void Malicious3PCProtocol<T>::check() {
 
     // return ;
@@ -466,6 +474,7 @@ inline T Malicious3PCProtocol<T>::finalize_dotprod(int length)
 
     (void) length;
     this->dot_counter++;
+    total_and_gates ++;
     return finalize_mul();
 }
 

@@ -79,6 +79,7 @@ public:
 
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
+    ~Malicious3PCProtocol();
     
     // Replicated(const ReplicatedBase& other);
 

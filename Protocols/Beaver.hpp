@@ -54,6 +54,10 @@ template<class T>
 void Beaver<T>::exchange()
 {
     MC->POpen(opened, shares, P);
+    
+    exchange_comm += (shares.size() * T::value_type::size());
+    total_and_gates += shares.size();
+
     it = opened.begin();
     triple = triples.begin();
 }
@@ -94,6 +98,7 @@ void Beaver<T>::check()
 {
     assert(MC);
     MC->Check(P);
+    check_comm += 20 * 2;
 }
 
 #endif

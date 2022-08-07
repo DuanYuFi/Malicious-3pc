@@ -35,6 +35,8 @@ class SpdzWise : public ProtocolBase<T>
 public:
     Player& P;
 
+    int total_and_gates, exchange_comm, check_comm;
+
     SpdzWise(Player& P);
     virtual ~SpdzWise();
 
