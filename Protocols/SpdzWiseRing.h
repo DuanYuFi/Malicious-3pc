@@ -25,7 +25,16 @@ class SpdzWiseRing : public SpdzWise<T>
     SubProcessor<zero_check_type> zero_proc;
 
 public:
+
+    size_t check_comm;
     SpdzWiseRing(Player &P);
+    ~SpdzWiseRing() {
+        if (check_comm != 0) {
+            cout << "Arith part in SpdzWiseRing: " << endl;
+            cout << "Total check comm: " << check_comm << endl;
+            cout << endl;
+        }
+    }
 
     void zero_check(check_type t);
 };

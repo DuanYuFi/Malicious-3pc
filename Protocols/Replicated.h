@@ -143,9 +143,25 @@ class Replicated : public ReplicatedBase, public ProtocolBase<T>
 
 public:
     static const bool uses_triples = false;
+    int total_and_gates, exchange_comm, check_comm, total_dotprod;
 
     Replicated(Player& P);
     Replicated(const ReplicatedBase& other);
+    ~Replicated() {
+        if (total_and_gates != 0) {
+            cout << "Arith part in Replicated: " << endl;
+            if (total_and_gates != 0)
+                cout << "Total multiplies: " << total_and_gates << endl;
+            
+            if (total_dotprod != 0)
+                cout << "Total dotprod: " << total_dotprod << endl;
+
+            if (exchange_comm != 0)
+                cout << "Exchange comm: " << exchange_comm << endl;
+            
+            cout << endl;
+        }
+    }
 
     static void assign(T& share, const typename T::clear& value, int my_num)
     {

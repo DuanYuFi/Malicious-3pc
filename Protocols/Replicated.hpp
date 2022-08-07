@@ -31,15 +31,22 @@ ProtocolBase<T>::ProtocolBase() :
 template<class T>
 Replicated<T>::Replicated(Player& P) : ReplicatedBase(P)
 {
-    // cout << "Replicated<T>::Replicated(Player& P)" << endl;
     assert(T::vector_length == 2);
+
+    total_and_gates = 0;
+    exchange_comm = 0;
+    check_comm = 0;
+    total_dotprod = 0;
 }
 
 template<class T>
 Replicated<T>::Replicated(const ReplicatedBase& other) :
         ReplicatedBase(other)
 {
-    // cout << "Replicated<T>::Replicated(const ReplicatedBase& other)" << endl;
+    total_and_gates = 0;
+    exchange_comm = 0;
+    check_comm = 0;
+    total_dotprod = 0;
 }
 
 inline ReplicatedBase::ReplicatedBase(Player& P) : P(P)
@@ -185,21 +192,9 @@ template<class T>
 void Replicated<T>::prepare_mul(const T& x,
         const T& y, int n)
 {
-
-    // std::chrono::_V2::system_clock::time_point start, end;
-    // if (LOG_LEVEL & SHOW_TIME_LOG) {
-	// 	start = std::chrono::high_resolution_clock::now();
-	// }
-
-
     typename T::value_type add_share = x.local_mul(y);
     prepare_reshare(add_share, n);
-
-    // if (LOG_LEVEL & SHOW_TIME_LOG) {
-    //     end = std::chrono::high_resolution_clock::now();
-    //     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    //     cout << "Time in prepare_mul: " << duration.count() << endl;
-    // }
+    total_and_gates ++;
 }
 
 template<class T>
@@ -217,23 +212,12 @@ void Replicated<T>::prepare_reshare(const typename T::clear& share,
 template<class T>
 void Replicated<T>::exchange()
 {
-
-    std::chrono::_V2::system_clock::time_point start, end;
-    if (LOG_LEVEL & SHOW_TIME_LOG) {
-        start = std::chrono::high_resolution_clock::now();
-        cout << "Exchange start at " << std::chrono::system_clock::now().time_since_epoch().count() << endl;
-    }
+    exchange_comm += os[0].get_length();
 
     if (os[0].get_length() > 0)
         P.pass_around(os[0], os[1], 1);
+    
     this->rounds++;
-
-    if (LOG_LEVEL & SHOW_TIME_LOG) {
-        end = std::chrono::high_resolution_clock::now();
-        cout << "Exchange end   at " << std::chrono::system_clock::now().time_since_epoch().count() << endl;
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        cout << "Time in exchange: " << duration.count() << endl;
-    }
 }
 
 template<class T>
@@ -252,23 +236,11 @@ void Replicated<T>::stop_exchange()
 template<class T>
 inline T Replicated<T>::finalize_mul(int n)
 {
-
-    // std::chrono::_V2::system_clock::time_point start, end;
-    // if (LOG_LEVEL & SHOW_TIME_LOG) {
-    //     start = std::chrono::high_resolution_clock::now();
-    // }
-
     this->counter++;
     this->bit_counter += n;
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
-
-    // if (LOG_LEVEL & SHOW_TIME_LOG) {
-    //     end = std::chrono::high_resolution_clock::now();
-    //     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    //     cout << "Time in finalize_mul: " << duration.count() << endl;
-    // }
 
     return result;
 }
@@ -300,6 +272,7 @@ inline T Replicated<T>::finalize_dotprod(int length)
 
     (void) length;
     this->dot_counter++;
+    total_dotprod ++;
     return finalize_mul();
 }
 

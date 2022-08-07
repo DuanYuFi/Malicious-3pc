@@ -10,11 +10,15 @@ SpdzWiseRing<T>::SpdzWiseRing(Player& P) :
         SpdzWise<T>(P), zero_prep(0, zero_usage), zero_proc(zero_output,
                 zero_prep, P)
 {
+    check_comm = 0;
 }
 
 template<class T>
 void SpdzWiseRing<T>::zero_check(check_type t)
 {
+
+    // cout << "In SpdzWiseRing zero_check" << endl;
+
     int l = T::LENGTH + T::SECURITY;
     vector<zero_check_type> bit_masks(l);
     zero_check_type masked = t;
@@ -26,6 +30,9 @@ void SpdzWiseRing<T>::zero_check(check_type t)
     }
     auto& P = this->P;
     auto opened = zero_output.open(masked, P);
+
+    check_comm += (masked.size() * zero_check_type::value_type::size());
+
     vector<zero_check_type> bits(l);
     for (int i = 0; i < l; i++)
     {
@@ -41,11 +48,13 @@ void SpdzWiseRing<T>::zero_check(check_type t)
             protocol.prepare_mul(bits[i], bits[i + 1]);
         protocol.exchange();
         int n_mults = bits.size() / 2;
+        check_comm += (n_mults * zero_check_type::value_type::size()) * 2;
         bits.resize(bits.size() % 2);
         for (int i = 0; i < n_mults; i++)
             bits.push_back(protocol.finalize_mul());
     }
     zero_output.CheckFor(0, {bits[0]}, P);
     zero_output.Check(P);
+    check_comm += 40;
     zero_proc.protocol.check();
 }

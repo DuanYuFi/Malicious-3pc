@@ -55,6 +55,7 @@ Malicious3PCProtocol<T>::~Malicious3PCProtocol() {
     cout << "Total and gates: " << total_and_gates << endl;
     cout << "Check comm: " << check_comm << endl;
     cout << "Exchange comm: " << exchange_comm << endl;
+    cout << endl;
 }
 
 template <class T>
@@ -159,6 +160,15 @@ void Malicious3PCProtocol<T>::final_verify() {
         proof.unpack(proof_os[1]);
         VerMsg vermsg = gen_vermsg(proof, input_result_down, input_mono_down, sz, k, sid[prev_number], mask_ss_down, prev_number, my_number);
         vermsg.pack(vermsg_os[0]);
+
+        for (int i = 0; i < k; i ++) {
+            delete[] input_result_down[i];
+            delete[] input_mono_down[i];
+            delete[] mask_ss_down[i];
+        }
+        delete[] input_result_down;
+        delete[] input_mono_down;
+        delete[] mask_ss_down;
     }
 
     proof_os[0].reset_read_head();
@@ -197,7 +207,15 @@ void Malicious3PCProtocol<T>::final_verify() {
             // cout << "Check passed" << endl;
         }
 
-        // cout << "Checked one batch" << endl;
+        for (int i = 0; i < k; i ++) {
+            delete[] input_result_up[i];
+            delete[] input_mono_up[i];
+            delete[] mask_ss_up[i];
+        }
+        delete[] input_result_up;
+        delete[] input_mono_up;
+        delete[] mask_ss_up;
+        delete[] sid;
     }
 
     status_queue.clear();
@@ -474,7 +492,6 @@ inline T Malicious3PCProtocol<T>::finalize_dotprod(int length)
 
     (void) length;
     this->dot_counter++;
-    total_and_gates ++;
     return finalize_mul();
 }
 

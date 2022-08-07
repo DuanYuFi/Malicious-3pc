@@ -1,69 +1,28 @@
-strs = '''Total and gates: 16188615
-Check comm: 2516000
-Exchange comm: 129504125
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
+strs = '''In SpdzWiseRing zero_check
+Arith part in SpdzWiseRing: 
+Total check comm: 3056
 
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
+Arith part in Replicated: 
+Total multiplies: 206
+Exchange comm: 3708
 
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
+Arith part in Replicated: 
+Total multiplies: 208
+Exchange comm: 2704
 
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
+Arith part in Replicated: 
+Total multiplies: 1000000
+Exchange comm: 13000000
 
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
+Arith part in Replicated: 
+Total multiplies: 1000001
+Total dotprod: 2
+Exchange comm: 13000039
 
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Total and gates: 3256155
-Check comm: 505920
-Exchange comm: 25937365
-
-Total and gates: 3256155
-Check comm: 505920
-Exchange comm: 25937365
-
-Total and gates: 3256155
-Check comm: 505920
-Exchange comm: 25937365
-
-Total and gates: 3277235
-Check comm: 510000
-Exchange comm: 26106005
+Binary part: 
+Total and gates: 1000000
+Check comm: 156400
+Exchange comm: 1000000
 '''
 
 total_and_gates = 0
