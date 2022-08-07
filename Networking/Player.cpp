@@ -212,6 +212,8 @@ Player::Player(const Names& Nms) :
   nplayers=Nms.nplayers;
   player_no=Nms.player_no;
   thread_stats.resize(nplayers);
+
+  total_comms = total_and_comm = total_and_gates = total_check_comm = 0;
 }
 
 

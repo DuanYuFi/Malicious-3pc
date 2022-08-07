@@ -80,7 +80,8 @@ void ShareThread<T>::post_run()
     protocol->finalize_check();
     // protocol->check();
     cout << "Total and gates: " << protocol->total_and_gates << endl;
-    cout << "Total comm: " << protocol->total_comm << endl;
+    cout << "Check comm: " << protocol->check_comm << endl;
+    cout << "Exchange comm: " << protocol->exchange_comm << endl;
     MC->Check(*this->P);
 }
 

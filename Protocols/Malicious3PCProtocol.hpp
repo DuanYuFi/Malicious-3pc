@@ -15,7 +15,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 
     returned = true;
     total_and_gates = 0;
-    total_comm = 0;
+    exchange_comm = 0;
+    check_comm = 0;
 
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
@@ -133,11 +134,9 @@ void Malicious3PCProtocol<T>::final_verify() {
     for (auto data: status_queue) {
         DZKProof proof = data.proof;
         proof.pack(proof_os[0]);
-        // proof.get_size();
     }
 
-    total_comm += proof_os[0].get_length();
-
+    check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
 
     for (auto data: status_queue) {
@@ -150,7 +149,6 @@ void Malicious3PCProtocol<T>::final_verify() {
         int k = OnlineOptions::singleton.k_size;
 
         proof.unpack(proof_os[1]);
-        // proof.get_size();
         VerMsg vermsg = gen_vermsg(proof, input_result_down, input_mono_down, sz, k, sid[prev_number], mask_ss_down, prev_number, my_number);
         vermsg.pack(vermsg_os[0]);
     }
@@ -161,8 +159,8 @@ void Malicious3PCProtocol<T>::final_verify() {
     P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
-    total_comm += vermsg_os[0].get_length();
-    total_comm += vermsg_os[0].get_length();
+    check_comm += proof_os[0].get_length();
+    check_comm += vermsg_os[0].get_length();
 
     for (auto data: status_queue) {
 
@@ -201,7 +199,6 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
-    total_and_gates += sz;
     // cout << sz << endl;
     if (sz == 0) {
         return;
@@ -405,10 +402,13 @@ void Malicious3PCProtocol<T>::exchange()
     // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
     if (os[0].get_length() > 0) {
-        total_comm += os[0].get_length();
+        exchange_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
     }
-        
+    
+    total_and_gates += add_shares.size();
+
+
     this->rounds++;
 }
 

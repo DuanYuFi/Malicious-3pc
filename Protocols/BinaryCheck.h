@@ -12,6 +12,7 @@ typedef unsigned __int128 uint128_t;
 class LocalHash {
     octetStream buffer;
 public:
+
     template <typename T>
     void update(T data) {
         buffer.store(data);
@@ -19,6 +20,7 @@ public:
 
     uint64_t final() {
         Hash hash;
+        hash.reset();
         hash.update(buffer);
         uint64_t result;
         hash.final().get(result);
@@ -29,8 +31,22 @@ public:
 struct DZKProof {
     vector<vector<uint64_t>> p_evals_masked;
 
-    inline void get_size() {
-        cout << p_evals_masked.size() << "*" << p_evals_masked[0].size() << endl;
+    size_t get_size() {
+        size_t size = 0;
+        for (auto& v : p_evals_masked) {
+            size += v.size();
+        }
+        return size;
+    }
+
+    uint64_t get_hash() {
+        LocalHash hash;
+        for (auto p_eval : p_evals_masked) {
+            for (auto each : p_eval) {
+                hash.update(each);
+            }
+        }
+        return hash.final();
     }
 
     void pack(octetStream &os) {
@@ -71,6 +87,23 @@ struct VerMsg {
         this->p_eval_r_ss = p_eval_r_ss;
         this->final_input = final_input;
         this->final_result_ss = final_result_ss;
+    }
+
+    size_t get_size() {
+        return p_eval_ksum_ss.size() + p_eval_r_ss.size() + 2;
+    }
+
+    uint64_t get_hash() {
+        LocalHash hash;
+        for (uint64_t each: p_eval_ksum_ss) {
+            hash.update(each);
+        }
+        for (uint64_t each: p_eval_r_ss) {
+            hash.update(each);
+        }
+        hash.update(final_input);
+        hash.update(final_result_ss);
+        return hash.final();
     }
 
     void pack(octetStream &os) {
