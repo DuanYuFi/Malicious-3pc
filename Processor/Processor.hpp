@@ -419,8 +419,6 @@ void SubProcessor<T>::muls(const vector<int>& reg, int size)
     assert(reg.size() % 3 == 0);
     int n = reg.size() / 3;
 
-    cout << "Here" << endl;
-
     protocol.mul_counter = n * size;
 
     SubProcessor<T>& proc = *this;

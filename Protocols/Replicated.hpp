@@ -99,8 +99,6 @@ void ProtocolBase<T>::mulrs(const vector<int>& reg,
         SubProcessor<T>& proc)
 {
 
-    cout << "In ProtocolBase<T>::mulrs" << endl;
-
     proc.mulrs(reg);
 }
 
@@ -113,8 +111,6 @@ void ProtocolBase<T>::multiply(vector<T>& products,
     fprintf(stderr, "multiply from %d to %d in %d\n", begin, end,
             BaseMachine::thread_num);
 #endif
-
-    cout << "In ProtocolBase<T>::multiply" << endl;
 
     init(proc.DataF, proc.MC);
     init_mul();

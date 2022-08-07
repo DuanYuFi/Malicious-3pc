@@ -45,6 +45,8 @@ public:
     void init_mul();
     void prepare_mul(const T& x, const T& y, int n = -1);
     void exchange();
+    void exchange1();
+    void exchange2();
     T finalize_mul(int n = -1);
 
     void init_dotprod();
