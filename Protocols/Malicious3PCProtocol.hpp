@@ -150,25 +150,25 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     for (auto data: status_queue) {
         DZKProof proof;
-        uint64_t **input_result_down = data.input_result_down;
-        uint64_t **input_mono_down = data.input_mono_down;
-        uint64_t **mask_ss_down = data.mask_ss_down;
+        uint64_t **input_result_prev = data.input_result_prev;
+        uint64_t **input_mono_prev = data.input_mono_prev;
+        uint64_t **mask_ss_prev = data.mask_ss_prev;
         uint64_t *sid = data.sid;
         int sz = data.sz;
         int k = OnlineOptions::singleton.k_size;
 
         proof.unpack(proof_os[1]);
-        VerMsg vermsg = gen_vermsg(proof, input_result_down, input_mono_down, sz, k, sid[prev_number], mask_ss_down, prev_number, my_number);
+        VerMsg vermsg = gen_vermsg(proof, input_result_prev, input_mono_prev, sz, k, sid[prev_number], mask_ss_prev, prev_number, my_number);
         vermsg.pack(vermsg_os[0]);
 
         // for (int i = 0; i < k; i ++) {
-        //     delete[] input_result_down[i];
-        //     delete[] input_mono_down[i];
-        //     delete[] mask_ss_down[i];
+        //     delete[] input_result_prev[i];
+        //     delete[] input_mono_prev[i];
+        //     delete[] mask_ss_prev[i];
         // }
-        // delete[] input_result_down;
-        // delete[] input_mono_down;
-        // delete[] mask_ss_down;
+        // delete[] input_result_prev;
+        // delete[] input_mono_prev;
+        // delete[] mask_ss_prev;
     }
 
     proof_os[0].reset_read_head();
@@ -182,9 +182,9 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     for (auto data: status_queue) {
 
-        uint64_t **input_result_up = data.input_result_up;
-        uint64_t **input_mono_up = data.input_mono_up;
-        uint64_t **mask_ss_up = data.mask_ss_up;
+        uint64_t **input_result_next = data.input_result_next;
+        uint64_t **input_mono_next = data.input_mono_next;
+        uint64_t **mask_ss_next = data.mask_ss_next;
         uint64_t *sid = data.sid;
 
         int sz = data.sz;
@@ -197,7 +197,7 @@ void Malicious3PCProtocol<T>::final_verify() {
         proof.unpack(proof_os[1]);
 
         // cout << "Next: verify" << endl;
-        bool res = verify(proof, input_result_up, input_mono_up, received_vermsg, sz, k, sid[next_number], mask_ss_up, next_number, my_number);
+        bool res = verify(proof, input_result_next, input_mono_next, received_vermsg, sz, k, sid[next_number], mask_ss_next, next_number, my_number);
             
         if (!res) {
             // throw mac_fail("ZKP check failed");
@@ -208,13 +208,13 @@ void Malicious3PCProtocol<T>::final_verify() {
         }
 
         // for (int i = 0; i < k; i ++) {
-        //     delete[] input_result_up[i];
-        //     delete[] input_mono_up[i];
-        //     delete[] mask_ss_up[i];
+        //     delete[] input_result_next[i];
+        //     delete[] input_mono_next[i];
+        //     delete[] mask_ss_next[i];
         // }
-        // delete[] input_result_up;
-        // delete[] input_mono_up;
-        // delete[] mask_ss_up;
+        // delete[] input_result_next;
+        // delete[] input_mono_next;
+        // delete[] mask_ss_next;
         // delete[] sid;
     }
 
@@ -233,24 +233,24 @@ void Malicious3PCProtocol<T>::Check_one() {
     int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
     int my_number = P.my_real_num();
 
-    uint64_t **input_left, **input_right, **input_result_up, **input_result_down, **input_mono_up, **input_mono_down;
+    uint64_t **input_left, **input_right, **input_result_next, **input_result_prev, **input_mono_next, **input_mono_prev;
 
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
-    input_result_up = new uint64_t*[k];
-    input_result_down = new uint64_t*[k];
-    input_mono_up = new uint64_t*[k];
-    input_mono_down = new uint64_t*[k];
+    input_result_next = new uint64_t*[k];
+    input_result_prev = new uint64_t*[k];
+    input_mono_next = new uint64_t*[k];
+    input_mono_prev = new uint64_t*[k];
 
     int cnt_non_zeros = 0;
     // int size = results.size();
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 2];
         input_right[i] = new uint64_t[cols * 2];
-        input_result_up[i] = new uint64_t[cols * 2];
-        input_result_down[i] = new uint64_t[cols * 2];
-        input_mono_up[i] = new uint64_t[cols];
-        input_mono_down[i] = new uint64_t[cols];
+        input_result_next[i] = new uint64_t[cols * 2];
+        input_result_prev[i] = new uint64_t[cols * 2];
+        input_mono_next[i] = new uint64_t[cols];
+        input_mono_prev[i] = new uint64_t[cols];
 
         for (int j = 0; j < cols; j ++) {
 
@@ -300,11 +300,11 @@ void Malicious3PCProtocol<T>::Check_one() {
             input_right[i][j * 2 + 1] = v3;
 
             // shared vars between P_i and P_{i-1}
-            input_result_down[i][j * 2] = v0;
-            input_result_down[i][j * 2 + 1] = v2;
+            input_result_prev[i][j * 2] = v0;
+            input_result_prev[i][j * 2 + 1] = v2;
             // shared vars between P_i and P_{i+1}
-            input_result_up[i][j * 2] = v1;
-            input_result_up[i][j * 2 + 1] = v3;
+            input_result_next[i][j * 2] = v1;
+            input_result_next[i][j * 2 + 1] = v3;
 
 
             // cout << "v0: " << v0 << endl;
@@ -315,44 +315,44 @@ void Malicious3PCProtocol<T>::Check_one() {
             uint64_t tii = (z[1] - x[1] * y[1] - rho[1]).get();
 
             // shared vars between P_i and P_{i-1}
-            input_mono_down[i][j] = Mersenne::neg(tii);
+            input_mono_prev[i][j] = Mersenne::neg(tii);
             // shared vars between P_i and P_{i+1}
-            input_mono_up[i][j] = rho[0].get();
+            input_mono_next[i][j] = rho[0].get();
 
-            // cout << "rho: " << input_mono_down[i][j] << endl;
-            // cout << "-ti: " << input_mono_up[i][j] << endl;
+            // cout << "rho: " << input_mono_prev[i][j] << endl;
+            // cout << "-ti: " << input_mono_next[i][j] << endl;
 
             // // Check inputs
             // cout << "left: " << Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) << endl;
-            // cout << "right: " << Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]) << endl;
-            // assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
-            // assert(Mersenne::add(Mersenne::mul(input_result_up[i][j * 2], input_result_down[i][j * 2]), Mersenne::mul(input_result_up[i][j * 2 + 1], input_result_down[i][j * 2 + 1])) == Mersenne::add(input_mono_up[i][j], input_mono_down[i][j]));
+            // cout << "right: " << Mersenne::add(input_mono_next[i][j], input_mono_prev[i][j]) << endl;
+            // assert(Mersenne::add(Mersenne::mul(input_left[i][j * 2], input_right[i][j * 2]), Mersenne::mul(input_left[i][j * 2 + 1], input_right[i][j * 2 + 1])) == Mersenne::add(input_mono_next[i][j], input_mono_prev[i][j]));
+            // assert(Mersenne::add(Mersenne::mul(input_result_next[i][j * 2], input_result_prev[i][j * 2]), Mersenne::mul(input_result_next[i][j * 2 + 1], input_result_prev[i][j * 2 + 1])) == Mersenne::add(input_mono_next[i][j], input_mono_prev[i][j]));
         }
     }
 
-    // cout << "prover's non-zeros: " << cnt_non_zeros << endl;
+    cout << "prover's non-zeros: " << cnt_non_zeros << endl;
 
     int cnt = log(2 * sz) / log(k) + 2;
-    uint64_t **masks, **mask_ss_up, **mask_ss_down;
+    uint64_t **masks, **mask_ss_next, **mask_ss_prev;
     masks = new uint64_t*[cnt];
-    mask_ss_up = new uint64_t*[cnt];
-    mask_ss_down = new uint64_t*[cnt];
+    mask_ss_next = new uint64_t*[cnt];
+    mask_ss_prev = new uint64_t*[cnt];
 
     for (int i = 0; i < cnt; i++) {
         masks[i] = new uint64_t[2*k-1];
-        mask_ss_up[i] = new uint64_t[2*k-1];
-        mask_ss_down[i] = new uint64_t[2*k-1];
+        mask_ss_next[i] = new uint64_t[2*k-1];
+        mask_ss_prev[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
             // P_i and P_{i+1}
-            // mask_ss_up[i][j] = shared_prngs[0].get_word() && Mersenne::PR;
-            // mask_ss_up[i][j] = Mersenne::modp(shared_prngs[0].get_word());
-            mask_ss_up[i][j] = 0;
+            // mask_ss_next[i][j] = shared_prngs[0].get_word() && Mersenne::PR;
+            // mask_ss_next[i][j] = Mersenne::modp(shared_prngs[0].get_word());
+            mask_ss_next[i][j] = 0;
             // P_i and P_{i-1}
-            // mask_ss_down[i][j] = shared_prngs[1].get_word() && Mersenne::PR;
-            // mask_ss_down[i][j] = Mersenne::modp(shared_prngs[1].get_word());
-            mask_ss_down[i][j] = 0;
+            // mask_ss_prev[i][j] = shared_prngs[1].get_word() && Mersenne::PR;
+            // mask_ss_prev[i][j] = Mersenne::modp(shared_prngs[1].get_word());
+            mask_ss_prev[i][j] = 0;
             masks[i][j] = 0;
-            // masks[i][j] = Mersenne::add(mask_ss_up[i][j], mask_ss_down[i][j]);
+            // masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
         }
     }
 
@@ -365,12 +365,12 @@ void Malicious3PCProtocol<T>::Check_one() {
     DZKProof dzkproof = prove(input_left, input_right, sz, k, sid[my_number], masks);
 
     status_queue.push_back(StatusData(dzkproof,
-                                    input_result_up, 
-                                    input_result_down, 
-                                    input_mono_up,
-                                    input_mono_down,
-                                    mask_ss_up,
-                                    mask_ss_down,
+                                    input_result_next, 
+                                    input_result_prev, 
+                                    input_mono_next,
+                                    input_mono_prev,
+                                    mask_ss_next,
+                                    mask_ss_prev,
                                     sid,
                                     sz));
 
