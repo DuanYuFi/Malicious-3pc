@@ -55,16 +55,22 @@ public:
         return t;
     }
 
-    T front() {
-        return q.front();
-    }
+    // T front() {
+    //     return q.front();
+    // }
 
     size_t size() {
-        return q.size();
+        pthread_mutex_lock(&mutex);
+        size_t sz = q.size();
+        pthread_mutex_unlock(&mutex);
+        return sz;
     }
 
     bool empty() {
-        return q.empty();
+        pthread_mutex_lock(&mutex);
+        bool ep = q.empty();
+        pthread_mutex_unlock(&mutex);
+        return ep;
     }
 private:
     // 如何保证对这个队列的操作是线程安全的？引入互斥锁

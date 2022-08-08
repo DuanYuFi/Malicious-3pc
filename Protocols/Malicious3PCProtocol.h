@@ -8,6 +8,7 @@
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
+#include <mutex>
 
 #define USE_THREAD
 
@@ -47,10 +48,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     Queue<array<typename T::value_type, 2>> rhos;
 
     vector<StatusData> status_queue;
-    // Queue<VerMsg> vermsg_queue;
     vector<typename T::open_type> opened;
-    // Preprocessing<T>* prep;
-    // typename T::MAC_Check* MC;
     std::thread check_thread;
 
     array<octetStream, 2> os;
@@ -58,6 +56,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typename T::clear dotprod_share;
 
     bool returned;
+    pthread_mutex_t mutex;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -101,6 +100,7 @@ public:
     void init_dotprod();
     void prepare_dotprod(const T& x, const T& y);
     void next_dotprod();
+    T dotprod_finalize_mul(int n = -1);
     T finalize_dotprod(int length);
 
     template<class U>
@@ -120,8 +120,22 @@ public:
     void finalize_check();
     void Check_one();
     void final_verify();
+    void thread_handler();
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
+
+    inline void set_returned(bool value) {
+        pthread_mutex_lock(&mutex);
+        returned = value;
+        pthread_mutex_unlock(&mutex);
+    }
+
+    inline bool get_returned() {
+        pthread_mutex_lock(&mutex);
+        bool value = returned;
+        pthread_mutex_unlock(&mutex);
+        return value;
+    }
 };
 
 #endif /* PROTOCOLS_MALICIOUS3PCPROTOCOL_H_ */

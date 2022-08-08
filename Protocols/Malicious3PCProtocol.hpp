@@ -13,7 +13,9 @@ template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
 
-    returned = true;
+    // cout << typeid(typename T::value_type).name() << endl;
+
+    set_returned(true);
     total_and_gates = 0;
     exchange_comm = 0;
     check_comm = 0;
@@ -52,9 +54,15 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 template <class T>
 Malicious3PCProtocol<T>::~Malicious3PCProtocol() {
     cout << "Binary part: " << endl;
-    cout << "Total and gates: " << total_and_gates << endl;
+    cout << "Total and gates: " << this->counter << endl;
     cout << "Check comm: " << check_comm << endl;
     cout << "Exchange comm: " << exchange_comm << endl;
+
+    if (this->dot_counter != 0) {
+        cout << "Dotprod: " << this->dot_counter << endl;
+    }
+
+    cout << "Total rounds: " << this->rounds << endl;
     cout << endl;
 }
 
@@ -68,22 +76,22 @@ void Malicious3PCProtocol<T>::check() {
 
     #ifdef USE_THREAD
 
-    if (!returned) {
+    if (!get_returned()) {
         // cout << "Thread already running" << endl;
         return ;
     }
 
-    returned = false;
+    set_returned(false);
     
     if (check_thread.joinable()) {
         // cout << "Join last thread" << endl;
         check_thread.join();
     }
 
-    // cout << "Create thread" << endl;
-    check_thread = std::thread(&Malicious3PCProtocol<T>::check, this);
+    // cout << "Create new thread" << endl;
+    check_thread = std::thread(&Malicious3PCProtocol<T>::thread_handler, this);
     #else
-    check();
+    thread_handler();
     #endif
     
 }
@@ -104,10 +112,7 @@ template <class T>
 void Malicious3PCProtocol<T>::finalize_check() {
 
     // return ;
-
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
-        Check_one();
-    Check_one();
+    // cout << "In finalize_check" << endl;
 
     #ifdef USE_THREAD
     if (check_thread.joinable()) {
@@ -115,18 +120,25 @@ void Malicious3PCProtocol<T>::finalize_check() {
     }
     #endif
 
+    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+        Check_one();
+    Check_one();
+
     final_verify();
 }
 
-// template <class T>
-// void Malicious3PCProtocol<T>::check() {
-//     while ((int) results.size() >= OnlineOptions::singleton.batch_size)
-//         Check_one();
-//     returned = true;
-// }
+template <class T>
+void Malicious3PCProtocol<T>::thread_handler() {
+    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+        Check_one();
+    set_returned(true);
+    // cout << "Returned from thread handler" << endl;
+}
 
 template <class T>
 void Malicious3PCProtocol<T>::final_verify() {
+
+    // cout << "In final_ver" << endl;
 
     int my_number = P.my_real_num();
     int prev_number = my_number == 0 ? 2 : my_number - 1;
@@ -144,6 +156,8 @@ void Malicious3PCProtocol<T>::final_verify() {
         DZKProof proof = data.proof;
         proof.pack(proof_os[0]);
     }
+
+    // cout << proof_os[0].get_length() << endl;
 
     check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
@@ -171,7 +185,7 @@ void Malicious3PCProtocol<T>::final_verify() {
         // delete[] mask_ss_down;
     }
 
-    proof_os[0].reset_read_head();
+    // proof_os[0].reset_read_head();
     proof_os[1].reset_write_head();
 
     P.pass_around(proof_os[0], proof_os[1], -1);
@@ -225,7 +239,7 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
-    // cout << sz << endl;
+    // cout << "size = " << sz << endl;
     if (sz == 0) {
         return;
     }
@@ -254,14 +268,14 @@ void Malicious3PCProtocol<T>::Check_one() {
 
         for (int j = 0; j < cols; j ++) {
 
-            if (i == k - 1 && j >= sz % cols) {
+            if (i * cols + j >= sz) {
                 break;
             }
 
-            auto x = input1.front();    input1.pop();
-            auto y = input2.front();    input2.pop();
-            auto z = results.front();   results.pop();
-            array<typename T::value_type, 2> rho = rhos.front();    rhos.pop();
+            auto x = input1.pop();
+            auto y = input2.pop();
+            auto z = results.pop();
+            array<typename T::value_type, 2> rho = rhos.pop();
 
             // x[0]: x_i, x[1]: x_{i-1}
             // y[0]: y_i, y[1]: y_{i-1}
@@ -271,6 +285,9 @@ void Malicious3PCProtocol<T>::Check_one() {
                 cout << "y: " << y[0] << " " << y[1] << endl;
                 cout << "z: " << z[0] << " " << z[1] << endl;
                 cout << "rho: " << rho[0] << " " << rho[1] << endl;
+
+                cout << "sz = " << sz << ", k = " << k << ", cols = " << cols << endl;
+                cout << "i = " << i << ", j = " << j << endl;
             }
             assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
             
@@ -388,6 +405,7 @@ void Malicious3PCProtocol<T>::Check_one() {
 
     delete[] masks;
 
+    // cout << "Returned from Check_one()" << endl;
 }
 
 
@@ -431,9 +449,6 @@ void Malicious3PCProtocol<T>::exchange()
         exchange_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
     }
-    
-    total_and_gates += add_shares.size();
-
 
     this->rounds++;
 }
@@ -465,6 +480,17 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     return result;
 }
 
+template <class T>
+inline T Malicious3PCProtocol<T>::dotprod_finalize_mul(int n) {
+    this->counter++;
+    this->bit_counter += n;
+    T result;
+    result[0] = add_shares.next();
+    result[1].unpack(os[1], n);
+
+    return result;
+}
+
 template<class T>
 inline void Malicious3PCProtocol<T>::init_dotprod()
 {
@@ -492,7 +518,7 @@ inline T Malicious3PCProtocol<T>::finalize_dotprod(int length)
 
     (void) length;
     this->dot_counter++;
-    return finalize_mul();
+    return dotprod_finalize_mul();
 }
 
 template<class T>
