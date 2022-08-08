@@ -33,20 +33,16 @@ Replicated<T>::Replicated(Player& P) : ReplicatedBase(P)
 {
     assert(T::vector_length == 2);
 
-    total_and_gates = 0;
     exchange_comm = 0;
     check_comm = 0;
-    total_dotprod = 0;
 }
 
 template<class T>
 Replicated<T>::Replicated(const ReplicatedBase& other) :
         ReplicatedBase(other)
 {
-    total_and_gates = 0;
     exchange_comm = 0;
     check_comm = 0;
-    total_dotprod = 0;
 }
 
 inline ReplicatedBase::ReplicatedBase(Player& P) : P(P)
@@ -194,7 +190,6 @@ void Replicated<T>::prepare_mul(const T& x,
 {
     typename T::value_type add_share = x.local_mul(y);
     prepare_reshare(add_share, n);
-    total_and_gates ++;
 }
 
 template<class T>
@@ -272,7 +267,6 @@ inline T Replicated<T>::finalize_dotprod(int length)
 
     (void) length;
     this->dot_counter++;
-    total_dotprod ++;
     return finalize_mul();
 }
 

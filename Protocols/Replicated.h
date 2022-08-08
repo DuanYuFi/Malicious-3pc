@@ -143,18 +143,19 @@ class Replicated : public ReplicatedBase, public ProtocolBase<T>
 
 public:
     static const bool uses_triples = false;
-    int total_and_gates, exchange_comm, check_comm, total_dotprod;
+    int exchange_comm, check_comm;
 
     Replicated(Player& P);
     Replicated(const ReplicatedBase& other);
     ~Replicated() {
-        if (total_and_gates != 0) {
+        if (this->counter != 0) {
             cout << "Arith part in Replicated: " << endl;
-            if (total_and_gates != 0)
-                cout << "Total multiplies: " << total_and_gates << endl;
+            cout << "Value type: " << typeid(typename T::value_type).name() << endl;
+            if (this->counter != 0)
+                cout << "Total multiplies: " << this->counter << endl;
             
-            if (total_dotprod != 0)
-                cout << "Total dotprod: " << total_dotprod << endl;
+            if (this->dot_counter != 0)
+                cout << "Total dotprod: " << this->dot_counter << endl;
 
             if (exchange_comm != 0)
                 cout << "Exchange comm: " << exchange_comm << endl;

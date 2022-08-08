@@ -8,21 +8,17 @@
 #include <chrono>
 #include <thread>
 
-#include "Tools/PointerVector.h"
+// #include "Tools/PointerVector.h"
 
 using namespace std;
 
 const int N = 3e6;
 
-PointerVector<int> pv;
+// PointerVector<int> pv;
 
 int main() {
 
-    pv.push_back(1);
-    pv.push_back(2);
-    pv.next();
-
-    cout << pv.left();
+    cout << sizeof(long) << endl;
     
 
     return 0;
