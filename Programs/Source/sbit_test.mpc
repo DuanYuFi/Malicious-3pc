@@ -3,19 +3,7 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-ROUNDS = 1000000
-
-for i in range(ROUNDS - 1):
-    a & b
-
-c = a & b
-
-a = sint(123342)
-b = sint(324234)
-
-for i in range(ROUNDS - 1):
+for i in range(5):
     a * b
-
-c = a * b
 
 # print_ln("%s", c.reveal())
