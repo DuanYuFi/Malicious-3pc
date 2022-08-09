@@ -97,7 +97,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
     // cout << "In finalize_check" << endl;
 
     #ifdef USE_THREAD
-    if (check_thread.joinable()) {
+    if (!get_returned()) {
         check_thread.join();
     }
     #endif
