@@ -69,8 +69,6 @@ public:
 
     static const bool uses_triples = false;
 
-    int total_and_gates, exchange_comm, check_comm;
-
     array<PRNG, 2> shared_prngs;
     PRNG global_prng;
 
@@ -78,9 +76,10 @@ public:
 
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
-    ~Malicious3PCProtocol();
+    ~Malicious3PCProtocol() {
+        this->print_debug_info("Binary Part");
+    }
     
-    // Replicated(const ReplicatedBase& other);
 
     static void assign(T& share, const typename T::clear& value, int my_num)
     {

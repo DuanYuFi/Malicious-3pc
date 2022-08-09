@@ -16,9 +16,6 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     // cout << typeid(typename T::value_type).name() << endl;
 
     set_returned(true);
-    total_and_gates = 0;
-    exchange_comm = 0;
-    check_comm = 0;
 
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
@@ -52,26 +49,11 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 }
 
 template <class T>
-Malicious3PCProtocol<T>::~Malicious3PCProtocol() {
-    cout << "Binary part: " << endl;
-    cout << "Total and gates: " << this->counter << endl;
-    cout << "Check comm: " << check_comm << endl;
-    cout << "Exchange comm: " << exchange_comm << endl;
-
-    if (this->dot_counter != 0) {
-        cout << "Dotprod: " << this->dot_counter << endl;
-    }
-
-    cout << "Total rounds: " << this->rounds << endl;
-    cout << endl;
-}
-
-template <class T>
 void Malicious3PCProtocol<T>::check() {
 
     // return ;
     
-    if ((int) results.size() < OnlineOptions::singleton.batch_size)
+    if ((int) results.size() < OnlineOptions::singleton.binary_batch_size)
         return;
 
     #ifdef USE_THREAD
@@ -120,7 +102,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
     }
     #endif
 
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    while ((int) results.size() >= OnlineOptions::singleton.binary_batch_size)
         Check_one();
     Check_one();
 
@@ -129,7 +111,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
 
 template <class T>
 void Malicious3PCProtocol<T>::thread_handler() {
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    while ((int) results.size() >= OnlineOptions::singleton.binary_batch_size)
         Check_one();
     set_returned(true);
     // cout << "Returned from thread handler" << endl;
@@ -146,11 +128,11 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     array<octetStream, 2> proof_os, vermsg_os;
 
-    for (auto& o : proof_os)
-        o.reset_write_head();
+    // for (auto& o : proof_os)
+    //     o.reset_write_head();
     
-    for (auto& o : vermsg_os)
-        o.reset_write_head();
+    // for (auto& o : vermsg_os)
+    //     o.reset_write_head();
     
     for (auto data: status_queue) {
         DZKProof proof = data.proof;
@@ -159,7 +141,7 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     // cout << proof_os[0].get_length() << endl;
 
-    check_comm += proof_os[0].get_length();
+    this->check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
 
     for (auto data: status_queue) {
@@ -191,8 +173,8 @@ void Malicious3PCProtocol<T>::final_verify() {
     P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
-    check_comm += proof_os[0].get_length();
-    check_comm += vermsg_os[0].get_length();
+    this->check_comm += proof_os[0].get_length();
+    this->check_comm += vermsg_os[0].get_length();
 
     for (auto data: status_queue) {
 
@@ -238,7 +220,7 @@ void Malicious3PCProtocol<T>::final_verify() {
 template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
-    int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
+    int sz = min((int) results.size(), OnlineOptions::singleton.binary_batch_size);
     // cout << "size = " << sz << endl;
     if (sz == 0) {
         return;
@@ -413,7 +395,6 @@ template<class T>
 void Malicious3PCProtocol<T>::prepare_mul(const T& x,
         const T& y, int n)
 {
-    // cout << typeid(typename T::value_type).name() << endl;
     typename T::value_type add_share = x.local_mul(y);
     input1.push(x);
     input2.push(y);
@@ -446,7 +427,7 @@ void Malicious3PCProtocol<T>::exchange()
     // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
     if (os[0].get_length() > 0) {
-        exchange_comm += os[0].get_length();
+        this->exchange_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
     }
 
@@ -457,6 +438,7 @@ template<class T>
 void Malicious3PCProtocol<T>::start_exchange()
 {
     P.send_relative(1, os[0]);
+    this->exchange_comm += os[0].get_length();
     this->rounds++;
 }
 

@@ -54,10 +54,6 @@ template<class T>
 void Beaver<T>::exchange()
 {
     MC->POpen(opened, shares, P);
-    
-    exchange_comm += (shares.size() * T::value_type::size());
-    total_and_gates += shares.size();
-
     it = opened.begin();
     triple = triples.begin();
 }
@@ -79,6 +75,8 @@ void Beaver<T>::stop_exchange()
 template<class T>
 T Beaver<T>::finalize_mul(int n)
 {
+    this->counter++;
+    this->bit_counter += n;
     (void) n;
     typename T::open_type masked[2];
     T& tmp = (*triple)[2];
@@ -98,7 +96,6 @@ void Beaver<T>::check()
 {
     assert(MC);
     MC->Check(P);
-    check_comm += 20 * 2;
 }
 
 #endif

@@ -35,20 +35,13 @@ protected:
 public:
     static const bool uses_triples = true;
 
-    int total_and_gates, exchange_comm, check_comm;
     Player& P;
 
     Beaver(Player& P) : prep(0), MC(0), P(P) {
-        total_and_gates = 0;
-        exchange_comm = 0;
-        check_comm = 0;
     }
 
     ~Beaver() {
-        cout << "Arith part: " << endl;
-        cout << "Total multiplies: " << total_and_gates << endl;
-        // cout << "Check comm: " << check_comm << endl;
-        cout << "Exchange comm: " << exchange_comm << endl;
+        this->print_debug_info("Beaver");
     }
 
     typename T::Protocol branch();

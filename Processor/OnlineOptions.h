@@ -22,6 +22,7 @@ public:
     int playerno;
     std::string progname;
     int batch_size;
+    int binary_batch_size;
     int k_size;
     std::string memtype;
     bool bits_from_squares;

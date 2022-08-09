@@ -4,26 +4,21 @@
 // #include "Math/BitVec.h"
 
 #include <iostream>
-#include <queue>
-#include <chrono>
+#include <cstdio>
 #include <thread>
 
-#include "Tools/PointerVector.h"
+// #include "Tools/PointerVector.h"
 
 using namespace std;
 
 const int N = 3e6;
 
-PointerVector<int> pv;
+// PointerVector<int> pv;
 
 int main() {
 
-    pv.push_back(1);
-    pv.push_back(2);
-    pv.next();
-
-    cout << pv.left();
-    
+    thread t;
+    t.join();
 
     return 0;
 }

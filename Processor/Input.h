@@ -44,6 +44,7 @@ protected:
 public:
     vector<octetStream> os;
     int values_input;
+    int total_comm;
 
     template<class U>
     static void input(SubProcessor<T>& Proc, const vector<int>& args, int size);

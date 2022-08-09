@@ -21,10 +21,12 @@
 #include "global_debug.hpp"
 #include <chrono>
 
+// #define VERBOSE_COUNT
+
 template<class T>
 ProtocolBase<T>::ProtocolBase() :
         trunc_pr_counter(0), rounds(0), trunc_rounds(0), dot_counter(0),
-        bit_counter(0), counter(0)
+        bit_counter(0), counter(0), exchange_comm(0), check_comm(0)
 {
 }
 
@@ -32,21 +34,12 @@ template<class T>
 Replicated<T>::Replicated(Player& P) : ReplicatedBase(P)
 {
     assert(T::vector_length == 2);
-
-    total_and_gates = 0;
-    exchange_comm = 0;
-    check_comm = 0;
-    total_dotprod = 0;
 }
 
 template<class T>
 Replicated<T>::Replicated(const ReplicatedBase& other) :
         ReplicatedBase(other)
 {
-    total_and_gates = 0;
-    exchange_comm = 0;
-    check_comm = 0;
-    total_dotprod = 0;
 }
 
 inline ReplicatedBase::ReplicatedBase(Player& P) : P(P)
@@ -79,15 +72,49 @@ template<class T>
 ProtocolBase<T>::~ProtocolBase()
 {
 #ifdef VERBOSE_COUNT
+    if (!counter and !rounds) 
+        return ;
+
+    cerr << "In " << T::type_string() << ": " << endl;
     if (counter or rounds)
         cerr << "Number of " << T::type_string() << " multiplications: "
-                << counter << " (" << bit_counter << " bits) in " << rounds
+                << counter - dot_counter << " (" << bit_counter << " bits) in " << rounds
                 << " rounds" << endl;
-    if (counter or rounds)
+    if (dot_counter)
         cerr << "Number of " << T::type_string() << " dot products: " << dot_counter << endl;
-    if (trunc_pr_counter or trunc_rounds)
-        cerr << "Number of probabilistic truncations: " << trunc_pr_counter << " in " << trunc_rounds << " rounds" << endl;
+    // if (trunc_pr_counter or trunc_rounds)
+    //     cerr << "Number of probabilistic truncations: " << trunc_pr_counter << " in " << trunc_rounds << " rounds" << endl;
+    if (check_comm)
+        cerr << "Bytes of communication in check: " << check_comm << endl;
+    if (exchange_comm) 
+        cerr << "Bytes of communication in exchange: " << exchange_comm << endl;
+    
+    cerr << endl;
 #endif
+}
+
+template<class T>
+void ProtocolBase<T>::print_debug_info(string protocol_name) {
+    
+    if (!counter and !rounds and !exchange_comm and !check_comm and !dot_counter) 
+        return ;
+
+    cerr << "In " << protocol_name << " at ring " << typeid(typename T::value_type).name() << ": " << endl;
+    
+    if (counter or rounds)
+        cerr << "Number of " << T::type_string() << " multiplications: "
+                << counter - dot_counter << " (" << bit_counter << " bits) in " << rounds
+                << " rounds" << endl;
+    if (dot_counter)
+        cerr << "Number of " << T::type_string() << " dot products: " << dot_counter << endl;
+    // if (trunc_pr_counter or trunc_rounds)
+    //     cerr << "Number of probabilistic truncations: " << trunc_pr_counter << " in " << trunc_rounds << " rounds" << endl;
+    if (check_comm)
+        cerr << "Bytes of communication in check: " << check_comm << endl;
+    if (exchange_comm) 
+        cerr << "Bytes of communication in exchange: " << exchange_comm << endl;
+    
+    cerr << endl;
 }
 
 template<class T>
@@ -194,7 +221,6 @@ void Replicated<T>::prepare_mul(const T& x,
 {
     typename T::value_type add_share = x.local_mul(y);
     prepare_reshare(add_share, n);
-    total_and_gates ++;
 }
 
 template<class T>
@@ -212,11 +238,12 @@ void Replicated<T>::prepare_reshare(const typename T::clear& share,
 template<class T>
 void Replicated<T>::exchange()
 {
-    exchange_comm += os[0].get_length();
 
-    if (os[0].get_length() > 0)
+    if (os[0].get_length() > 0) {
+        this->exchange_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
-    
+    }
+        
     this->rounds++;
 }
 
@@ -224,6 +251,7 @@ template<class T>
 void Replicated<T>::start_exchange()
 {
     P.send_relative(1, os[0]);
+    this->exchange_comm += os[0].get_length();
     this->rounds++;
 }
 
@@ -272,7 +300,6 @@ inline T Replicated<T>::finalize_dotprod(int length)
 
     (void) length;
     this->dot_counter++;
-    total_dotprod ++;
     return finalize_mul();
 }
 

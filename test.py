@@ -1,43 +1,36 @@
-strs = '''In SpdzWiseRing zero_check
-Arith part in SpdzWiseRing: 
-Total check comm: 3056
+strs = '''In Replicated at ring 2Z2ILi64EE: 
+Number of replicated Z2^64 multiplications: 18016184 (-9009093 bits) in 60 rounds
+Number of replicated Z2^64 dot products: 1001
+Bytes of communication in exchange: 72072744
 
-Arith part in Replicated: 
-Total multiplies: 206
-Exchange comm: 3708
+In Replicated at ring 7BitVec_IlE: 
+Number of replicated secret multiplications: 16188615 (1036028235 bits) in 420 rounds
+Bytes of communication in exchange: 129504125
 
-Arith part in Replicated: 
-Total multiplies: 208
-Exchange comm: 2704
+In Replicated at ring 2Z2ILi64EE: 
+Number of replicated Z2^64 multiplications: 9020000 (-9020000 bits) in 902 rounds
+Bytes of communication in exchange: 72160000
 
-Arith part in Replicated: 
-Total multiplies: 1000000
-Exchange comm: 13000000
+In Replicated at ring 2Z2ILi64EE: 
+Number of replicated Z2^64 multiplications: 21228544 (-21728256 bits) in 33952 rounds
+Number of replicated Z2^64 dot products: 11113984
+Bytes of communication in exchange: 173826048
 
-Arith part in Replicated: 
-Total multiplies: 1000001
-Total dotprod: 2
-Exchange comm: 13000039
+In Replicated at ring 7BitVec_IlE: 
+Number of replicated secret multiplications: 51835910 (3303654400 bits) in 52115 rounds
+Bytes of communication in exchange: 412962535
 
-Binary part: 
-Total and gates: 1000000
-Check comm: 156400
-Exchange comm: 1000000
+In Replicated at ring 2Z2ILi64EE: 
+Number of replicated Z2^64 multiplications: 102220000 (-102220000 bits) in 10222 rounds
+Bytes of communication in exchange: 817760000
 '''
 
-total_and_gates = 0
-check_comm = 0
-and_comm = 0
-
 lines = strs.split('\n')
-for line in lines:
-    if line.startswith("Total and gates: "):
-        total_and_gates += int(line.split(': ')[1])
-    elif line.startswith("Check comm: "):
-        check_comm += int(line.split(': ')[1])
-    elif line.startswith("Exchange comm: "):
-        and_comm += int(line.split(': ')[1])
 
-print("Total and gates: {}".format(total_and_gates))
-print("Check comm: {}".format(check_comm))
-print("Exchange comm: {}".format(and_comm))
+total_comm = 0
+
+for line in lines:
+    if line.startswith("Bytes of communication in exchange: "):
+        total_comm += int(line.split(': ')[1])
+
+print(total_comm / 1024 / 1024)

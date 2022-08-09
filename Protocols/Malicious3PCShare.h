@@ -57,6 +57,11 @@ public:
         return "M3" + string(1, T::type_char());
     }
 
+    static string type_string()
+    {
+        return "Malicious3PC Secret " + T::type_string();
+    }
+
     Malicious3PCShare()
     {
     }
@@ -87,6 +92,7 @@ class Malicious3PCRingShare : public SpdzWiseShare<Malicious3PCShare<Z2<K + S>>>
 
 public:
     typedef SignedZ2<K> clear;
+    typedef clear value_type;
     typedef clear open_type;
     typedef Malicious3PCShare<clear> open_part_type;
 
