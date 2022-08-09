@@ -78,7 +78,21 @@ public:
 
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
-    ~Malicious3PCProtocol();
+    ~Malicious3PCProtocol() {
+        cout << "Binary part: " << endl;
+        cout << "Value type: " << typeid(typename T::value_type).name() << endl;
+        cout << "Total and gates: " << this->counter << endl;
+        cout << "Check comm: " << check_comm << endl;
+        cout << "Exchange comm: " << exchange_comm << endl;
+        cout << "Bit counter: " << this->bit_counter << endl;
+
+        if (this->dot_counter != 0) {
+            cout << "Dotprod: " << this->dot_counter << endl;
+        }
+
+        cout << "Total rounds: " << this->rounds << endl;
+        cout << endl;
+    }
     
     // Replicated(const ReplicatedBase& other);
 

@@ -4,9 +4,7 @@
 // #include "Math/BitVec.h"
 
 #include <iostream>
-#include <queue>
-#include <chrono>
-#include <thread>
+#include <cstdio>
 
 // #include "Tools/PointerVector.h"
 
@@ -18,7 +16,7 @@ const int N = 3e6;
 
 int main() {
 
-    cout << sizeof(long) << endl;
+    fprintf(stdout, "Hello\n");
     
 
     return 0;
