@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <thread>
 
 // #include "Tools/PointerVector.h"
 
@@ -16,8 +17,8 @@ const int N = 3e6;
 
 int main() {
 
-    fprintf(stdout, "Hello\n");
-    
+    thread t;
+    t.join();
 
     return 0;
 }

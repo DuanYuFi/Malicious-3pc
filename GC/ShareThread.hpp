@@ -77,8 +77,8 @@ template<class T>
 void ShareThread<T>::post_run()
 {
     // cout << "Calling final check" << endl;
-    // protocol->finalize_check();
-    protocol->check();
+    protocol->finalize_check();
+    // protocol->check();
     MC->Check(*this->P);
 }
 

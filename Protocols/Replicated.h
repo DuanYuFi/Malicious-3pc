@@ -53,14 +53,14 @@ protected:
 
     int trunc_pr_counter;
     int rounds, trunc_rounds;
-    int dot_counter;
-    int bit_counter;
+    size_t dot_counter;
+    size_t bit_counter;
 
 public:
     typedef T share_type;
 
-    int counter;
-    int mul_counter;
+    size_t counter;
+    size_t mul_counter;
 
     ProtocolBase();
     virtual ~ProtocolBase();

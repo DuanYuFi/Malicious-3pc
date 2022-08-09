@@ -1,153 +1,167 @@
 strs = '''Arith part in SpdzWiseRing: 
-Total check comm: 7707232
+Total check comm: 36672
 
 Arith part in Replicated: 
-Total multiplies: 519532
-Exchange comm: 9351576
+Value type: 2Z2ILi144EE
+Total multiplies: 2472
+Exchange comm: 44496
 
 Arith part in Replicated: 
-Total multiplies: 524576
-Exchange comm: 6819488
+Value type: 2Z2ILi104EE
+Total multiplies: 2496
+Exchange comm: 32448
 
 Arith part in Replicated: 
-Total multiplies: 2522
-Total dotprod: 5044
-Exchange comm: 98358
+Value type: 2Z2ILi104EE
+Total multiplies: 36
+Total dotprod: 24
+Exchange comm: 468
 
 Arith part in Replicated: 
-Total multiplies: 43787369
-Exchange comm: 569235797
+Value type: 2Z2ILi104EE
+Total multiplies: 49747369
+Exchange comm: 646715797
 
 Arith part in SpdzWiseRing: 
-Total check comm: 152800
+Total check comm: 9168
 
 Arith part in Replicated: 
-Total multiplies: 10300
-Exchange comm: 185400
+Value type: 2Z2ILi144EE
+Total multiplies: 618
+Exchange comm: 11124
 
 Arith part in Replicated: 
-Total multiplies: 10400
-Exchange comm: 135200
+Value type: 2Z2ILi104EE
+Total multiplies: 624
+Exchange comm: 8112
 
 Arith part in Replicated: 
-Total multiplies: 9008092
+Value type: 2Z2ILi104EE
+Total multiplies: 9009093
 Total dotprod: 1001
 Exchange comm: 117118209
 
 Arith part in Replicated: 
-Total multiplies: 9010144
-Total dotprod: 1101
-Exchange comm: 117146185
+Value type: 2Z2ILi104EE
+Total multiplies: 9011104
+Total dotprod: 1007
+Exchange comm: 117144352
 
 Binary part: 
+Value type: 7BitVec_IlE
 Total and gates: 16188615
-Check comm: 2516000
+Check comm: 12768
 Exchange comm: 129504125
+Bit counter: 1036028235
+Total rounds: 420
 
 Arith part in SpdzWiseRing: 
-Total check comm: 2759568
+Total check comm: 15280
 
 Arith part in Replicated: 
-Total multiplies: 186018
-Exchange comm: 3348324
+Value type: 2Z2ILi144EE
+Total multiplies: 1030
+Exchange comm: 18540
 
 Arith part in Replicated: 
-Total multiplies: 187824
-Exchange comm: 2441712
+Value type: 2Z2ILi104EE
+Total multiplies: 1040
+Exchange comm: 13520
 
 Arith part in Replicated: 
-Total multiplies: 9020000
-Total dotprod: 902
-Exchange comm: 117271726
+Value type: 2Z2ILi104EE
+Total multiplies: 12000004
+Total dotprod: 4
+Exchange comm: 156000052
 
 Arith part in Replicated: 
-Total multiplies: 9020903
-Total dotprod: 2708
-Exchange comm: 117306943
-
-Arith part in SpdzWiseRing: 
-Total check comm: 1949728
-
-Arith part in Replicated: 
-Total multiplies: 131428
-Exchange comm: 2365704
-
-Arith part in Replicated: 
-Total multiplies: 132704
-Exchange comm: 1725152
-
-Arith part in Replicated: 
-Total multiplies: 638
-Total dotprod: 1276
-Exchange comm: 24882
-
-Arith part in Replicated: 
-Total multiplies: 12760000
-Exchange comm: 165880000
-
-Arith part in SpdzWiseRing: 
-Total check comm: 293376
-
-Arith part in Replicated: 
-Total multiplies: 19776
-Exchange comm: 355968
-
-Arith part in Replicated: 
-Total multiplies: 19968
-Exchange comm: 259584
-
-Arith part in Replicated: 
-Total multiplies: 660480
-Total dotprod: 694624
-Exchange comm: 17616352
-
-Arith part in Replicated: 
-Total multiplies: 3170080
-Total dotprod: 694816
-Exchange comm: 50243648
-
-Binary part: 
-Total and gates: 3233215
-Check comm: 503200
-Exchange comm: 25753845
-
-Arith part in SpdzWiseRing: 
-Total check comm: 1952784
-
-Arith part in Replicated: 
-Total multiplies: 131634
-Exchange comm: 2369412
-
-Arith part in Replicated: 
-Total multiplies: 132912
-Exchange comm: 1727856
-
-Arith part in Replicated: 
-Total multiplies: 6380000
-Total dotprod: 638
-Exchange comm: 82948294
-
-Arith part in Replicated: 
-Total multiplies: 6380639
-Total dotprod: 1916
-Exchange comm: 82973215
+Value type: 2Z2ILi104EE
+Total multiplies: 12000019
+Total dotprod: 14
+Exchange comm: 156000247
 
 Significant amount of unused bits of SPDZ-wise replicated Z2^104. For more accurate benchmarks, consider reducing the batch size with -b.
 Arith part in SpdzWiseRing: 
-Total check comm: 1949728
+Total check comm: 106960
 
 Arith part in Replicated: 
-Total multiplies: 131428
-Exchange comm: 2365704
+Value type: 2Z2ILi144EE
+Total multiplies: 7210
+Exchange comm: 129780
 
 Arith part in Replicated: 
-Total multiplies: 132704
-Exchange comm: 1725152
+Value type: 2Z2ILi104EE
+Total multiplies: 7280
+Exchange comm: 94640
 
 Arith part in Replicated: 
-Total multiplies: 638
-Total dotprod: 1276
-Exchange comm: 24882
+Value type: 2Z2ILi104EE
+Total multiplies: 105
+Total dotprod: 70
+Exchange comm: 1365
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 210000000
+Exchange comm: -1564967296
+
+Arith part in SpdzWiseRing: 
+Total check comm: 24448
+
+Arith part in Replicated: 
+Value type: 2Z2ILi144EE
+Total multiplies: 1648
+Exchange comm: 29664
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 1664
+Exchange comm: 21632
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 21728256
+Total dotprod: 11113984
+Exchange comm: 282467328
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 61973528
+Total dotprod: 11114000
+Exchange comm: 805655864
+
+Binary part: 
+Value type: 7BitVec_IlE
+Total and gates: 51835910
+Check comm: 38048
+Exchange comm: 412962535
+Bit counter: -991312896
+Total rounds: 52115
+
+Arith part in SpdzWiseRing: 
+Total check comm: 110016
+
+Arith part in Replicated: 
+Value type: 2Z2ILi144EE
+Total multiplies: 7416
+Exchange comm: 133488
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 7488
+Exchange comm: 97344
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 105000035
+Total dotprod: 35
+Exchange comm: 1365000455
+
+Arith part in Replicated: 
+Value type: 2Z2ILi104EE
+Total multiplies: 105000143
+Total dotprod: 107
+Exchange comm: 1365001859
 '''
 
 total_and_gates = 0

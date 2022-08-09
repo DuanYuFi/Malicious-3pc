@@ -56,7 +56,7 @@ void Malicious3PCProtocol<T>::check() {
 
     // return ;
     
-    if ((int) results.size() < OnlineOptions::singleton.batch_size)
+    if ((int) results.size() < OnlineOptions::singleton.binary_batch_size)
         return;
 
     #ifdef USE_THREAD
@@ -100,12 +100,12 @@ void Malicious3PCProtocol<T>::finalize_check() {
     // cout << "In finalize_check" << endl;
 
     #ifdef USE_THREAD
-    if (check_thread.joinable()) {
+    if (!get_returned()) {
         check_thread.join();
     }
     #endif
 
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    while ((int) results.size() >= OnlineOptions::singleton.binary_batch_size)
         Check_one();
     Check_one();
 
@@ -114,7 +114,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
 
 template <class T>
 void Malicious3PCProtocol<T>::thread_handler() {
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    while ((int) results.size() >= OnlineOptions::singleton.binary_batch_size)
         Check_one();
     set_returned(true);
     // cout << "Returned from thread handler" << endl;
@@ -223,7 +223,7 @@ void Malicious3PCProtocol<T>::final_verify() {
 template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
-    int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
+    int sz = min((int) results.size(), OnlineOptions::singleton.binary_batch_size);
     // cout << "size = " << sz << endl;
     if (sz == 0) {
         return;
