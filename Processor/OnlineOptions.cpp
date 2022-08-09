@@ -23,6 +23,7 @@ OnlineOptions::OnlineOptions() : playerno(-1)
     lgp = gfp0::MAX_N_BITS;
     live_prep = true;
     batch_size = 10000;
+    binary_batch_size = 10000;
     k_size = 8;
     memtype = "empty";
     bits_from_squares = false;
@@ -222,6 +223,16 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     );
 
     opt.add(
+        to_string(10000).c_str(), // Default.
+        0, // Required?
+        1, // Number of args expected.
+        0, // Delimiter if expecting multiple args.
+        ("Size of binary check batches (default: " + to_string(10000) + ")").c_str(), // Help description.
+        "-bb", // Flag token.
+        "--bianry-batch-size" // Flag token.
+    );
+
+    opt.add(
             to_string(8).c_str(), // Default.
             0, // Required?
             1, // Number of args expected.
@@ -283,6 +294,7 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     }
     opt.get("-b")->getInt(batch_size);
     opt.get("-k")->getInt(k_size);
+    opt.get("-bb")->getInt(binary_batch_size);
     opt.get("--memory")->getString(memtype);
     bits_from_squares = opt.isSet("-Q");
 

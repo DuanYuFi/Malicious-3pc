@@ -52,26 +52,11 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 }
 
 template <class T>
-Malicious3PCProtocol<T>::~Malicious3PCProtocol() {
-    cout << "Binary part: " << endl;
-    cout << "Total and gates: " << this->counter << endl;
-    cout << "Check comm: " << check_comm << endl;
-    cout << "Exchange comm: " << exchange_comm << endl;
-
-    if (this->dot_counter != 0) {
-        cout << "Dotprod: " << this->dot_counter << endl;
-    }
-
-    cout << "Total rounds: " << this->rounds << endl;
-    cout << endl;
-}
-
-template <class T>
 void Malicious3PCProtocol<T>::check() {
 
     // return ;
     
-    if ((int) results.size() < OnlineOptions::singleton.batch_size)
+    if ((int) results.size() < OnlineOptions::singleton.binary_batch_size)
         return;
 
     #ifdef USE_THREAD
@@ -115,12 +100,12 @@ void Malicious3PCProtocol<T>::finalize_check() {
     // cout << "In finalize_check" << endl;
 
     #ifdef USE_THREAD
-    if (check_thread.joinable()) {
+    if (!get_returned()) {
         check_thread.join();
     }
     #endif
 
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    while ((int) results.size() >= OnlineOptions::singleton.binary_batch_size)
         Check_one();
     Check_one();
 
@@ -129,7 +114,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
 
 template <class T>
 void Malicious3PCProtocol<T>::thread_handler() {
-    while ((int) results.size() >= OnlineOptions::singleton.batch_size)
+    while ((int) results.size() >= OnlineOptions::singleton.binary_batch_size)
         Check_one();
     set_returned(true);
     // cout << "Returned from thread handler" << endl;
@@ -238,7 +223,7 @@ void Malicious3PCProtocol<T>::final_verify() {
 template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
-    int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
+    int sz = min((int) results.size(), OnlineOptions::singleton.binary_batch_size);
     // cout << "size = " << sz << endl;
     if (sz == 0) {
         return;
@@ -413,7 +398,6 @@ template<class T>
 void Malicious3PCProtocol<T>::prepare_mul(const T& x,
         const T& y, int n)
 {
-    // cout << typeid(typename T::value_type).name() << endl;
     typename T::value_type add_share = x.local_mul(y);
     input1.push(x);
     input2.push(y);
