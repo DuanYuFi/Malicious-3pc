@@ -97,7 +97,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
     // cout << "In finalize_check" << endl;
 
     #ifdef USE_THREAD
-    if (!get_returned()) {
+    if (check_thread.joinable()) {
         check_thread.join();
     }
     #endif
@@ -453,7 +453,10 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 {
 
     this->counter++;
-    this->bit_counter += n;
+    this->bit_counter += (n == -1 ? 64 : n);
+
+    // cout << "this n = " << n << endl;
+
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
@@ -465,7 +468,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 template <class T>
 inline T Malicious3PCProtocol<T>::dotprod_finalize_mul(int n) {
     this->counter++;
-    this->bit_counter += n;
+    // this->bit_counter += n;
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);

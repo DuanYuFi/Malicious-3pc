@@ -265,7 +265,7 @@ template<class T>
 inline T Replicated<T>::finalize_mul(int n)
 {
     this->counter++;
-    this->bit_counter += n;
+    this->bit_counter += (n == -1 ? T::clear::length() : n);
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);

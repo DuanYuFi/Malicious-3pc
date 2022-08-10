@@ -3,11 +3,12 @@ from Compiler.GC.types import *
 a = sbit(1)
 b = sbit(0)
 
-c = a & b
+for i in range(20):
+    a & b
 
 # a = sint(2)
 # b = sint(3)
 
 # c = a * b
 
-print_ln("%s", c.reveal())
+# print_ln("%s", c.reveal())

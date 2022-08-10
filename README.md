@@ -27,7 +27,7 @@ and the script file is in `Scripts/semi-ring.sh`.
 
 ## Malicious
 
-Shits happening...
+Our binary check is in Protocols/Malicious3PCProtocol.h, and the VM file is Machines/mal3pc-ring-party.cpp. If you want to compile this protocol, please DO NOT FORGET to uncomment GC/ShareThread.hpp: line 80 `protocol->finalize_check();` and comment line 81.
 
 ## About mpir:
 
