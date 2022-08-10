@@ -50,21 +50,6 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 }
 
 template <class T>
-Malicious3PCProtocol<T>::~Malicious3PCProtocol() {
-    cout << "Binary part: " << endl;
-    cout << "Total and gates: " << this->counter << endl;
-    cout << "Binary Check comm: " << check_comm << endl;
-    cout << "Binary Exchange comm: " << exchange_comm << endl;
-
-    if (this->dot_counter != 0) {
-        cout << "Dotprod: " << this->dot_counter << endl;
-    }
-
-    cout << "Total rounds: " << this->rounds << endl;
-    cout << endl;
-}
-
-template <class T>
 void Malicious3PCProtocol<T>::check() {
 
     // return ;
@@ -302,7 +287,7 @@ void Malicious3PCProtocol<T>::Check_one() {
             auto x = input1.pop();
             auto y = input2.pop();
             auto z = results.pop();
-            array<typename T::value_type, 2> rho = rhos.pop();
+            auto rho = rhos.pop();
 
             // cout << "P.my_real_num(): " << P.my_real_num() << endl;
             // cout << "P.my_num(): " << P.my_num() << endl;
@@ -314,45 +299,45 @@ void Malicious3PCProtocol<T>::Check_one() {
             // x[0]: x_i, x[1]: x_{i-1}
             // y[0]: y_i, y[1]: y_{i-1}
             // z[0]: z_i, z[1]: z_{i-1}
-            if (z[0] != x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]) {
-                cout << "x: " << x[0] << " " << x[1] << endl;
-                cout << "y: " << y[0] << " " << y[1] << endl;
-                cout << "z: " << z[0] << " " << z[1] << endl;
-                cout << "rho: " << rho[0] << " " << rho[1] << endl;
+            if (z.first != x.first * y.first + x.second * y.first + x.first * y.second + rho.first + rho.second) {
+                cout << "x: " << x.first << " " << x.second << endl;
+                cout << "y: " << y.first << " " << y.second << endl;
+                cout << "z: " << z.first << " " << z.second << endl;
+                cout << "rho: " << rho.first << " " << rho.second << endl;
 
                 cout << "sz = " << sz << ", k = " << k << ", cols = " << cols << endl;
                 cout << "i = " << i << ", j = " << j << endl;
             }
-            assert(z[0] == x[0] * y[0] + x[1] * y[0] + x[0] * y[1] + rho[0] + rho[1]);
+            assert(z.first == x.first * y.first + x.second * y.first + x.first * y.second + rho.first + rho.second);
             
-            uint64_t ti = (z[0] + x[0] * y[0] + rho[0]).get();
+            uint64_t ti = (z.first + x.first * y.first + rho.first);
             // shared vars between P_i and P_{i-1}
-            uint64_t v0 = y[1].get();
+            uint64_t v0 = y.second;
             // shared vars between P_i and P_{i+1}
-            uint64_t v1 = Mersenne::sub(x[0].get(), 2 * ti * x[0].get());
-            // uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
+            uint64_t v1 = Mersenne::sub(x.first, 2 * ti * x.first);
+            // uint64_t v11 = x.first - 2 * ti * x.first;
             // shared vars between P_i and P_{i-1}
-            uint64_t v2 = Mersenne::sub(2 * rho[1].get() * x[1].get(), x[1].get());
-            // uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
+            uint64_t v2 = Mersenne::sub(2 * rho.second * x.second, x.second);
+            // uint64_t v22 = x.second - 2 * rho.second * x.second;
             // shared vars between P_i and P_{i+1}
-            uint64_t v3 = y[0].get();
-            // uint64_t v4 = Mersenne::sub(rho[1].get(), ti);
-            // uint64_t v44 = rho[1].get() - ti;
+            uint64_t v3 = y.first;
+            // uint64_t v4 = Mersenne::sub(rho.second, ti);
+            // uint64_t v44 = rho.second - ti;
 
-            sum += rho[1].get() - ti;
+            sum += rho.second - ti;
 
             // cout << "share with next (v1, v3, ti): " << v1 << " " << v3 << " " << ti << endl;
-            // cout << "share with prev (v0, v2, rho): " << v0 << " " << v2 << " " << rho[1].get() << endl;
+            // cout << "share with prev (v0, v2, rho): " << v0 << " " << v2 << " " << rho.second << endl;
 
             // cout << "v0, v2, v1, v3: " << v0 << " " << v1 << " " << v2 << " " << v3 << endl;
-            // cout << "ti, rho_{i-1}: " << ti << " " << rho[1].get() << endl;
+            // cout << "ti, rho_{i-1}: " << ti << " " << rho.second << endl;
 
             // assert(Mersenne::add(Mersenne::mul(v0, v1), Mersenne::mul(v2, v3)) == v4);
             // assert(v0 * v11 - v22 * v3 == v44);
             if(ti != 0) {
                 cnt_non_zeros_1++;
             }
-            if(rho[1] != 0) {
+            if(rho.second != 0) {
                 cnt_non_zeros_2++;
             }
 
@@ -361,17 +346,17 @@ void Malicious3PCProtocol<T>::Check_one() {
             input_right[i][j * 2] = v1;
             input_right[i][j * 2 + 1] = v3;
 
-            uint64_t tii = (z[1] + x[1] * y[1] + rho[1]).get();
+            uint64_t tii = (z.second + x.second * y.second + rho.second);
             // shared vars between P_i and P_{i-1}
-            uint64_t v00 = y[0].get();
+            uint64_t v00 = y.first;
             // shared vars between P_i and P_{i+1}
-            uint64_t v11 = Mersenne::sub(x[1].get(), 2 * tii * x[1].get());
-            // uint64_t v11 = x[0].get() - 2 * ti * x[0].get();
+            uint64_t v11 = Mersenne::sub(x.second, 2 * tii * x.second);
+            // uint64_t v11 = x.first - 2 * ti * x.first;
             // shared vars between P_i and P_{i-1}
-            uint64_t v22 = Mersenne::sub(2 * rho[0].get() * x[0].get(), x[0].get());
-            // uint64_t v22 = x[1].get() - 2 * rho[1].get() * x[1].get();
+            uint64_t v22 = Mersenne::sub(2 * rho.first * x.first, x.first);
+            // uint64_t v22 = x.second - 2 * rho[1] * x.second;
             // shared vars between P_i and P_{i+1}
-            uint64_t v33 = y[1].get();
+            uint64_t v33 = y.second;
 
             // cout << "(prev) v00, v22: " << v00 << " " << v22 << endl;
             // cout << "(next) v11, v33: " << v11 << " " << v33 << endl;
@@ -384,7 +369,7 @@ void Malicious3PCProtocol<T>::Check_one() {
             input_shared_prev[i][j * 2 + 1] = v33;
 
             // cout << "should equal to prev (v11, v33, tii): " << v11 << " " << v33 << " " << tii << endl;
-            // cout << "should equal to next (v00, v22, rho): " << v00 << " " << v22 << " " << rho[0].get() << endl;
+            // cout << "should equal to next (v00, v22, rho): " << v00 << " " << v22 << " " << rho[0] << endl;
 
 
             // cout << "v0: " << v0 << endl;
@@ -392,20 +377,20 @@ void Malicious3PCProtocol<T>::Check_one() {
             // cout << "v2: " << v2 << endl;
             // cout << "v3: " << v3 << endl;
 
-            // uint64_t tii = (z[1] + x[1] * y[1] + rho[1]).get();
+            // uint64_t tii = (z[1] + x[1] * y[1] + rho[1]);
 
             // shared vars between P_i and P_{i-1}
             input_mono_prev[i][j] = Mersenne::neg(tii);
             // shared vars between P_i and P_{i+1}
-            input_mono_next[i][j] = rho[0].get();
+            input_mono_next[i][j] = rho.first;
 
             // cout << "(next) t{i-1}: " << input_mono_prev[i][j] << endl;
-            // cout << "(prev) rhoi: " << rho[0].get() << endl;
+            // cout << "(prev) rhoi: " << rho[0] << endl;
 
             if(tii != 0) {
                 cnt_non_zeros_3++;
             }
-            if(rho[0] != 0) {
+            if(rho.first != 0) {
                 cnt_non_zeros_4++;
             }
 
@@ -514,8 +499,17 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
 {
     // cout << typeid(typename T::value_type).name() << endl;
     typename T::value_type add_share = x.local_mul(y);
-    input1.push(x);
-    input2.push(y);
+
+    int this_size = (n == -1 ? T::value_type::length() : n);
+
+    register long x0 = x[0].get(), x1 = x[1].get();
+    register long y0 = y[0].get(), y1 = y[1].get();
+
+    for (register short i = 0; i < this_size; i ++) {
+        input1.push(ShareType((x0 >> i) & 1, (x1 >> i & 1)));
+        input2.push(ShareType((y0 >> i) & 1, (y1 >> i & 1)));
+    }
+
     prepare_reshare(add_share, n);
 
 }
@@ -528,10 +522,12 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     for (int i = 0; i < 2; i++)
         tmp[i].randomize(shared_prngs[i], n);
     
-    array<typename T::value_type, 2> rho;
-    rho[0] = tmp[0];
-    rho[1] = tmp[1];
-    rhos.push(rho);
+    int this_size = (n == -1 ? T::value_type::length() : n);
+    register long rho0 = tmp[0].get(), rho1 = tmp[1].get();
+
+    for (register short i = 0; i < this_size; i ++) {
+        rhos.push(ShareType((rho0 >> i) & 1, (rho1 >> i & 1)));
+    }
 
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
@@ -571,7 +567,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 {
 
     this->counter++;
-    this->bit_counter += (n == -1 ? 64 : n);
+    this->bit_counter += (n == -1 ? T::value_type::length() : n);
 
     // cout << "this n = " << n << endl;
 
@@ -579,7 +575,12 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
 
-    results.push(result);
+    int this_size = (n == -1 ? T::value_type::length() : n);
+    register long z0 = result[0].get(), z1 = result[1].get();
+    for (register short i = 0; i < this_size; i ++) {
+        rhos.push(ShareType((z0 >> i) & 1, (z1 >> i & 1)));
+    }
+
     return result;
 }
 

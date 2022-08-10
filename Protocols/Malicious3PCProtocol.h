@@ -35,6 +35,8 @@ struct StatusData {
         proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sid(sid), sz(sz) {}
 };
 
+typedef pair<bool, bool> ShareType;
+
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -44,8 +46,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    Queue<T> input1, input2, results;
-    Queue<array<typename T::value_type, 2>> rhos;
+    Queue<ShareType> input1, input2, results, rhos;
 
     vector<StatusData> status_queue;
     vector<typename T::open_type> opened;

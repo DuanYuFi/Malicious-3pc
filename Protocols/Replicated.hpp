@@ -102,8 +102,8 @@ void ProtocolBase<T>::print_debug_info(string protocol_name) {
     cerr << "In " << protocol_name << " at ring " << typeid(typename T::value_type).name() << ": " << endl;
     
     if (counter or rounds)
-        cerr << "Number of " << T::type_string() << " multiplications: "
-                << counter - dot_counter << " (" << bit_counter << " bits) in " << rounds
+        cerr << "Number of " << T::type_string() << " multiplications including dotprod: "
+                << counter << " (" << bit_counter << " bits) in " << rounds
                 << " rounds" << endl;
     if (dot_counter)
         cerr << "Number of " << T::type_string() << " dot products: " << dot_counter << endl;
