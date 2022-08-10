@@ -99,7 +99,7 @@ void ProtocolBase<T>::print_debug_info(string protocol_name) {
     if (!counter and !rounds and !exchange_comm and !check_comm and !dot_counter) 
         return ;
 
-    cerr << "In " << protocol_name << " at ring " << typeid(typename T::value_type).name() << ": " << endl;
+    cerr << "In " << protocol_name << " at ring " << typeid(typename T::clear).name() << ": " << endl;
     
     if (counter or rounds)
         cerr << "Number of " << T::type_string() << " multiplications including dotprod: "
