@@ -222,6 +222,9 @@ public:
 
   mutable vector<NamedCommStats> thread_stats;
 
+  uint64_t calculate_comm, check_comm, input_comm, MC_comm, binary_calculate_comm, binary_check_comm;
+  uint64_t total_and_gates, total_multiply, total_dotprod;
+
   Player(const Names& Nms);
   virtual ~Player();
 

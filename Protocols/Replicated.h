@@ -54,13 +54,15 @@ protected:
     int trunc_pr_counter;
     int rounds, trunc_rounds;
     size_t dot_counter;
-    size_t bit_counter;
+    long long int bit_counter;
 
 public:
     typedef T share_type;
 
     size_t counter;
     size_t mul_counter;
+    uint64_t exchange_comm;
+    uint64_t check_comm;
 
     ProtocolBase();
     virtual ~ProtocolBase();
@@ -124,6 +126,8 @@ public:
     { throw runtime_error("CISC instructions not implemented"); }
 
     virtual vector<int> get_relevant_players();
+
+    void print_debug_info(string protocol_name);
 };
 
 /**
@@ -143,25 +147,11 @@ class Replicated : public ReplicatedBase, public ProtocolBase<T>
 
 public:
     static const bool uses_triples = false;
-    int exchange_comm, check_comm;
 
     Replicated(Player& P);
     Replicated(const ReplicatedBase& other);
     ~Replicated() {
-        if (this->counter != 0) {
-            cout << "Arith part in Replicated: " << endl;
-            cout << "Value type: " << typeid(typename T::value_type).name() << endl;
-            if (this->counter != 0)
-                cout << "Total multiplies: " << this->counter << endl;
-            
-            if (this->dot_counter != 0)
-                cout << "Total dotprod: " << this->dot_counter << endl;
-
-            if (exchange_comm != 0)
-                cout << "Exchange comm: " << exchange_comm << endl;
-            
-            cout << endl;
-        }
+        this->print_debug_info("Replicated");
     }
 
     static void assign(T& share, const typename T::clear& value, int my_num)

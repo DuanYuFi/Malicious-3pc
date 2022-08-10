@@ -17,9 +17,6 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     // cout << typeid(typename T::value_type).name() << endl;
 
     set_returned(true);
-    total_and_gates = 0;
-    exchange_comm = 0;
-    check_comm = 0;
 
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
@@ -147,11 +144,11 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     array<octetStream, 2> proof_os, vermsg_os;
 
-    for (auto& o : proof_os)
-        o.reset_write_head();
+    // for (auto& o : proof_os)
+    //     o.reset_write_head();
     
-    for (auto& o : vermsg_os)
-        o.reset_write_head();
+    // for (auto& o : vermsg_os)
+    //     o.reset_write_head();
     
     for (auto data: status_queue) {
         DZKProof proof = data.proof;
@@ -160,7 +157,7 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     // cout << proof_os[0].get_length() << endl;
 
-    check_comm += proof_os[0].get_length();
+    this->check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
 
     for (auto data: status_queue) {
@@ -198,8 +195,8 @@ void Malicious3PCProtocol<T>::final_verify() {
     P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
-    check_comm += proof_os[0].get_length();
-    check_comm += vermsg_os[0].get_length();
+    this->check_comm += proof_os[0].get_length();
+    this->check_comm += vermsg_os[0].get_length();
 
     for (auto data: status_queue) {
 
@@ -548,7 +545,7 @@ void Malicious3PCProtocol<T>::exchange()
     // cout << "In Malicious3PCProtocol::exchange()" << endl;
 
     if (os[0].get_length() > 0) {
-        exchange_comm += os[0].get_length();
+        this->exchange_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
     }
 
@@ -559,6 +556,7 @@ template<class T>
 void Malicious3PCProtocol<T>::start_exchange()
 {
     P.send_relative(1, os[0]);
+    this->exchange_comm += os[0].get_length();
     this->rounds++;
 }
 
@@ -573,7 +571,10 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 {
 
     this->counter++;
-    this->bit_counter += n;
+    this->bit_counter += (n == -1 ? 64 : n);
+
+    // cout << "this n = " << n << endl;
+
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
@@ -585,7 +586,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 template <class T>
 inline T Malicious3PCProtocol<T>::dotprod_finalize_mul(int n) {
     this->counter++;
-    this->bit_counter += n;
+    // this->bit_counter += n;
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);

@@ -120,3 +120,4 @@ _build/
 
 # environment
 .env
+core

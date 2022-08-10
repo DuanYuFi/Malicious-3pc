@@ -92,6 +92,7 @@ template<class T>
 void ReplicatedInput<T>::send_mine()
 {
     P.send_relative(os);
+    P.input_comm += os[0].get_length() + os[1].get_length();
 }
 
 template<class T>

@@ -17,7 +17,7 @@
 
 template<class T>
 InputBase<T>::InputBase(ArithmeticProcessor* proc) :
-        P(0), values_input(0)
+        P(0), values_input(0), total_comm(0)
 {
     my_num = -1;
     if (proc)

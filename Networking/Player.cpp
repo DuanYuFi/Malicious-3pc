@@ -207,7 +207,9 @@ Names::~Names()
 
 
 Player::Player(const Names& Nms) :
-        PlayerBase(Nms.my_num()), N(Nms)
+        PlayerBase(Nms.my_num()), N(Nms), calculate_comm(0), check_comm(0), 
+        input_comm(0), MC_comm(0), binary_calculate_comm(0), binary_check_comm(0), 
+        total_and_gates(0), total_multiply(0), total_dotprod(0)
 {
   nplayers=Nms.nplayers;
   player_no=Nms.player_no;
@@ -258,6 +260,23 @@ Player::~Player()
   for (auto& x : thread_stats)
     x.print();
 #endif
+
+return ;
+  cout << "Player's log: " << endl;
+  cout << "In arithmetic: " << endl;
+  cout << "Calculate communication: " << calculate_comm << " bytes." << endl;
+  cout << "Check communication: " << check_comm << " bytes." << endl;
+  cout << "Input communication: " << input_comm << " bytes." << endl;
+  cout << "Arithmetic check communication: " << MC_comm << " bytes." << endl;
+  cout << "In binary: " << endl;
+  cout << "Calculate communication: " << binary_calculate_comm << " bytes." << endl;
+  cout << "Check communication: " << binary_check_comm << " bytes." << endl;
+  cout << "Summary: " << endl;
+  cout << "Total and gates: " << total_and_gates << endl;
+  cout << "Total multiplications: " << total_multiply << endl;
+  cout << "Total dotprods: " << total_dotprod << endl;
+  cout << endl;
+
 }
 
 PlayerBase::~PlayerBase()

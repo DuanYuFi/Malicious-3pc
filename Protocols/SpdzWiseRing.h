@@ -26,14 +26,9 @@ class SpdzWiseRing : public SpdzWise<T>
 
 public:
 
-    size_t check_comm;
     SpdzWiseRing(Player &P);
     ~SpdzWiseRing() {
-        if (check_comm != 0) {
-            cout << "Arith part in SpdzWiseRing: " << endl;
-            cout << "Total check comm: " << check_comm << endl;
-            cout << endl;
-        }
+        this->print_debug_info("SpdzWiseRing");
     }
 
     void zero_check(check_type t);
