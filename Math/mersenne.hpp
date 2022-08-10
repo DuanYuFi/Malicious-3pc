@@ -43,7 +43,12 @@ inline uint64_t Mersenne::modp_128(uint128_t a){
 }
 
 inline uint64_t Mersenne::neg(uint64_t a) {
-    return PR - a;
+    assert(a < PR);
+    if (a > 0) {
+        return PR - a;
+    } else {
+        return 0;
+    }
 }
 
 inline uint64_t Mersenne::add(uint64_t a, uint64_t b) {

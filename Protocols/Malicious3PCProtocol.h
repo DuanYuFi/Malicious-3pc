@@ -25,14 +25,14 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    uint64_t **input_result_up, **input_result_down, **input_mono_up, **input_mono_down;
-    uint64_t **mask_ss_up, **mask_ss_down;
+    uint64_t **input_shared_prev, **input_shared_next, **input_mono_prev, **input_mono_next;
+    uint64_t **mask_ss_prev, **mask_ss_next;
     uint64_t *sid;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_result_up, uint64_t **input_result_down, uint64_t **input_mono_up, uint64_t **input_mono_down, uint64_t **mask_ss_up, uint64_t **mask_ss_down, uint64_t *sid, int sz) :
-        proof(proof), input_result_up(input_result_up), input_result_down(input_result_down), input_mono_up(input_mono_up), input_mono_down(input_mono_down), mask_ss_up(mask_ss_up), mask_ss_down(mask_ss_down), sid(sid), sz(sz) {}
+    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **input_mono_prev, uint64_t **input_mono_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, uint64_t *sid, int sz) :
+        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sid(sid), sz(sz) {}
 };
 
 
@@ -78,21 +78,7 @@ public:
 
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
-    ~Malicious3PCProtocol() {
-        cout << "Binary part: " << endl;
-        cout << "Value type: " << typeid(typename T::value_type).name() << endl;
-        cout << "Total and gates: " << this->counter << endl;
-        cout << "Check comm: " << check_comm << endl;
-        cout << "Exchange comm: " << exchange_comm << endl;
-        cout << "Bit counter: " << this->bit_counter << endl;
-
-        if (this->dot_counter != 0) {
-            cout << "Dotprod: " << this->dot_counter << endl;
-        }
-
-        cout << "Total rounds: " << this->rounds << endl;
-        cout << endl;
-    }
+    ~Malicious3PCProtocol();
     
     // Replicated(const ReplicatedBase& other);
 
