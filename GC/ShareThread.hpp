@@ -76,12 +76,14 @@ void StandaloneShareThread<T>::pre_run()
 template<class T>
 void ShareThread<T>::post_run()
 {
-    cout << "Calling final check" << endl;
+    // cout << "Calling final check" << endl;
     string name = typeid(T).name();
-    if (name == "N2GC18Malicious3PCSecretE")
+    if (name == "N2GC18Malicious3PCSecretE") {
         protocol->finalize_check();
-    else
+    }
+    else {
         protocol->check();
+    }
 
     MC->Check(*this->P);
 }

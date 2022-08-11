@@ -119,7 +119,7 @@ void SpdzWise<T>::add_to_check(const T& x)
 template<class T>
 void SpdzWise<T>::check()
 {
-    results.clear();
+    // results.clear();
     // cout << "T type: " << typeid(T).name() << endl;
 
     if (results.empty())

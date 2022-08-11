@@ -54,7 +54,7 @@ void Malicious3PCProtocol<T>::check() {
 
     // return ;
     
-    if ((int) results.size() < OnlineOptions::singleton.batch_size)
+    if ((int) results.size() < OnlineOptions::singleton.binary_batch_size)
         return;
 
     #ifdef USE_THREAD
@@ -201,7 +201,7 @@ void Malicious3PCProtocol<T>::final_verify() {
         DZKProof proof;
         proof.unpack(proof_os[1]);
 
-        int bs = ((sz - 1) / k + 1) * k - 1;
+        int bs = ((sz - 1) / k + 1) * k;
         // cout << "Next: verify" << endl;
         // bool res = verify(proof, input_shared_next, input_mono_next, received_vermsg, bs, k, sid[next_number], mask_ss_next, next_number, my_number);
         bool res = verify(proof, input_shared_prev, input_mono_prev, received_vermsg, bs, k, sid[next_number], mask_ss_next, next_number, my_number);
