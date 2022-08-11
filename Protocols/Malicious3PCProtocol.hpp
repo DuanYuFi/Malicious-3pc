@@ -39,6 +39,13 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
         global_prng.SetSeed(os.get_data());
     }
 
+    check_prngs[0].ReSeed();
+    os.clear();
+    os.append(check_prngs[0].get_seed(), SEED_SIZE);
+    P.send_relative(1, os);
+    P.receive_relative(-1, os);
+    check_prngs[1].SetSeed(os.get_data());
+
 }
 
 template <class T>
@@ -233,7 +240,7 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
-    // cout << "size = " << sz << endl;
+    cout << "size = " << sz << endl;
     if (sz == 0) {
         return;
     }
@@ -299,7 +306,7 @@ void Malicious3PCProtocol<T>::Check_one() {
             // x[0]: x_i, x[1]: x_{i-1}
             // y[0]: y_i, y[1]: y_{i-1}
             // z[0]: z_i, z[1]: z_{i-1}
-            if (z.first != x.first * y.first + x.second * y.first + x.first * y.second + rho.first + rho.second) {
+            if (z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second)) {
                 cout << "x: " << x.first << " " << x.second << endl;
                 cout << "y: " << y.first << " " << y.second << endl;
                 cout << "z: " << z.first << " " << z.second << endl;
@@ -308,9 +315,9 @@ void Malicious3PCProtocol<T>::Check_one() {
                 cout << "sz = " << sz << ", k = " << k << ", cols = " << cols << endl;
                 cout << "i = " << i << ", j = " << j << endl;
             }
-            assert(z.first == x.first * y.first + x.second * y.first + x.first * y.second + rho.first + rho.second);
+            assert(z.first == ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second));
             
-            uint64_t ti = (z.first + x.first * y.first + rho.first);
+            uint64_t ti = (z.first ^ (x.first & y.first) ^ rho.first);
             // shared vars between P_i and P_{i-1}
             uint64_t v0 = y.second;
             // shared vars between P_i and P_{i+1}
@@ -443,11 +450,11 @@ void Malicious3PCProtocol<T>::Check_one() {
         mask_ss_prev[i] = new uint64_t[2*k-1];
         for (int j = 0; j < 2 * k - 1; j ++) {
             // P_i and P_{i+1}
-            mask_ss_next[i][j] = shared_prngs[1].get_word() & Mersenne::PR;
+            mask_ss_next[i][j] = check_prngs[1].get_word() & Mersenne::PR;
             // mask_ss_next[i][j] = Mersenne::modp(shared_prngs[0].get_word());
             // mask_ss_next[i][j] = 0;
             // P_i and P_{i-1}
-            mask_ss_prev[i][j] = shared_prngs[0].get_word() & Mersenne::PR;
+            mask_ss_prev[i][j] = check_prngs[0].get_word() & Mersenne::PR;
             // mask_ss_prev[i][j] = Mersenne::modp(shared_prngs[1].get_word());
             // mask_ss_prev[i][j] = 0;
             // masks[i][j] = 0;
@@ -578,7 +585,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     int this_size = (n == -1 ? T::value_type::length() : n);
     register long z0 = result[0].get(), z1 = result[1].get();
     for (register short i = 0; i < this_size; i ++) {
-        rhos.push(ShareType((z0 >> i) & 1, (z1 >> i & 1)));
+        results.push(ShareType((z0 >> i) & 1, (z1 >> i & 1)));
     }
 
     return result;

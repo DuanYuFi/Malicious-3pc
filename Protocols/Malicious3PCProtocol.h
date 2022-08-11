@@ -12,11 +12,8 @@
 
 #define USE_THREAD
 
-#ifdef USE_THREAD
 #define Queue SafeQueue
-#else
-#define Queue queue
-#endif
+
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
@@ -70,7 +67,7 @@ public:
 
     static const bool uses_triples = false;
 
-    array<PRNG, 2> shared_prngs;
+    array<PRNG, 2> shared_prngs, check_prngs;
     PRNG global_prng;
 
     Player& P;
