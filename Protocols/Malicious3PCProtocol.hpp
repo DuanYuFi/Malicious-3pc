@@ -46,6 +46,10 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     P.receive_relative(-1, os);
     check_prngs[1].SetSeed(os.get_data());
 
+    // cout << "check prng 0 seed: " << int128(*((__m128i *) check_prngs[0].get_seed())) << endl;
+    // cout << "check prng 1 seed: " << int128(*((__m128i *) check_prngs[1].get_seed())) << endl;
+    // cout << "global prng seed: " << int128(*((__m128i *) global_prng.get_seed())) << endl;
+
 }
 
 template <class T>
@@ -240,7 +244,7 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.batch_size);
-    cout << "size = " << sz << endl;
+    // cout << "size = " << sz << endl;
     if (sz == 0) {
         return;
     }
