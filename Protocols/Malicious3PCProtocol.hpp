@@ -186,14 +186,18 @@ void Malicious3PCProtocol<T>::final_verify() {
         vermsg.pack(vermsg_os[0]);
 
 
-        // for (int i = 0; i < k; i ++) {
-        //     delete[] input_shared_prev[i];
-        //     delete[] input_mono_prev[i];
-        //     delete[] mask_ss_prev[i];
-        // }
-        // delete[] input_shared_prev;
-        // delete[] input_mono_prev;
-        // delete[] mask_ss_prev;
+        for (int i = 0; i < k; i ++) {
+            delete[] input_shared_next[i];
+            delete[] input_mono_next[i];
+        }
+
+        int cnt = log(2 * sz) / log(k) + 2;
+        for (int i = 0; i < cnt; i ++) {
+            delete[] mask_ss_prev[i];
+        }
+        delete[] input_shared_next;
+        delete[] input_mono_next;
+        delete[] mask_ss_prev;
     }
 
     // proof_os[0].reset_read_head();
@@ -237,19 +241,24 @@ void Malicious3PCProtocol<T>::final_verify() {
             throw mac_fail("ZKP check failed");
             //// cout<< "ZKP check failed" << endl;
         }
-        else {
-           cout<< "Binary Check passed" << endl;
+        // else {
+        //    cout<< "Binary Check passed" << endl;
+        // }
+
+        for (int i = 0; i < k; i ++) {
+            delete[] input_shared_prev[i];
+            delete[] input_mono_prev[i];       
         }
 
-        // for (int i = 0; i < k; i ++) {
-        //     delete[] input_shared_next[i];
-        //     delete[] input_mono_next[i];
-        //     delete[] mask_ss_next[i];
-        // }
-        // delete[] input_shared_next;
-        // delete[] input_mono_next;
-        // delete[] mask_ss_next;
-        // delete[] sid;
+        int cnt = log(2 * sz) / log(k) + 2;
+        for (int i = 0; i < cnt; i ++) {
+            delete[] mask_ss_next[i];
+        }
+
+        delete[] input_shared_prev;
+        delete[] input_mono_prev;
+        delete[] mask_ss_next;
+        delete[] sid;
     }
 
     status_queue.clear();
@@ -260,8 +269,10 @@ void Malicious3PCProtocol<T>::Check_one() {
     
     //// cout<< "in Check_one" << endl;
 
+    auto start = std::chrono::high_resolution_clock::now();
+
     int sz = min((int) results.size(), OnlineOptions::singleton.binary_batch_size);
-   // cout<< "sz: " << sz << endl;
+   cout<< "sz: " << sz << endl;
     // //// cout<< "size = " << sz << endl;
     if (sz == 0) {
         return;
@@ -523,7 +534,18 @@ void Malicious3PCProtocol<T>::Check_one() {
 
    // cout<< "Checkone: checkpoint 3" << endl;
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    cout << "Time taken to generate masks: " << duration.count() << " microseconds" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+
     DZKProof dzkproof = prove(input_left, input_right, bs, k, sid[my_number], masks);
+
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    cout << "Time taken to generate DZK proof: " << duration.count() << " microseconds" << endl;
 
    // cout<< "Checkone: checkpoint 4" << endl;
 
