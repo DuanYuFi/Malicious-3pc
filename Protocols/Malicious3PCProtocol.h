@@ -13,7 +13,8 @@
 
 #define USE_THREAD
 
-// // #define Queue SafeQueue
+// #ifdef USE_THREAD
+// #define Queue SafeQueue
 // #else
 // #define Queue queue
 // #endif
