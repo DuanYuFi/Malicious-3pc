@@ -4,6 +4,7 @@
 #include "Replicated.h"
 #include "BinaryCheck.h"
 #include "Processor/Data_Files.h"
+#include "Math/mersenne.hpp"
 
 #include "queue"
 #include "SafeQueue.h"
@@ -27,14 +28,16 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    uint64_t **input_shared_prev, **input_shared_next, **input_mono_prev, **input_mono_next;
+    uint64_t **input_shared_prev, **input_shared_next; // **input_mono_prev, **input_mono_next;
     uint64_t **mask_ss_prev, **mask_ss_next;
-    uint64_t *sid;
+    // uint64_t *sid;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **input_mono_prev, uint64_t **input_mono_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, uint64_t *sid, int sz) :
-        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sid(sid), sz(sz) {}
+    // StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **input_mono_prev, uint64_t **input_mono_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, uint64_t *sid, int sz) :
+    //     proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sid(sid), sz(sz) {}
+    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) :
+        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
 };
 
 typedef pair<bool, bool> ShareType;
@@ -60,6 +63,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     bool returned;
     pthread_mutex_t mutex;
+
+    uint64_t two_inverse = Mersenne::inverse(2);
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
