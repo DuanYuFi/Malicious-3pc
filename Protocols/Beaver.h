@@ -41,7 +41,7 @@ public:
     }
 
     ~Beaver() {
-        this->print_debug_info("Beaver");
+        this->print_debug_info("Beaver " + string(typeid(T).name()));
     }
 
     typename T::Protocol branch();

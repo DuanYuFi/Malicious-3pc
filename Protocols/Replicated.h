@@ -151,7 +151,7 @@ public:
     Replicated(Player& P);
     Replicated(const ReplicatedBase& other);
     ~Replicated() {
-        this->print_debug_info("Replicated");
+        this->print_debug_info("Replicated " + string(typeid(T).name()));
     }
 
     static void assign(T& share, const typename T::clear& value, int my_num)

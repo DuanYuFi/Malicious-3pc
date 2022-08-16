@@ -30,12 +30,20 @@ protected:
     PointerVector<T> secrets;
     PointerVector<typename T::open_type> values;
 
+    size_t rounds, comm;
+
 public:
     int values_opened;
 
     MAC_Check_Base(const typename T::mac_key_type::Scalar& mac_key = { }) :
-            alphai(mac_key), values_opened(0) {}
+            alphai(mac_key), values_opened(0), rounds(0), comm(0) {}
     virtual ~MAC_Check_Base() {}
+    void print_debug_info(string share_name) {
+        cout << "MAC_Check_Base " << share_name << ": " << endl;
+        cout << "  rounds: " << rounds << endl;
+        cout << "  comm: " << comm << endl;
+        cout << "  values_opened: " << values_opened << endl;
+    }
 
     /// Run checking protocol
     virtual void Check(const Player& P) { (void)P; }

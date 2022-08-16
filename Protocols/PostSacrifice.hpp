@@ -16,6 +16,7 @@ template<class T>
 PostSacrifice<T>::~PostSacrifice()
 {
     check();
+    cout << "PostSacrifice's log is in " << typeid(this->internal).name() << endl;
 }
 
 template<class T>

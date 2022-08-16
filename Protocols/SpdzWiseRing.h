@@ -28,7 +28,7 @@ public:
 
     SpdzWiseRing(Player &P);
     ~SpdzWiseRing() {
-        this->print_debug_info("SpdzWiseRing");
+        cout << "SpdzWiseRing's log is in " << typeid(typename T::part_type::Honest::Protocol).name() << endl;
     }
 
     void zero_check(check_type t);
