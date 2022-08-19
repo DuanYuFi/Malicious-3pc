@@ -125,9 +125,22 @@ void Malicious3PCProtocol<T>::final_verify() {
         int sz = data.sz;
         int k = OnlineOptions::singleton.k_size;
 
+        int cnt = log(4 * sz) / log(k) + 1;
+
         proof.unpack(proof_os[1]);
         VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
         vermsg.pack(vermsg_os[0]);
+
+        for (int i = 0; i < k; i ++) {
+            delete[] input_shared_next[i];
+        }
+        delete[] input_shared_next;
+
+        for (int i = 0; i < cnt; i ++) {
+            delete[] mask_ss_prev[i];
+        }
+        delete[] mask_ss_prev;
+
     }
 
     proof_os[1].reset_write_head();
@@ -146,6 +159,8 @@ void Malicious3PCProtocol<T>::final_verify() {
         int sz = data.sz;
         int k = OnlineOptions::singleton.k_size;
 
+        int cnt = log(4 * sz) / log(k) + 1;
+
         VerMsg received_vermsg;
         received_vermsg.unpack(vermsg_os[1]);
 
@@ -153,6 +168,17 @@ void Malicious3PCProtocol<T>::final_verify() {
         proof.unpack(proof_os[1]);
         
         bool res = verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);
+        
+        for (int i = 0; i < k; i ++) {
+            delete[] input_shared_prev[i];
+        }
+        delete[] input_shared_prev;
+
+        for (int i = 0; i < cnt; i ++) {
+            delete[] mask_ss_next[i];
+        }
+        delete[] mask_ss_next;
+
         if (!res) {
             throw mac_fail("ZKP check failed");
         }
