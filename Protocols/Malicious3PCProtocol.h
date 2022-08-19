@@ -10,6 +10,7 @@
 #include "SafeQueue.h"
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 #define USE_THREAD
 
@@ -28,16 +29,38 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    uint64_t **input_shared_prev, **input_shared_next; // **input_mono_prev, **input_mono_next;
+    uint64_t **input_shared_prev, **input_shared_next;
     uint64_t **mask_ss_prev, **mask_ss_next;
-    // uint64_t *sid;
     int sz;
 
     StatusData() {}
-    // StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **input_mono_prev, uint64_t **input_mono_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, uint64_t *sid, int sz) :
-    //     proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sid(sid), sz(sz) {}
     StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) :
         proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+};
+
+class CV {
+private:
+    std::mutex mtk;
+    condition_variable cv;
+    int n_times;
+
+public:
+
+    CV(): n_times(0) {}
+
+    inline void wait() {
+        std::unique_lock<std::mutex> lk(this->mtk);
+        if (--this->n_times < 0) {
+            cv.wait(lk);
+        }
+    }
+
+    inline void signal() {
+        std::unique_lock<std::mutex> lk(this->mtk);
+        if (++this->n_times <= 0) {
+            cv.notify_one();
+        }
+    }
 };
 
 typedef pair<bool, bool> ShareType;
@@ -51,9 +74,9 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    Queue<ShareType> input1, input2, results, rhos;
+    SafeQueue<ShareType> input1, input2, results, rhos;
 
-    vector<StatusData> status_queue;
+    SafeVector<StatusData> status_queue;
     vector<typename T::open_type> opened;
     std::thread check_thread;
 
@@ -64,7 +87,13 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     bool returned;
     pthread_mutex_t mutex;
 
+    WaitQueue<bool> cv;
+
+    size_t local_counter;
+
     uint64_t two_inverse = Mersenne::inverse(2);
+
+    const static size_t MAX_STATUS = 100;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -87,6 +116,7 @@ public:
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
         this->print_debug_info("Binary Part");
+        pthread_mutex_destroy(&mutex);
     }
     
 
