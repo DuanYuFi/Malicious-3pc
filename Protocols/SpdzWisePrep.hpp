@@ -21,6 +21,8 @@
 template<class T>
 void SpdzWisePrep<T>::buffer_triples()
 {
+    cout << "in SpdzWise::buffer_triples, using batch_size" << endl;
+
     assert(this->protocol != 0);
     assert(this->proc != 0);
     this->protocol->init_mul();
