@@ -47,7 +47,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     check_prngs[1].SetSeed(os.get_data());
 
     check_thread = std::thread(&Malicious3PCProtocol<T>::thread_handler, this);
-    local_counter = 0;
+    this->local_counter = 0;
 }
 
 template <class T>
@@ -64,6 +64,7 @@ template <class T>
 void Malicious3PCProtocol<T>::check() {
     if ((int) results.size() < OnlineOptions::singleton.binary_batch_size)
         return;
+    Check_one();
 }
 
 template <class T>
@@ -183,6 +184,7 @@ void Malicious3PCProtocol<T>::final_verify() {
             throw mac_fail("ZKP check failed");
         }
     }
+    // status_queue.clear();
 }
 
 template <class T>
@@ -190,7 +192,7 @@ void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.binary_batch_size);
 
-    // cout << "size = " << sz << endl;
+    cout << "size = " << sz << endl;
 
     if (sz == 0) {
         return;
@@ -412,9 +414,9 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
         results.push(ShareType((z0 >> i) & 1, (z1 >> i & 1)));
     }
     
-    local_counter += this_size;
-    while (local_counter >= (size_t) OnlineOptions::singleton.batch_size) {
-        local_counter -= OnlineOptions::singleton.batch_size;
+    this->local_counter += this_size;
+    while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
+        local_counter -= OnlineOptions::singleton.binary_batch_size;
         cv.push(true);
         if (status_queue.size() >= MAX_STATUS) {
             final_verify();

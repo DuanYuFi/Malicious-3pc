@@ -146,6 +146,11 @@ public:
         pthread_mutex_unlock(&mutex);
         return ep;
     }
+
+    void clear() {
+        q.clear();
+    }
+
 private:
     // 如何保证对这个队列的操作是线程安全的？引入互斥锁
     vector<T> q;
