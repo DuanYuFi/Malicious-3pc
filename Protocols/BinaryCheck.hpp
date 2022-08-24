@@ -17,7 +17,6 @@ uint64_t get_rand() {
 }
 
 void get_bases(uint64_t n, uint64_t** result) {
-
     for (uint64_t i = 0; i < n - 1; i++) {
         for(uint64_t j = 0; j < n; j++) {
             result[i][j] = 1;
@@ -130,14 +129,17 @@ DZKProof prove(
 
     s *= 4;
     vector<vector<uint64_t>> p_evals_masked;
-    uint64_t** base = new uint64_t*[k];
-    for (uint64_t i = 0; i < k - 1; i ++) {
+
+    uint64_t** base = new uint64_t*[k - 1];
+    for (uint64_t i = 0; i < k - 1; i++) {
         base[i] = new uint64_t[k];
     }
 
     get_bases(k, base);
 
     uint64_t* eval_base = new uint64_t[k];
+    // uint64_t* eval_base_2k = new uint64_t[2 * k - 1];
+
     uint64_t s0;
     uint64_t** eval_result = new uint64_t*[k];
     for(uint64_t i = 0; i < k; i++) {
@@ -261,11 +263,10 @@ DZKProof prove(
     delete[] eval_result;
     delete[] eval_p_poly;
 
-    for (uint64_t i = 0; i < k - 1; i ++) {
+    for (uint64_t i = 0; i < k - 1; i++) {
         delete[] base[i];
     }
     delete[] base;
-    
     delete[] eval_base;
 
     DZKProof proof = { 
@@ -318,7 +319,8 @@ VerMsg gen_vermsg(
    // cout << "in gen_vermsg: checkpoint 1" << endl;
 
 
-    uint64_t* eval_base = new uint64_t[2 * k - 1];
+    uint64_t* eval_base = new uint64_t[k];
+    uint64_t* eval_base_2k = new uint64_t[2 * k - 1];
     uint64_t r, s0, index, cnt = 0;
     uint128_t temp_result;
 
@@ -375,10 +377,10 @@ VerMsg gen_vermsg(
 
            // cout << "in gen_vermsg: checkpoint 5" << endl;
 
-            evaluate_bases(2 * k - 1, r, eval_base);
+            evaluate_bases(2 * k - 1, r, eval_base_2k);
             temp_result = 0;
             for(uint64_t i = 0; i < 2 * k - 1; i++) {
-                temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
+                temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
             }
             final_result_ss = Mersenne::modp_128(temp_result);
             break;
@@ -390,10 +392,10 @@ VerMsg gen_vermsg(
         // assert(r < Mersenne::PR);
         // r = 1;
         //// cout << "r: " << r << endl;
-        evaluate_bases(2 * k - 1, r, eval_base);
+        evaluate_bases(2 * k - 1, r, eval_base_2k);
         temp_result = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
+            temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
         }
         p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
 
@@ -424,6 +426,7 @@ VerMsg gen_vermsg(
     }
 
     delete[] eval_base;
+    delete[] eval_base_2k;
 
     VerMsg vermsg(
         p_eval_ksum_ss,
