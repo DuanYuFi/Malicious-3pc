@@ -106,6 +106,13 @@ public:
         signal();
         unlock();
     }
+
+    bool empty() {
+        lock();
+        bool is_empty = queue.empty();
+        unlock();
+        return is_empty;
+    }
 };
 
 #endif /* TOOLS_WAITQUEUE_H_ */

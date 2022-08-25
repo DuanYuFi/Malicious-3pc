@@ -25,6 +25,7 @@ OnlineOptions::OnlineOptions() : playerno(-1)
     batch_size = 10000;
     binary_batch_size = 10000;
     k_size = 8;
+    verify_threshold = 1000;
     memtype = "empty";
     bits_from_squares = false;
     direct = false;
@@ -243,6 +244,16 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     );
 
     opt.add(
+            to_string(1000).c_str(), // Default.
+            0, // Required?
+            1, // Number of args expected.
+            0, // Delimiter if expecting multiple args.
+            ("Verifying threshold (default: " + to_string(1000) + ")").c_str(), // Help description.
+            "-V", // Flag token.
+            "--verify-threshold" // Flag token.
+    );
+
+    opt.add(
             memtype.c_str(), // Default.
             0, // Required?
             1, // Number of args expected.
@@ -295,6 +306,7 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     opt.get("-b")->getInt(batch_size);
     opt.get("-k")->getInt(k_size);
     opt.get("-bb")->getInt(binary_batch_size);
+    opt.get("-V")->getInt(verify_threshold);
     opt.get("--memory")->getString(memtype);
     bits_from_squares = opt.isSet("-Q");
 

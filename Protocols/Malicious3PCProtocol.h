@@ -63,6 +63,25 @@ public:
     }
 };
 
+class SafeBool {
+private:
+    std::mutex lock;
+    bool data;
+public:
+    inline void set(bool value) {
+        lock.lock();
+        data = value;
+        lock.unlock();
+    }
+
+    inline bool get() {
+        lock.lock();
+        bool value = data;
+        lock.unlock();
+        return value;
+    }
+};
+
 typedef pair<bool, bool> ShareType;
 
 
@@ -76,7 +95,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     SafeQueue<ShareType> input1, input2, results, rhos;
 
-    SafeVector<StatusData> status_queue;
+    SafeQueue<StatusData> status_queue;
     vector<typename T::open_type> opened;
     std::thread check_thread;
 
@@ -86,10 +105,13 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     bool returned;
     pthread_mutex_t mutex;
+    std::mutex verify_lock;
+    CV verify_cv;
+    SafeBool isWaiting;
 
     WaitQueue<bool> cv;
 
-    size_t local_counter;
+    size_t local_counter, status_counter;
 
     uint64_t two_inverse = Mersenne::inverse(2);
 
@@ -115,6 +137,10 @@ public:
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
+        if (check_thread.joinable()) {
+            cv.push(false);
+            check_thread.join();
+        }
         this->print_debug_info("Binary Part");
         pthread_mutex_destroy(&mutex);
     }
