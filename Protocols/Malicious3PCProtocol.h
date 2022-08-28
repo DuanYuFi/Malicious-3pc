@@ -66,6 +66,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     uint64_t two_inverse = Mersenne::inverse(2);
 
+    const static size_t MAX_STATUS = 50;
+
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
     template<class U>
@@ -86,7 +88,12 @@ public:
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
-        this->print_debug_info("Binary Part");
+        if (check_thread.joinable()) {
+            cv.push(false);
+            check_thread.join();
+        }
+        // this->print_debug_info("Binary Part");
+        pthread_mutex_destroy(&mutex);
     }
     
 
