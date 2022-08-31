@@ -141,7 +141,7 @@ public:
             cv.push(false);
             check_thread.join();
         }
-        this->print_debug_info("Binary Part");
+        // this->print_debug_info("Binary Part");
         pthread_mutex_destroy(&mutex);
     }
     
