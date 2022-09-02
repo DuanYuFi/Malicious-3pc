@@ -32,10 +32,15 @@ struct StatusData {
     uint64_t **input_shared_prev, **input_shared_next;
     uint64_t **mask_ss_prev, **mask_ss_next;
     int sz;
+    int ID;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) :
-        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz, int id) :
+        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz), ID(id) {}
+    
+    bool operator <(const StatusData &other) const {
+        return ID < other.ID;
+    }
 };
 
 class CV {
@@ -47,6 +52,10 @@ private:
 public:
 
     CV(): n_times(0) {}
+    
+    void set(int n_times) {
+        this->n_times = n_times;
+    }
 
     inline void wait() {
         std::unique_lock<std::mutex> lk(this->mtk);
@@ -55,10 +64,22 @@ public:
         }
     }
 
+    inline void wait(int n) {
+        for (int i = 0; i < n; i ++) {
+            wait();
+        }
+    }
+
     inline void signal() {
         std::unique_lock<std::mutex> lk(this->mtk);
         if (++this->n_times <= 0) {
             cv.notify_one();
+        }
+    }
+
+    inline void signal(int n) {
+        for (int i = 0; i < n; i ++) {
+            signal();
         }
     }
 };
@@ -97,7 +118,6 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     SafeQueue<StatusData> status_queue;
     vector<typename T::open_type> opened;
-    std::thread check_thread;
 
     array<octetStream, 2> os;
     PointerVector<typename T::clear> add_shares, uids;
@@ -105,17 +125,22 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     bool returned;
     pthread_mutex_t mutex;
-    std::mutex verify_lock;
+    std::mutex verify_lock, check_lock;
     CV verify_cv;
     SafeBool isWaiting;
 
     WaitQueue<bool> cv;
 
     size_t local_counter, status_counter;
+    size_t checking_id;
 
     uint64_t two_inverse = Mersenne::inverse(2);
 
     const static size_t MAX_STATUS = 100;
+    const static short THREAD_NUM = 4;
+    CV join_cv;
+
+    vector<std::thread> check_threads;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -128,8 +153,10 @@ public:
 
     static const bool uses_triples = false;
 
-    array<PRNG, 2> shared_prngs, check_prngs;
-    // array<PRNG, 2> shared_prngs;
+    array<PRNG, 2> shared_prngs;
+    array<PRNG, 2> check_prngs;
+    // vector<array<PRNG, 2> > check_prngs;
+
     PRNG global_prng;
 
     Player& P;
@@ -137,9 +164,15 @@ public:
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
-        if (check_thread.joinable()) {
+
+        for (int i = 0; i < THREAD_NUM; i ++) {
             cv.push(false);
-            check_thread.join();
+        }
+
+        for (auto &each_thread: check_threads) {
+            if (each_thread.joinable()) {      
+                each_thread.join();
+            }
         }
         this->print_debug_info("Binary Part");
         pthread_mutex_destroy(&mutex);

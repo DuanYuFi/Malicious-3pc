@@ -13,6 +13,7 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
+    assert(THREAD_NUM > 0);
 
     // cout<< typeid(typename T::value_type).name() << endl;
 
@@ -39,17 +40,30 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
         global_prng.SetSeed(os.get_data());
     }
 
-    check_prngs[0].ReSeed();
-    os.clear();
-    os.append(check_prngs[0].get_seed(), SEED_SIZE);
-    P.send_relative(1, os);
-    P.receive_relative(-1, os);
-    check_prngs[1].SetSeed(os.get_data());
+    // check_prngs.resize(THREAD_NUM);
+    // for (auto &prng: check_prngs) {
+    //     prng[0].SetSeed(shared_prngs[0]);
+    //     prng[1].SetSeed(shared_prngs[1]);
+    // }
+    check_prngs[0].SetSeed(shared_prngs[0]);
+    check_prngs[1].SetSeed(shared_prngs[1]);
 
-    check_thread = std::thread(&Malicious3PCProtocol<T>::thread_handler, this);
+    // check_prngs[0].ReSeed();
+    // os.clear();
+    // os.append(check_prngs[0].get_seed(), SEED_SIZE);
+    // P.send_relative(1, os);
+    // P.receive_relative(-1, os);
+    // check_prngs[1].SetSeed(os.get_data());
+
+    for (int i = 0; i < THREAD_NUM; i ++) {
+        check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this));
+    }
+
     this->local_counter = 0;
     this->status_counter = 0;
+    this->checking_id = 0;
     isWaiting.set(false);
+    join_cv.set(THREAD_NUM);
 }
 
 template <class T>
@@ -58,8 +72,16 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
 {
     for (int i = 0; i < 2; i++) {
         shared_prngs[i].SetSeed(prngs[i]);
-        check_prngs[i].SetSeed(prngs[i]);
     }
+
+    // check_prngs.resize(THREAD_NUM);
+    // for (auto &prng: check_prngs) {
+    //     prng[0].SetSeed(shared_prngs[0]);
+    //     prng[1].SetSeed(shared_prngs[1]);
+    // }
+
+    check_prngs[0].SetSeed(shared_prngs[0]);
+    check_prngs[1].SetSeed(shared_prngs[1]);
 }
 
 template <class T>
@@ -85,8 +107,14 @@ void Malicious3PCProtocol<T>::init_mul()
 template <class T>
 void Malicious3PCProtocol<T>::finalize_check() {
 
-    cv.push(false);
-    check_thread.join();
+    for (int i = 0; i < THREAD_NUM; i ++) {
+        cv.push(false);
+    }
+    
+    for (auto &each_thread: check_threads) {
+        each_thread.join();
+    }
+
     while (status_queue.size() > 0) {
         final_verify();
     }
@@ -97,10 +125,15 @@ void Malicious3PCProtocol<T>::thread_handler() {
     bool _;
     while (cv.pop(_)) {
         // cout << _ << endl;
-        Check_one();
+
         if (_ == false) {
+            // cout << "Stop thread" << endl;
             break;
         }
+
+        join_cv.wait();
+        Check_one();
+        join_cv.signal();
 
         if (isWaiting.get() and cv.empty()) {
             verify_cv.signal();
@@ -116,7 +149,9 @@ void Malicious3PCProtocol<T>::final_verify() {
         return ;
     }
 
-    // cout << this->bit_counter << endl;
+    // sort(status_queue.begin(), status_queue.end());
+
+    // cout << "Verify" << endl;
 
     int my_number = P.my_real_num();
     int prev_number = my_number == 0 ? 2 : my_number - 1;
@@ -127,14 +162,23 @@ void Malicious3PCProtocol<T>::final_verify() {
     vector<StatusData> local_status_datas;
     int size = min(status_queue.size(), MAX_STATUS);
     
+    cout << size << endl;
+
     for (int i = 0; i < size; i++) {
         local_status_datas.push_back(status_queue.pop());
-        DZKProof proof = local_status_datas[i].proof;
-        proof.pack(proof_os[0]);
     }
 
+    sort(local_status_datas.begin(), local_status_datas.end());
+    
+    for (auto data: local_status_datas) {
+        DZKProof proof = data.proof;
+        // cout << proof.get_size() << ", ";
+        proof.pack(proof_os[0]);
+    }
+    // cout << endl;
+
     this->check_comm += proof_os[0].get_length();
-    // cout << "checkpoint 1: " << this->check_comm << endl;
+    cout << "checkpoint 1: " << proof_os[0].get_length() << endl;
     P.pass_around(proof_os[0], proof_os[1], 1);
 
     for (auto data: local_status_datas) {
@@ -142,6 +186,9 @@ void Malicious3PCProtocol<T>::final_verify() {
         uint64_t **input_shared_next = data.input_shared_next;
         uint64_t **mask_ss_prev = data.mask_ss_prev;
         int sz = data.sz;
+
+        // cout << sz << endl;
+
         int k = OnlineOptions::singleton.k_size;
 
         int cnt = log(4 * sz) / log(k) + 1;
@@ -166,7 +213,7 @@ void Malicious3PCProtocol<T>::final_verify() {
 
     this->check_comm += proof_os[0].get_length();
     this->check_comm += vermsg_os[0].get_length();
-    // cout << "checkpoint 2: " << this->check_comm << endl;
+    cout << "checkpoint 2: " << proof_os[0].get_length() + vermsg_os[0].get_length() << endl;
 
     P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
@@ -205,6 +252,9 @@ void Malicious3PCProtocol<T>::final_verify() {
             throw mac_fail("ZKP check failed");
         }
     }
+
+    local_status_datas.clear();
+
     // cout << "verify end" << endl;
     // status_queue.clear();
 }
@@ -214,13 +264,14 @@ void Malicious3PCProtocol<T>::Check_one() {
     
     int sz = min((int) results.size(), OnlineOptions::singleton.binary_batch_size);
 
-    // cout << "size = " << sz << endl;
+    // cout << "size = " << sz << ", ";
 
     if (sz == 0) {
         return;
     }
 
     int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
+    int ID;
     
     uint64_t **input_left, **input_right, **input_shared_next, **input_shared_prev;
 
@@ -228,6 +279,37 @@ void Malicious3PCProtocol<T>::Check_one() {
     input_right = new uint64_t*[k];
     input_shared_next = new uint64_t*[k];
     input_shared_prev = new uint64_t*[k];
+
+    deque<ShareType> _input1, _input2, _results, _rhos;
+    check_lock.lock();
+    for (int i = 0; i < sz; i ++) {
+        _input1.push_back(input1.pop());
+        _input2.push_back(input2.pop());
+        _results.push_back(results.pop());
+        _rhos.push_back(rhos.pop());
+    }
+
+    int cnt = log(4 * sz) / log(k) + 1;
+    ID = checking_id ++;
+
+    uint64_t **masks, **mask_ss_next, **mask_ss_prev;
+
+    masks = new uint64_t*[cnt];
+    mask_ss_next = new uint64_t*[cnt];
+    mask_ss_prev = new uint64_t*[cnt];
+
+    for (int i = 0; i < cnt; i++) {
+        masks[i] = new uint64_t[2 * k - 1];
+        mask_ss_next[i] = new uint64_t[2 * k - 1];
+        mask_ss_prev[i] = new uint64_t[2 * k - 1];
+
+        for (int j = 0; j < 2 * k - 1; j ++) {
+            mask_ss_next[i][j] = check_prngs[1].get_word() & Mersenne::PR;
+            mask_ss_prev[i][j] = check_prngs[0].get_word() & Mersenne::PR;
+            masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
+        }
+    }
+    check_lock.unlock();
 
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 4];
@@ -246,10 +328,10 @@ void Malicious3PCProtocol<T>::Check_one() {
                 break;
             }
 
-            auto x = input1.pop();
-            auto y = input2.pop();
-            auto z = results.pop();
-            auto rho = rhos.pop();
+            auto x = _input1.front(); _input1.pop_front();
+            auto y = _input2.front(); _input2.pop_front();
+            auto z = _results.front();    _results.pop_front();
+            auto rho = _rhos.front(); _rhos.pop_front();
 
             assert(z.first == ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second));
             
@@ -302,34 +384,16 @@ void Malicious3PCProtocol<T>::Check_one() {
         }
     }
 
-    int cnt = log(4 * sz) / log(k) + 1;
-
-    uint64_t **masks, **mask_ss_next, **mask_ss_prev;
-
-    masks = new uint64_t*[cnt];
-    mask_ss_next = new uint64_t*[cnt];
-    mask_ss_prev = new uint64_t*[cnt];
-
-    for (int i = 0; i < cnt; i++) {
-        masks[i] = new uint64_t[2 * k - 1];
-        mask_ss_next[i] = new uint64_t[2 * k - 1];
-        mask_ss_prev[i] = new uint64_t[2 * k - 1];
-
-        for (int j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[i][j] = check_prngs[1].get_word() & Mersenne::PR;
-            mask_ss_prev[i][j] = check_prngs[0].get_word() & Mersenne::PR;
-            masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
-        }
-    }
    
     DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
 
     status_queue.push(StatusData(dzkproof,
-                                input_shared_next, 
-                                input_shared_prev, 
-                                mask_ss_next,
-                                mask_ss_prev,
-                                sz));
+                                 input_shared_next, 
+                                 input_shared_prev, 
+                                 mask_ss_next,
+                                 mask_ss_prev,
+                                 sz,
+                                 ID));
 
     for (int i = 0; i < k; i ++) {
         delete[] input_left[i];
@@ -344,6 +408,13 @@ void Malicious3PCProtocol<T>::Check_one() {
     }
 
     delete[] masks;
+
+    _input1.clear();
+    _input2.clear();
+    _results.clear();
+    _rhos.clear();
+
+    // cout << "Finish check" << endl;
 
 }
 
@@ -446,7 +517,9 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
             isWaiting.set(true);
             verify_cv.wait();
             isWaiting.set(false);
+            join_cv.wait(THREAD_NUM);
             final_verify();
+            join_cv.signal(THREAD_NUM);
             status_counter = 0;
         }
         // if ((int) status_queue.size() >= MAX_STATUS) {
