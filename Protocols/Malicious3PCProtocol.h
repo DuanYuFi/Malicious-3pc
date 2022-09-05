@@ -114,7 +114,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    SafeQueue<ShareType> input1, input2, results, rhos;
+    FixedQueue<ShareType> input1, input2, results, rhos;
 
     SafeQueue<StatusData> status_queue;
     vector<typename T::open_type> opened;
@@ -140,7 +140,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     const static short THREAD_NUM = 4;
     CV join_cv;
 
-    vector<std::thread> check_threads;
+    vector<std::thread> check_threads, verify_threads;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
