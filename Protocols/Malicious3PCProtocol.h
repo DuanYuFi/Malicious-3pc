@@ -32,15 +32,11 @@ struct StatusData {
     uint64_t **input_shared_prev, **input_shared_next;
     uint64_t **mask_ss_prev, **mask_ss_next;
     int sz;
-    int ID;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz, int id) :
-        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz), ID(id) {}
+    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
+        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
-    bool operator <(const StatusData &other) const {
-        return ID < other.ID;
-    }
 };
 
 class CV {
@@ -82,6 +78,10 @@ public:
             signal();
         }
     }
+
+    void reset() {
+        n_times = 0;
+    }
 };
 
 class SafeBool {
@@ -103,8 +103,21 @@ public:
     }
 };
 
-typedef pair<bool, bool> ShareType;
+template <typename T1, typename T2>
+struct MyPair {
+public:
+    T1 first;
+    T2 second;
 
+    MyPair(): first(0), second(0) {}
+    MyPair(T1 a, T2 b): first(a), second(b) {}
+};
+
+typedef MyPair<bool, bool> ShareType;
+
+
+#define THREAD_NUM 4
+#define MAX_STATUS 10
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -116,7 +129,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     FixedQueue<ShareType> input1, input2, results, rhos;
 
-    SafeQueue<StatusData> status_queue;
+    array<StatusData, MAX_STATUS> status_queue;
     vector<typename T::open_type> opened;
 
     array<octetStream, 2> os;
@@ -136,10 +149,10 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     uint64_t two_inverse = Mersenne::inverse(2);
 
-    const static size_t MAX_STATUS = 100;
-    const static short THREAD_NUM = 4;
-    CV join_cv;
+    // const static size_t MAX_STATUS = 100;
+    // const static short THREAD_NUM = 4;
 
+    array<std::mutex, THREAD_NUM> locks;
     vector<std::thread> check_threads, verify_threads;
 
     template<class U>
@@ -218,7 +231,7 @@ public:
     void finalize_check();
     void Check_one();
     void final_verify();
-    void thread_handler();
+    void thread_handler(int tid);
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 
@@ -233,6 +246,18 @@ public:
         bool value = returned;
         pthread_mutex_unlock(&mutex);
         return value;
+    }
+
+    inline void lock_all() {
+        for (int i = 0; i < THREAD_NUM; i ++) {
+            locks[i].lock();
+        }
+    }
+
+    inline void unlock_all() {
+        for (int i = 0; i < THREAD_NUM; i ++) {
+            locks[i].unlock();
+        }
     }
 };
 

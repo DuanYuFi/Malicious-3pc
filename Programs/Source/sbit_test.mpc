@@ -1,14 +1,14 @@
 from Compiler.GC.types import *
 
 a = sbit(1)
-b = sbit(0)
+b = sbit(1)
 
-for i in range(100000 - 1):
-    a * b
+for i in range(1000000 - 1):
+    a & b
 
-c = a * b
+c = a & b
 
-for i in range(100000):
-    c * a
+for i in range(1000000):
+    c & a
 
 # print_ln("%s", c.reveal())

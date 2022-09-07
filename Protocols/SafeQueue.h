@@ -198,7 +198,7 @@ public:
 
         // print_log();
 
-        size_t sz = size();
+        size_t sz = _size;
         T *tmp = new T[length];
 
         if (head > tail) {
@@ -215,12 +215,14 @@ public:
     }
 
     inline void push(T one_data) {
-        if (size() + 1 >= _size) {
+        data[head++] = one_data;
+
+        if (head - _size == tail) {
             // cout << "resize to " << _size * 2 << endl;
             resize(_size * 2);
         }
-        data[head++] = one_data;
-        if (head >= _size) {
+        
+        else if (head >= _size) {
             head -= _size;
         }
     }
