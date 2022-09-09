@@ -437,7 +437,7 @@ VerMsg gen_vermsg(
     return vermsg;
 }
 
-bool verify(
+bool _verify(
     DZKProof proof, 
     uint64_t** input, 
     VerMsg other_vermsg, 

@@ -113,6 +113,41 @@ public:
     MyPair(T1 a, T2 b): first(a), second(b) {}
 };
 
+class WaitSize {
+
+private:
+    size_t now;
+    size_t target;
+    CV cv;
+    mutex lock;
+
+public:
+    WaitSize(): now(0) {}
+    WaitSize(size_t target): now(0), target(target) {}
+
+    void set_target(size_t _target) {
+        target = _target;
+    }
+
+    void operator ++() {
+        lock.lock();
+        now ++;
+        if (now == target) {
+            cv.signal();
+        }
+        lock.unlock();
+    }
+
+    void wait() {
+        cv.wait();
+    }
+
+    void reset() {
+        now = 0;
+    }
+
+};
+
 typedef MyPair<bool, bool> ShareType;
 
 
@@ -136,8 +171,6 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     PointerVector<typename T::clear> add_shares, uids;
     typename T::clear dotprod_share;
 
-    bool returned;
-    pthread_mutex_t mutex;
     std::mutex verify_lock, check_lock;
     CV verify_cv;
     SafeBool isWaiting;
@@ -146,6 +179,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     size_t local_counter, status_counter;
     size_t checking_id;
+    WaitSize wait_size;
 
     uint64_t two_inverse = Mersenne::inverse(2);
 
@@ -187,8 +221,8 @@ public:
                 each_thread.join();
             }
         }
-        // this->print_debug_info("Binary Part");
-        pthread_mutex_destroy(&mutex);
+        this->print_debug_info("Binary Part");
+        // pthread_mutex_destroy(&mutex);
     }
     
 
@@ -230,23 +264,10 @@ public:
     void check();
     void finalize_check();
     void Check_one();
-    void final_verify();
+    void verify();
     void thread_handler(int tid);
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
-
-    inline void set_returned(bool value) {
-        pthread_mutex_lock(&mutex);
-        returned = value;
-        pthread_mutex_unlock(&mutex);
-    }
-
-    inline bool get_returned() {
-        pthread_mutex_lock(&mutex);
-        bool value = returned;
-        pthread_mutex_unlock(&mutex);
-        return value;
-    }
 
     inline void lock_all() {
         for (int i = 0; i < THREAD_NUM; i ++) {

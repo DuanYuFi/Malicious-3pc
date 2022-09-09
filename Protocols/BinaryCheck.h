@@ -165,7 +165,7 @@ VerMsg gen_vermsg(
     uint64_t party_ID
 );
 
-bool verify(
+bool _verify(
     DZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono, 

@@ -217,7 +217,9 @@ public:
     inline void push(T one_data) {
         data[head++] = one_data;
 
-        if (head - _size == tail) {
+        if (head >= _size)  head -= _size;
+
+        if (head == tail) {
             // cout << "resize to " << _size * 2 << endl;
             resize(_size * 2);
         }
