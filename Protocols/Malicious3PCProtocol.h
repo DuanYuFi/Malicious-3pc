@@ -118,28 +118,44 @@ class WaitSize {
 private:
     size_t now;
     size_t target;
-    CV cv;
-    mutex lock;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 
 public:
     WaitSize(): now(0) {}
     WaitSize(size_t target): now(0), target(target) {}
+
+    void lock()
+    {
+        pthread_mutex_lock(&mutex);
+    }
+
+    void unlock()
+    {
+        pthread_mutex_unlock(&mutex);
+    }
+
+    void wait()
+    {
+        pthread_cond_wait(&cond, &mutex);
+    }
+
+    void signal()
+    {
+        pthread_cond_signal(&cond);
+    }
 
     void set_target(size_t _target) {
         target = _target;
     }
 
     void operator ++() {
-        lock.lock();
+        lock();
         now ++;
         if (now == target) {
-            cv.signal();
+            signal();
         }
-        lock.unlock();
-    }
-
-    void wait() {
-        cv.wait();
+        unlock();
     }
 
     void reset() {

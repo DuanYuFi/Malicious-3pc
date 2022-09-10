@@ -271,8 +271,8 @@ void Malicious3PCProtocol<T>::Check_one() {
     
     check_lock.lock();
     int sz = min(results.size(), (size_t) OnlineOptions::singleton.binary_batch_size);
-    results.print_log();
-    cout << "size = " << sz << endl;
+    // results.print_log();
+    // cout << "size = " << sz << endl;
 
     if (sz == 0) {
         check_lock.unlock();
@@ -561,7 +561,9 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
             // verify_cv.wait();
             // isWaiting.set(false);
             // lock_all();
+            cout << "waiting" << endl;
             wait_size.wait();
+            cout << "wait end" << endl;
             verify();
             wait_size.reset();
             // verify_cv.reset();
