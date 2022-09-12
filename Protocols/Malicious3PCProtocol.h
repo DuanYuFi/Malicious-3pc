@@ -11,6 +11,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <fstream>
 
 #define USE_THREAD
 
@@ -20,7 +21,7 @@
 // #define Queue queue
 // #endif
 
-#define Queue SafeQueue
+// #define Queue SafeQueue
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
@@ -127,12 +128,17 @@ public:
 
     void lock()
     {
+        cout << "in lock, calling pthread_mutex_lock" << endl;
         pthread_mutex_lock(&mutex);
+        cout << "in lock, after calling pthread_mutex_lock" << endl;
     }
 
     void unlock()
     {
+        cout << "in unlock, calling pthread_mutex_unlock" << endl;
         pthread_mutex_unlock(&mutex);
+        cout << "in unlock, after calling pthread_mutex_unlock" << endl;
+
     }
 
     void wait()
@@ -150,11 +156,17 @@ public:
     }
 
     void operator ++() {
+        cout << "in WaitSize ++, calling lock " << endl;
         lock();
         now ++;
+        cout << "now: " << now << ", target: " << target << endl;
+
         if (now == target) {
+            cout << "now == target, sending signal " << endl;
             signal();
+            // pthread_mutex_unlock(&mutex);
         }
+        cout << "in WaitSize ++, calling unlock " << endl;
         unlock();
     }
 
@@ -167,7 +179,7 @@ public:
 typedef MyPair<bool, bool> ShareType;
 
 
-#define THREAD_NUM 4
+#define THREAD_NUM 5
 #define MAX_STATUS 10
 
 /**
@@ -179,8 +191,10 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Malicious3PCProtocol This;
 
     FixedQueue<ShareType> input1, input2, results, rhos;
+    // SafeQueue<ShareType> input1, input2, results, rhos;
 
-    array<StatusData, MAX_STATUS> status_queue;
+    // array<StatusData, MAX_STATUS> status_queue;
+    StatusData *status_queue;
     vector<typename T::open_type> opened;
 
     array<octetStream, 2> os;
@@ -229,6 +243,7 @@ public:
     ~Malicious3PCProtocol() {
 
         for (int i = 0; i < THREAD_NUM; i ++) {
+            cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             cv.push(false);
         }
 
@@ -279,7 +294,7 @@ public:
 
     void check();
     void finalize_check();
-    void Check_one();
+    void Check_one(int tid);
     void verify();
     void thread_handler(int tid);
     // void maybe_check();

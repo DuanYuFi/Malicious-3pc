@@ -73,6 +73,16 @@ struct DZKProof {
             }
         }
     }
+
+    void print_out() {
+        cout << "proof: ";
+        for(auto row: p_evals_masked) {
+            for(auto x: row) {
+                cout << x << " ";
+            }
+        }
+        cout << endl;
+    }
 };
 
 struct VerMsg {
