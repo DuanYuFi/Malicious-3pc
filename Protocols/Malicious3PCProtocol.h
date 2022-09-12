@@ -179,8 +179,8 @@ public:
 typedef MyPair<bool, bool> ShareType;
 
 
-#define THREAD_NUM 32
-#define MAX_STATUS 100
+#define THREAD_NUM 5
+#define MAX_STATUS 10
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -216,7 +216,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     // const static size_t MAX_STATUS = 100;
     // const static short THREAD_NUM = 4;
 
-    array<std::mutex, THREAD_NUM> locks;
+    std::mutex *locks;
     vector<std::thread> check_threads, verify_threads;
 
     template<class U>
@@ -242,7 +242,7 @@ public:
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
 
-        for (int i = 0; i < THREAD_NUM; i ++) {
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             cv.push(false);
         }
@@ -301,13 +301,13 @@ public:
     int get_n_relevant_players() { return P.num_players() - 1; }
 
     inline void lock_all() {
-        for (int i = 0; i < THREAD_NUM; i ++) {
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             locks[i].lock();
         }
     }
 
     inline void unlock_all() {
-        for (int i = 0; i < THREAD_NUM; i ++) {
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             locks[i].unlock();
         }
     }

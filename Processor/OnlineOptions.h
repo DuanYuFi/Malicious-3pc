@@ -23,6 +23,8 @@ public:
     std::string progname;
     int batch_size;
     int binary_batch_size;
+    int max_status;
+    int thread_number;
     int k_size;
     int verify_threshold;
     std::string memtype;

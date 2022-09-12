@@ -3,8 +3,6 @@
 
 #include "Malicious3PCProtocol.h"
 
-#define MAX_STATUS 100
-
 #include "Replicated.h"
 #include "Tools/octetStream.h"
 #include "Tools/time-func.h"
@@ -16,9 +14,11 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
-    assert(THREAD_NUM > 0);
+    assert(OnlineOptions::singleton.thread_number > 0);
+    assert(OnlineOptions::singleton.max_status > 0);
 
-    // cout << "in Malicious3PCProtocol(Player& P), THREAD_NUM: " << THREAD_NUM << endl;
+    // cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.thread_number: " << OnlineOptions::singleton.thread_number << endl;
+    // cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.max_status: " << OnlineOptions::singleton.max_status << endl;
     // cout<< typeid(typename T::value_type).name() << endl;
 
     // set_returned(true);
@@ -26,7 +26,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
 
-    status_queue = new StatusData[MAX_STATUS];
+    status_queue = new StatusData[OnlineOptions::singleton.max_status];
+    locks = new std::mutex[OnlineOptions::singleton.thread_number];
     
     shared_prngs[0].ReSeed();
 	octetStream os;
@@ -61,18 +62,18 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     // P.receive_relative(-1, os);
     // check_prngs[1].SetSeed(os.get_data());
 
-    for (int i = 0; i < THREAD_NUM; i ++) {
+    for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
         // check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this, i));
         check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this));
     }
 
-    verify_threads.resize(THREAD_NUM);
+    verify_threads.resize(OnlineOptions::singleton.thread_number);
 
     this->local_counter = 0;
     this->status_counter = 0;
     this->checking_id = 0;
     isWaiting.set(false);
-    wait_size.set_target(MAX_STATUS);
+    wait_size.set_target(OnlineOptions::singleton.max_status);
 
     input1.init(OnlineOptions::singleton.binary_batch_size * 2);
     input2.init(OnlineOptions::singleton.binary_batch_size * 2);
@@ -110,7 +111,7 @@ void Malicious3PCProtocol<T>::init_mul()
 {
     // cout << "in init_mul " << endl;
 
-    while (checking_id >= MAX_STATUS) {
+    while (checking_id >= (size_t) OnlineOptions::singleton.max_status) {
 
         // cout << "in init_mul, calling verify " << endl;
         verify();
@@ -129,7 +130,7 @@ void Malicious3PCProtocol<T>::finalize_check() {
 
     // cout << "in finalize_check" << endl;
 
-    for (int i = 0; i < THREAD_NUM; i ++) {
+    for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
         // cout << "in finalize_check, pushing false in cv" << endl;
         cv.push(false);
     }
@@ -668,7 +669,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
         cv.push(true);
         status_counter ++;
         // cout << "status_counter: " << status_counter << endl;
-        if (status_counter == MAX_STATUS) {
+        if (status_counter == (size_t) OnlineOptions::singleton.max_status) {
 
             // isWaiting.set(true);
             // verify_cv.wait();
