@@ -447,7 +447,7 @@ bool _verify(
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
-   // cout << "in verify" << endl;
+    // cout << "Entering zkp verify" << endl;
     //// cout<<"sid: "<< sid << endl;
     //// cout << "party_ID: " << party_ID << endl;
     //// cout << "prover_ID: " << prover_ID << endl;
@@ -470,6 +470,7 @@ bool _verify(
 
     // cout << "Mersenne::neg(Mersenne::inverse(2)): " << Mersenne::neg(Mersenne::inverse(2)) << endl;
     if(p_eval_ksum != first_output) {
+        // cout << "Exiting zkp verify" << endl;
         // cout << "0-th sum check didn't pass" << endl;
         return false;
     }
@@ -488,6 +489,7 @@ bool _verify(
 
         if(p_eval_ksum != p_eval_r) {
             // cout << i << "-th sum check didn't pass" << endl;
+            // cout << "Exiting zkp verify" << endl;
             return false;
         }
     }
@@ -518,10 +520,11 @@ bool _verify(
     // cout << "p_eval_r: " << p_eval_r << endl;
     if(res != p_eval_r) {
         // cout << "last check didn't pass" << endl;
+        // cout << "Exiting zkp verify" << endl;
         return false;
     }
-   // cout << "verify: checkpoint 4" << endl;
-    
+    // cout << "verify: checkpoint 4" << endl;
+    // cout << "Exiting zkp verify" << endl;
     return true;
 }
 

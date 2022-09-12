@@ -220,7 +220,7 @@ public:
         if (head >= _size)  head -= _size;
 
         if (head == tail) {
-            cout << "in push, resize from " << _size << " to " << _size * 2 << endl;
+            // cout << "in push, resize from " << _size << " to " << _size * 2 << endl;
             resize(_size * 2);
         }
         

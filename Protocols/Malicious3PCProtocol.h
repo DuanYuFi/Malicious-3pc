@@ -128,16 +128,16 @@ public:
 
     void lock()
     {
-        cout << "in lock, calling pthread_mutex_lock" << endl;
+        // cout << "in lock, calling pthread_mutex_lock" << endl;
         pthread_mutex_lock(&mutex);
-        cout << "in lock, after calling pthread_mutex_lock" << endl;
+        // cout << "in lock, after calling pthread_mutex_lock" << endl;
     }
 
     void unlock()
     {
-        cout << "in unlock, calling pthread_mutex_unlock" << endl;
+        // cout << "in unlock, calling pthread_mutex_unlock" << endl;
         pthread_mutex_unlock(&mutex);
-        cout << "in unlock, after calling pthread_mutex_unlock" << endl;
+        // cout << "in unlock, after calling pthread_mutex_unlock" << endl;
 
     }
 
@@ -156,17 +156,17 @@ public:
     }
 
     void operator ++() {
-        cout << "in WaitSize ++, calling lock " << endl;
+        // cout << "in WaitSize ++, calling lock " << endl;
         lock();
         now ++;
-        cout << "now: " << now << ", target: " << target << endl;
+        // cout << "now: " << now << ", target: " << target << endl;
 
         if (now == target) {
-            cout << "now == target, sending signal " << endl;
+            // cout << "now == target, sending signal " << endl;
             signal();
             // pthread_mutex_unlock(&mutex);
         }
-        cout << "in WaitSize ++, calling unlock " << endl;
+        // cout << "in WaitSize ++, calling unlock " << endl;
         unlock();
     }
 
@@ -179,8 +179,8 @@ public:
 typedef MyPair<bool, bool> ShareType;
 
 
-#define THREAD_NUM 5
-#define MAX_STATUS 10
+#define THREAD_NUM 32
+#define MAX_STATUS 100
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -243,7 +243,7 @@ public:
     ~Malicious3PCProtocol() {
 
         for (int i = 0; i < THREAD_NUM; i ++) {
-            cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
+            // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             cv.push(false);
         }
 
@@ -294,9 +294,9 @@ public:
 
     void check();
     void finalize_check();
-    void Check_one(int tid);
+    void Check_one();
     void verify();
-    void thread_handler(int tid);
+    void thread_handler();
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 
