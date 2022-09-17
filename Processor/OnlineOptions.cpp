@@ -114,6 +114,46 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
             "--bucket-size" // Flag token.
     );
 
+    opt.add(
+        "8", // Default.
+        0, // Required?
+        1, // Number of args expected.
+        0, // Delimiter if expecting multiple args.
+        "Compression parameter", // Help description.
+        "-k", // Flag token.
+        "--compression" // Flag token.
+    );
+
+    opt.add(
+        "100000", // Default.
+        0, // Required?
+        1, // Number of args expected.
+        0, // Delimiter if expecting multiple args.
+        "Batch size for binary ciruit verification", // Help description.
+        "-bb", // Flag token.
+        "--binary-batchsize" // Flag token.
+    );
+
+    opt.add(
+        "100", // Default.
+        0, // Required?
+        1, // Number of args expected.
+        0, // Delimiter if expecting multiple args.
+        "Max number of proofs per communication", // Help description.
+        "-ms", // Flag token.
+        "--max-status" // Flag token.
+    );
+
+    opt.add(
+        "10", // Default.
+        0, // Required?
+        1, // Number of args expected.
+        0, // Delimiter if expecting multiple args.
+        "Max number of threads for parallelism", // Help description.
+        "-tn", // Flag token.
+        "--thread-number" // Flag token.
+    );
+
     if (security)
         opt.add(
             to_string(security_parameter).c_str(), // Default.
@@ -135,60 +175,18 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
 
     opt.get("--bucket-size")->getInt(bucket_size);
 
-
-    opt.add(
-        "8", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Compression parameter", // Help description.
-        "-k", // Flag token.
-        "--compression" // Flag token.
-    );
+    
     opt.get("-k")->getInt(k_size);
+    opt.get("--compression")->getInt(k_size);
 
-    opt.add(
-        "100000", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Batch size for binary ciruit verification", // Help description.
-        "-bb", // Flag token.
-        "--binary-batchsize" // Flag token.
-    );
     opt.get("-bb")->getInt(binary_batch_size);
+    opt.get("--binary-batchsize")->getInt(binary_batch_size);
 
-    opt.add(
-        "100", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Max number of proofs per communication", // Help description.
-        "-ms", // Flag token.
-        "--max-status" // Flag token.
-    );
     opt.get("-ms")->getInt(max_status);
+    opt.get("--max-status")->getInt(max_status);
 
-    opt.add(
-        "100", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Max number of proofs per communication", // Help description.
-        "-ms", // Flag token.
-        "--max-status" // Flag token.
-    );
-
-    opt.add(
-        "10", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Max number threads for parallelism", // Help description.
-        "-tn", // Flag token.
-        "--thread-number" // Flag token.
-    );
     opt.get("-tn")->getInt(thread_number);
+    opt.get("--thread-number")->getInt(thread_number);
 
 #ifndef VERBOSE
     verbose = opt.isSet("--verbose");
@@ -280,25 +278,25 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
             "--batch-size" // Flag token.
     );
 
-    opt.add(
-        to_string(10000).c_str(), // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        ("Size of binary check batches (default: " + to_string(10000) + ")").c_str(), // Help description.
-        "-bb", // Flag token.
-        "--bianry-batch-size" // Flag token.
-    );
+    // opt.add(
+    //     to_string(10000).c_str(), // Default.
+    //     0, // Required?
+    //     1, // Number of args expected.
+    //     0, // Delimiter if expecting multiple args.
+    //     ("Size of binary check batches (default: " + to_string(10000) + ")").c_str(), // Help description.
+    //     "-bb", // Flag token.
+    //     "--bianry-batch-size" // Flag token.
+    // );
 
-    opt.add(
-            to_string(8).c_str(), // Default.
-            0, // Required?
-            1, // Number of args expected.
-            0, // Delimiter if expecting multiple args.
-            ("Rows of checking matrix (default: " + to_string(8) + ")").c_str(), // Help description.
-            "-k", // Flag token.
-            "--k-rows" // Flag token.
-    );
+    // opt.add(
+    //         to_string(8).c_str(), // Default.
+    //         0, // Required?
+    //         1, // Number of args expected.
+    //         0, // Delimiter if expecting multiple args.
+    //         ("Rows of checking matrix (default: " + to_string(8) + ")").c_str(), // Help description.
+    //         "-k", // Flag token.
+    //         "--k-rows" // Flag token.
+    // );
 
     opt.add(
             to_string(1000).c_str(), // Default.
@@ -361,65 +359,56 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
         file_prep_per_thread = true;
     }
     opt.get("-b")->getInt(batch_size);
+
+    opt.get("-k")->getInt(k_size);
+    opt.get("-bb")->getInt(binary_batch_size);
+    opt.get("-ms")->getInt(max_status);
+    opt.get("-tn")->getInt(thread_number);
+
+    // opt.add(
+    //     "8", // Default.
+    //     0, // Required?
+    //     1, // Number of args expected.
+    //     0, // Delimiter if expecting multiple args.
+    //     "Compression parameter", // Help description.
+    //     "-k", // Flag token.
+    //     "--compression" // Flag token.
+    // );
     // opt.get("-k")->getInt(k_size);
+
+    // opt.add(
+    //     "100000", // Default.
+    //     0, // Required?
+    //     1, // Number of args expected.
+    //     0, // Delimiter if expecting multiple args.
+    //     "Batch size for binary ciruit verification", // Help description.
+    //     "-bb", // Flag token.
+    //     "--binary-batchsize" // Flag token.
+    // );
     // opt.get("-bb")->getInt(binary_batch_size);
+
+    // opt.add(
+    //     "100", // Default.
+    //     0, // Required?
+    //     1, // Number of args expected.
+    //     0, // Delimiter if expecting multiple args.
+    //     "Max number of proofs per communication", // Help description.
+    //     "-ms", // Flag token.
+    //     "--max-status" // Flag token.
+    // );
     // opt.get("-ms")->getInt(max_status);
+
+    // opt.add(
+    //     "10", // Default.
+    //     0, // Required?
+    //     1, // Number of args expected.
+    //     0, // Delimiter if expecting multiple args.
+    //     "Max number threads for parallelism", // Help description.
+    //     "-tn", // Flag token.
+    //     "--thread-number" // Flag token.
+    // );
     // opt.get("-tn")->getInt(thread_number);
 
-        opt.add(
-        "8", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Compression parameter", // Help description.
-        "-k", // Flag token.
-        "--compression" // Flag token.
-    );
-    opt.get("-k")->getInt(k_size);
-
-    opt.add(
-        "100000", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Batch size for binary ciruit verification", // Help description.
-        "-bb", // Flag token.
-        "--binary-batchsize" // Flag token.
-    );
-    opt.get("-bb")->getInt(binary_batch_size);
-
-    opt.add(
-        "100", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Max number of proofs per communication", // Help description.
-        "-ms", // Flag token.
-        "--max-status" // Flag token.
-    );
-    opt.get("-ms")->getInt(max_status);
-
-    opt.add(
-        "100", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Max number of proofs per communication", // Help description.
-        "-ms", // Flag token.
-        "--max-status" // Flag token.
-    );
-
-    opt.add(
-        "10", // Default.
-        0, // Required?
-        1, // Number of args expected.
-        0, // Delimiter if expecting multiple args.
-        "Max number threads for parallelism", // Help description.
-        "-tn", // Flag token.
-        "--thread-number" // Flag token.
-    );
-    opt.get("-tn")->getInt(thread_number);
-    
     opt.get("-V")->getInt(verify_threshold);
     opt.get("--memory")->getString(memtype);
     bits_from_squares = opt.isSet("-Q");
