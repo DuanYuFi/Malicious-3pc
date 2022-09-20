@@ -42,65 +42,37 @@ struct StatusData {
 
 class CV {
 private:
-    std::mutex mtk;
-    condition_variable cv;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
     int n_times;
 
 public:
 
     CV(): n_times(0) {}
     
-    void set(int n_times) {
-        this->n_times = n_times;
+    void lock()
+    {
+        // cout << "in lock, calling pthread_mutex_lock" << endl;
+        pthread_mutex_lock(&mutex);
+        // cout << "in lock, after calling pthread_mutex_lock" << endl;
     }
 
-    inline void wait() {
-        std::unique_lock<std::mutex> lk(this->mtk);
-        if (--this->n_times < 0) {
-            cv.wait(lk);
-        }
+    void unlock()
+    {
+        // cout << "in unlock, calling pthread_mutex_unlock" << endl;
+        pthread_mutex_unlock(&mutex);
+        // cout << "in unlock, after calling pthread_mutex_unlock" << endl;
+
     }
 
-    inline void wait(int n) {
-        for (int i = 0; i < n; i ++) {
-            wait();
-        }
+    void wait()
+    {
+        pthread_cond_wait(&cond, &mutex);
     }
 
-    inline void signal() {
-        std::unique_lock<std::mutex> lk(this->mtk);
-        if (++this->n_times <= 0) {
-            cv.notify_one();
-        }
-    }
-
-    inline void signal(int n) {
-        for (int i = 0; i < n; i ++) {
-            signal();
-        }
-    }
-
-    void reset() {
-        n_times = 0;
-    }
-};
-
-class SafeBool {
-private:
-    std::mutex lock;
-    bool data;
-public:
-    inline void set(bool value) {
-        lock.lock();
-        data = value;
-        lock.unlock();
-    }
-
-    inline bool get() {
-        lock.lock();
-        bool value = data;
-        lock.unlock();
-        return value;
+    void signal()
+    {
+        pthread_cond_signal(&cond);
     }
 };
 
@@ -178,9 +150,13 @@ public:
 
 typedef MyPair<bool, bool> ShareType;
 
+// struct ShareTuple {
+//     ShareType input1, input2, result, rho;
+// };
 
-#define THREAD_NUM 5
-#define MAX_STATUS 10
+
+// #define THREAD_NUM 5
+// #define MAX_STATUS 10
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -190,10 +166,10 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    FixedQueue<ShareType> input1, input2, results, rhos;
-    // SafeQueue<ShareType> input1, input2, results, rhos;
+    ShareType *input1, *input2, *results, *rhos;
+    size_t idx_input, idx_rho, idx_result;
+    size_t share_tuple_size;
 
-    // array<StatusData, MAX_STATUS> status_queue;
     StatusData *status_queue;
     vector<typename T::open_type> opened;
 
@@ -201,14 +177,11 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     PointerVector<typename T::clear> add_shares, uids;
     typename T::clear dotprod_share;
 
-    std::mutex verify_lock, check_lock;
-    CV verify_cv;
-    SafeBool isWaiting;
+    std::mutex check_lock;
 
-    WaitQueue<bool> cv;
+    WaitQueue<int> cv;
 
     size_t local_counter, status_counter;
-    size_t checking_id;
     WaitSize wait_size;
 
     uint64_t two_inverse = Mersenne::inverse(2);
@@ -216,7 +189,6 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     // const static size_t MAX_STATUS = 100;
     // const static short THREAD_NUM = 4;
 
-    std::mutex *locks;
     vector<std::thread> check_threads, verify_threads;
 
     template<class U>
@@ -294,23 +266,12 @@ public:
 
     void check();
     void finalize_check();
-    void Check_one();
+    void Check_one(int node_id, int size = -1);
     void verify();
-    void thread_handler();
+    void thread_handler(int tid);
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 
-    inline void lock_all() {
-        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-            locks[i].lock();
-        }
-    }
-
-    inline void unlock_all() {
-        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-            locks[i].unlock();
-        }
-    }
 };
 
 #endif /* PROTOCOLS_MALICIOUS3PCPROTOCOL_H_ */
