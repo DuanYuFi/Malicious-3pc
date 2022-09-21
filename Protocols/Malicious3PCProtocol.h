@@ -133,6 +133,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     ShareType *input1, *input2, *results, *rhos;
     size_t idx_input, idx_rho, idx_result;
     size_t share_tuple_size;
+    const size_t ZOOM_RATE = 2;
 
     StatusData *status_queue;
     vector<typename T::open_type> opened;
