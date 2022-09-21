@@ -389,6 +389,9 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     memcpy(_results, results + start, sizeof(ShareType) * sz);
     memcpy(_rhos, rhos + start, sizeof(ShareType) * sz);
 
+    auto cp1_5 = std::chrono::high_resolution_clock::now();
+    outfile << "Memcpy uses " << (cp1_5 - cp1).count() / 1e6 << "ms." << endl;
+
 
     int temp_pointer = 0;
     uint64_t **input_left, **input_right, **input_shared_next, **input_shared_prev;
@@ -489,7 +492,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     auto cp2 = std::chrono::high_resolution_clock::now();
 
-    outfile << "Prepare uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
+    outfile << "Prepare uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
     // outfile << "in Check_one, calling prove" << endl;
     DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
 
