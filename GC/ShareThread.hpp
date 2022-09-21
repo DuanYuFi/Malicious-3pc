@@ -77,13 +77,16 @@ template<class T>
 void ShareThread<T>::post_run()
 {
     // cout << "Calling final check" << endl;
-    string name = typeid(T).name();
-    if (name == "N2GC18Malicious3PCSecretE") {
-        protocol->finalize_check();
-    }
-    else {
-        protocol->check();
-    }
+    // string name = typeid(T).name();
+    // if (name == "N2GC18Malicious3PCSecretE") {
+    //     protocol->finalize_check();
+    // }
+    // else {
+    //     protocol->check();
+    // }
+
+    protocol->finalize_check();
+    // protocol->check();
 
     MC->Check(*this->P);
 }
