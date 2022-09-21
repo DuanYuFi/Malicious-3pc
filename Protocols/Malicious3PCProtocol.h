@@ -6,12 +6,19 @@
 #include "Processor/Data_Files.h"
 #include "Math/mersenne.hpp"
 
+#include "Tools/octetStream.h"
+#include "Tools/time-func.h"
+
+#include <chrono>
+#include <string.h>
+
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
+#include <iostream>
 
 #define USE_THREAD
 
@@ -119,6 +126,7 @@ class WaitSize {
 private:
     size_t now;
     size_t target;
+    int check_final = -1;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 
@@ -155,23 +163,42 @@ public:
         target = _target;
     }
 
-    void operator ++() {
-        // cout << "in WaitSize ++, calling lock " << endl;
+    void set_check_final(size_t _check_final) {
+        // lock();
+        check_final = _check_final;
+        // unlock();
+    }
+
+    // void operator ++() {
+    void add(int tid, int party_num) {
+        ofstream outfile;
+        outfile.open("zzz_debug/details/P" + to_string(party_num) + "-thread" + to_string(tid) + "-bb" + to_string(OnlineOptions::singleton.binary_batch_size) + "-ms" + to_string(OnlineOptions::singleton.max_status) + "-tn" + to_string(OnlineOptions::singleton.thread_number), ios::app);
+
+        size_t this_target = check_final == -1 ? target : check_final;
+
+        outfile << "in WaitSize ++, calling lock " << endl;
         lock();
         now ++;
-        // cout << "now: " << now << ", target: " << target << endl;
+        outfile << "now: " << now << ", this_target: " << this_target << endl;
 
-        if (now == target) {
-            // cout << "now == target, sending signal " << endl;
+        if (now == this_target) {
+            outfile << "now == target, sending signal " << endl;
             signal();
             // pthread_mutex_unlock(&mutex);
         }
-        // cout << "in WaitSize ++, calling unlock " << endl;
+        outfile << "in WaitSize ++, calling unlock " << endl;
         unlock();
     }
 
     void reset() {
         now = 0;
+    }
+
+    size_t get_now() {
+        // lock();
+        size_t this_now = now;
+        // unlock();
+        return this_now;
     }
 
 };
@@ -202,7 +229,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typename T::clear dotprod_share;
 
     std::mutex verify_lock, check_lock;
-    CV verify_cv;
+    // CV verify_cv;
     SafeBool isWaiting;
 
     WaitQueue<bool> cv;
@@ -242,16 +269,17 @@ public:
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
 
-        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-            // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
-            cv.push(false);
-        }
+        // for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+        //     cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
+        //     cv.push(false);
+        // }
 
-        for (auto &each_thread: check_threads) {
-            if (each_thread.joinable()) {      
-                each_thread.join();
-            }
-        }
+        // for (auto &each_thread: check_threads) {
+        //     if (each_thread.joinable()) {      
+        //         cout << "in ~Malicious3PCProtocol, each thread joining" << endl;
+        //         each_thread.join();
+        //     }
+        // }
         this->print_debug_info("Binary Part");
         // pthread_mutex_destroy(&mutex);
     }
@@ -294,9 +322,9 @@ public:
 
     void check();
     void finalize_check();
-    void Check_one();
+    void Check_one(int tid);
     void verify();
-    void thread_handler();
+    void thread_handler(int tid);
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 

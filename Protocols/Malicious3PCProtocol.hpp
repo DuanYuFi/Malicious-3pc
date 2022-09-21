@@ -14,12 +14,14 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     assert(P.num_players() == 3);
+    assert(OnlineOptions::singleton.binary_batch_size > 0);
     assert(OnlineOptions::singleton.thread_number > 0);
     assert(OnlineOptions::singleton.max_status > 0);
 
-    // cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.thread_number: " << OnlineOptions::singleton.thread_number << endl;
-    // cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.max_status: " << OnlineOptions::singleton.max_status << endl;
-    // cout<< typeid(typename T::value_type).name() << endl;
+    cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.binary_batch_size: " << OnlineOptions::singleton.binary_batch_size << endl;
+    cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.max_status: " << OnlineOptions::singleton.max_status << endl;
+    cout << "in Malicious3PCProtocol(Player& P), OnlineOptions::singleton.thread_number: " << OnlineOptions::singleton.thread_number << endl;
+    // cout << typeid(typename T::value_type).name() << endl;
 
     // set_returned(true);
 
@@ -63,8 +65,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     // check_prngs[1].SetSeed(os.get_data());
 
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-        // check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this, i));
-        check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this));
+        check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this, i));
+        // check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this));
     }
 
     verify_threads.resize(OnlineOptions::singleton.thread_number);
@@ -109,16 +111,16 @@ void Malicious3PCProtocol<T>::check() {
 template <class T>
 void Malicious3PCProtocol<T>::init_mul()
 {
-    // cout << "in init_mul " << endl;
+    cout << "in init_mul " << endl;
 
-    while (checking_id >= (size_t) OnlineOptions::singleton.max_status) {
+    // while (checking_id >= (size_t) OnlineOptions::singleton.max_status) {
 
-        // cout << "in init_mul, calling verify " << endl;
-        verify();
+    //     cout << "in init_mul, calling verify " << endl;
+    //     verify();
 
-        // final_verify();
+    //     // final_verify();
 
-    }
+    // }
 
 	for (auto& o : os)
         o.reset_write_head();
@@ -128,77 +130,68 @@ void Malicious3PCProtocol<T>::init_mul()
 template <class T>
 void Malicious3PCProtocol<T>::finalize_check() {
 
-    // cout << "in finalize_check" << endl;
+    cout << "in finalize_check" << endl;
+
+    if (checking_id > 0) {
+        cout << "in finalize_check, checking_id: " << checking_id << endl;
+        // if(wait_size.get_now() < checking_id) {
+        //     cout << "in finalize_check, setting check_final" << endl;
+        //     wait_size.set_check_final(checking_id);
+        //     // check_lock.unlock();
+        //     cout << "in finalize_check, waiting" << endl;
+        //     wait_size.wait();
+        //     cout << "in finalize_check, waiting ends, calling verify" << endl;
+        // }
+        verify();
+        wait_size.unlock();
+    }
 
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-        // cout << "in finalize_check, pushing false in cv" << endl;
+        cout << "in finalize_check, pushing false in cv" << endl;
         cv.push(false);
     }
-    
-    for (auto &each_thread: check_threads) {
-        // cout << "in finalize_check, calling thread to join" << endl;
-        each_thread.join();
-    }
 
-    while (checking_id > 0) {
-        // cout << "in finalize_check, checking_id: " << checking_id << ", calling verify" << endl;
-        verify();
-    }
+    for (auto &each_thread: check_threads) {
+        cout << "in finalize_check, calling thread to join" << endl;
+        each_thread.join();
+    } 
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::thread_handler() {
-    // ofstream outfile;
-    // outfile.open("Thread_P" + to_string(P.my_real_num()) + "_" + to_string(tid));
+void Malicious3PCProtocol<T>::thread_handler(int tid) {
 
-    // outfile << "in thread_handler, tid: " << tid << endl;
+    ofstream outfile;
+    outfile.open("zzz_debug/details/Thread-P" + to_string(P.my_real_num()) + "-thread" + to_string(tid) + "-bb" + to_string(OnlineOptions::singleton.binary_batch_size) + "-ms" + to_string(OnlineOptions::singleton.max_status) + "-tn" + to_string(OnlineOptions::singleton.thread_number), ios::app);
+
+    outfile << "in thread_handler, tid: " << tid << endl;
+    // volatile bool _;
     bool _;
-    while (cv.pop(_)) { // listening to the cv queue 监听cv队列，有true就开始证明
-        // outfile << "bool _: " << _ << endl;
-
-        if (_ == false) {
-            // outfile << "breaking thread_handler loop... tid: " << tid << endl;
-            // verify_cv.signal();
-            break;
+    // while (cv.pop(_)) { // listening to the cv queue
+    while(true) {
+        while(cv.pop_dont_stop(_))
+        {
+            outfile << "bool _: " << _ << endl;
+            if (_ == false) {
+                outfile << "breaking thread_handler loop... tid: " << tid << endl;
+                // verify_cv.signal();
+                return;
+            }
+            // outfile << "in thread_handler, calling Check_one, tid: " << tid << endl;
+            Check_one(tid);
         }
-
-        // this->locks[tid].lock();
-        // outfile << "in thread_handler, calling Check_one, tid: " << tid << endl;
-        Check_one();
-        // if (isWaiting.get() and cv.empty()) {
-        //     verify_cv.signal();
-        // }
-        // this->locks[tid].unlock();
-
-        // cout << "in thread_handler, calling lock, tid: " << tid << endl;
-        // this->locks[tid].lock();
-        // Check_one();
-        // if (isWaiting.get() and cv.empty()) {
-        //     cout << "in thread_handler, calling signal, tid: " << tid << endl;
-        //     verify_cv.signal();
-        // }
-        // cout << "in thread_handler, calling unlock, tid: " << tid << endl;
-        // this->locks[tid].unlock();
     }
     // outfile << "in thread_handler, out of loop, returning..." << endl;
-    return;
+    // return;
 }
 
 template <class T>
 void Malicious3PCProtocol<T>::verify() {
 
-    // cout << "in Malicious3PCProtocol::verify, this->bit_counter: " << this->bit_counter << endl;
+    cout << "Entering verify, this->bit_counter: " << this->bit_counter << endl;
     
     if (checking_id == 0) {
         return ;
     }
-
-    // cout << "results queue: ";
-    // results.print_log();
-
-    // sort(status_queue.begin(), status_queue.end());
-
-    // cout << "Verify" << endl;
 
     int my_number = P.my_real_num();
     int prev_number = my_number == 0 ? 2 : my_number - 1;
@@ -209,9 +202,10 @@ void Malicious3PCProtocol<T>::verify() {
     int size = checking_id;
     checking_id = 0;
     
-    // cout << "size: " << size << endl;
+    cout << "size: " << size << endl;
     
     for (int i = 0; i < size; i ++) {
+        cout << "retriving " << i << "-th proof " << endl;
         DZKProof proof = status_queue[i].proof;
         // cout << proof.get_size() << ", ";
         proof.pack(proof_os[0]);
@@ -219,10 +213,9 @@ void Malicious3PCProtocol<T>::verify() {
     // cout << endl;
 
     this->check_comm += proof_os[0].get_length();
-    // cout << "checkpoint 1: " << proof_os[0].get_length() << endl;
-    // cout << "in verify, calling pass_around for sending/receiving proof (offset 1)" << endl;
+    cout << "in verify, calling pass_around for sending/receiving proof (offset 1)" << endl;
     P.pass_around(proof_os[0], proof_os[1], 1);
-    // cout << "in verify, pass_around done" << endl;
+    cout << "in verify, pass_around done" << endl;
 
 
     for (int i = 0; i < size; i ++) {
@@ -238,7 +231,7 @@ void Malicious3PCProtocol<T>::verify() {
         int cnt = log(4 * sz) / log(k) + 1;
 
         proof.unpack(proof_os[1]);
-        // cout << "generating vermsg, " << i << "-th proof: " << endl;
+        cout << "generating vermsg for " << i << "-th proof " << endl;
         // proof.print_out();
 
         VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
@@ -260,15 +253,14 @@ void Malicious3PCProtocol<T>::verify() {
 
     this->check_comm += proof_os[0].get_length();
     this->check_comm += vermsg_os[0].get_length();
-    // cout << "checkpoint 2: " << proof_os[0].get_length() + vermsg_os[0].get_length() << endl;
-
-    // cout << "in verify, calling pass_around for sending/receiving proof (offset -1)" << endl;
+    
+    cout << "in verify, calling pass_around for sending/receiving proof (offset -1)" << endl;
     P.pass_around(proof_os[0], proof_os[1], -1);
-    // cout << "in verify, pass_around done" << endl;
+    cout << "in verify, pass_around done" << endl;
 
-    // cout << "in verify, calling pass_around for sending/receiving vermsg (offset 1)" << endl;
+    cout << "in verify, calling pass_around for sending/receiving vermsg (offset 1)" << endl;
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
-    // cout << "in verify, pass_around done" << endl;
+    cout << "in verify, pass_around done" << endl;
 
 
     for (int i = 0; i < size; i ++) {
@@ -287,11 +279,11 @@ void Malicious3PCProtocol<T>::verify() {
         DZKProof proof;
         proof.unpack(proof_os[1]);
 
-        // cout << "zkp verifying, " << i << "-th proof: " << endl;
+        cout << "zkp verifying " << i << "-th proof" << endl;
         // proof.print_out();
         
         bool res = _verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);
-        // cout << "verify_res: " << res << endl;
+        cout << "verify_res: " << res << endl;
 
         for (int j = 0; j < k; j ++) {
             delete[] input_shared_prev[j];
@@ -304,7 +296,7 @@ void Malicious3PCProtocol<T>::verify() {
         delete[] mask_ss_next;
 
         if (!res) {
-            // cout << i << "-th proof check failed" << endl;
+            cout << i << "-th proof check failed" << endl;
             throw mac_fail("ZKP check failed");
         }
     }
@@ -313,29 +305,29 @@ void Malicious3PCProtocol<T>::verify() {
 
     // vector<StatusData>().swap(local_status_datas);
 
-    // cout << "verify end" << endl;
+    cout << "Exiting verify" << endl;
     // status_queue.clear();
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::Check_one() {
+void Malicious3PCProtocol<T>::Check_one(int tid) {
 
-    // ofstream outfile;
-    // outfile.open("CheckOne_P" + to_string(P.my_real_num()) + "_" + to_string(tid), ios::app);
+    ofstream outfile;
+    outfile.open("zzz_debug/details/P" + to_string(P.my_real_num()) + "-thread" + to_string(tid) + "-bb" + to_string(OnlineOptions::singleton.binary_batch_size) + "-ms" + to_string(OnlineOptions::singleton.max_status) + "-tn" + to_string(OnlineOptions::singleton.thread_number), ios::app);
 
     // outfile << "Entering Check_one" << endl;
 
     int ID;
     
-    // outfile << "in Check_one, calling lock" << endl;
+    outfile << "in Check_one, calling lock" << endl;
     check_lock.lock();
     int sz = min(results.size(), (size_t) OnlineOptions::singleton.binary_batch_size);
     // results.print_log();
-    // cout << "size = " << sz << endl;
+    outfile << "size = " << sz << endl;
 
     if (sz == 0) {
-        // outfile << "in Check_one, sz == 0, calling unlock, Exiting Check_one" << endl;
         check_lock.unlock();
+        outfile << "in Check_one, sz == 0, calling unlock, Exiting Check_one" << endl;
         return;
     }
 
@@ -375,9 +367,9 @@ void Malicious3PCProtocol<T>::Check_one() {
     //     _rhos[i] = rhos.pop();
     // }
 
-    // outfile << "checking_id: " << checking_id << endl;
     ID = checking_id ++;
-    // outfile << "ID: " << ID << endl;
+    outfile << "checking_id: " << checking_id << endl;
+    outfile << "ID: " << ID << endl;
   
     for (int i = 0; i < cnt; i++) {
         masks[i] = new uint64_t[2 * k - 1];
@@ -390,7 +382,7 @@ void Malicious3PCProtocol<T>::Check_one() {
             masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
         }
     }
-    // outfile << "in Check_one, calling unlock" << endl;
+    outfile << "in Check_one, calling unlock" << endl;
     // results.print_log();
     check_lock.unlock();
 
@@ -402,7 +394,10 @@ void Malicious3PCProtocol<T>::Check_one() {
     input_shared_next = new uint64_t*[k];
     input_shared_prev = new uint64_t*[k];
 
-
+    uint64_t neg_one = Mersenne::PR - 1;
+    uint64_t neg_two = Mersenne::PR - 2;
+    uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
+    
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 4];
         input_right[i] = new uint64_t[cols * 4];
@@ -425,37 +420,43 @@ void Malicious3PCProtocol<T>::Check_one() {
             auto z = _results[temp_pointer];
             auto rho = _rhos[temp_pointer];
 
+            bool res = (x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second;
+            if(z.first != res) {
+                cout << "z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second, temp_pointer: " << temp_pointer << endl;
+            }
             // outfile << "ID: " << ID << endl;
             // outfile << "x: " << x.first << " " << x.second << endl;
             // outfile << "y: " << y.first << " " << y.second << endl;
             // outfile << "z: " << z.first << " " << z.second << endl;
             // outfile << "rho: " << rho.first << " " << rho.second << endl;
 
-            if (z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second)) {
-                // outfile << "Error occured in " << temp_pointer << endl;
-                // outfile << "size = " << sz << endl;
-                // results.print_log();
-            }
-            assert(z.first == ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second));
+            bool e = z.first ^ (x.first & y.first) ^ rho.first;
+            bool f = rho.second;
+
+            // uint64_t t1 = Mersenne::sub(1, 2 * e);
+            // uint64_t t2 = Mersenne::sub(1, 2 * f);
+
             
-            uint64_t a = x.first;
-            uint64_t c = y.first;
-            uint64_t e = (z.first ^ (x.first & y.first) ^ rho.first);
+            uint64_t t1 = e ? neg_one : 1;
+            uint64_t t2 = f ? neg_one : 1;
 
-            uint64_t b = y.second;
-            uint64_t d = x.second;
-            uint64_t f = rho.second;
+            
+            // input_left[i][j * 4] = Mersenne::neg(Mersenne::mul(2 * a * c, t1));
+            // input_left[i][j * 4 + 1] = c * t1;
+            // input_left[i][j * 4 + 2] = a * t1;
+            input_left[i][j * 4] = x.first & y.first ? (e ? 2 : neg_two) : 0;
+            input_left[i][j * 4 + 1] = y.first ? t1 : 0;
+            input_left[i][j * 4 + 2] = x.first ? t1 : 0;
+            // input_left[i][j * 4 + 3] = Mersenne::neg(Mersenne::mul(t1, two_inverse));
+            input_left[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
+            // input_right[i][j * 4] = Mersenne::mul(b * d, t2);
+            // input_right[i][j * 4 + 1] = Mersenne::mul(d, t2);
+            // input_right[i][j * 4 + 2] = Mersenne::mul(b, t2);
+            // input_right[i][j * 4 + 3] = t2;
 
-            uint64_t t1 = Mersenne::sub(1, 2 * e);
-            uint64_t t2 = Mersenne::sub(1, 2 * f);
-   
-            input_left[i][j * 4] = Mersenne::neg(Mersenne::mul(2 * a * c, t1));
-            input_left[i][j * 4 + 1] = c * t1;
-            input_left[i][j * 4 + 2] = a * t1;
-            input_left[i][j * 4 + 3] = Mersenne::neg(Mersenne::mul(t1, two_inverse));
-            input_right[i][j * 4] = Mersenne::mul(b * d, t2);
-            input_right[i][j * 4 + 1] = Mersenne::mul(d, t2);
-            input_right[i][j * 4 + 2] = Mersenne::mul(b, t2);
+            input_right[i][j * 4] = y.second & x.second ? t2 : 0;
+            input_right[i][j * 4 + 1] = x.second ? t2 : 0;
+            input_right[i][j * 4 + 2] = y.second ? t2 : 0;
             input_right[i][j * 4 + 3] = t2;
 
             // outfile << "input_left[" << i << "][" << 4 * j << "]: " << input_left[i][4 * j] << endl;
@@ -469,32 +470,74 @@ void Malicious3PCProtocol<T>::Check_one() {
             // outfile << "input_right[" << i << "][" << 4 * j + 3 << "]: " << input_right[i][4 * j + 3] << endl;
 
 
-            uint64_t sum = 0;
-            for (int l = 0; l < 4; l++) {
-                sum = Mersenne::add(sum, Mersenne::mul(input_left[i][j + l], input_right[i][j + l]));
-            }
-            // outfile << "sum: " << sum << endl;
-            // outfile << "inverse(2): " << Mersenne::neg(two_inverse) << endl;
-            assert(sum == Mersenne::neg(two_inverse));
+            // uint64_t sum = 0;
+            // for (int l = 0; l < 4; l++) {
+            //     sum = Mersenne::add(sum, Mersenne::mul(input_left[i][j + l], input_right[i][j + l]));
+            // }
+            // // // outfile << "sum: " << sum << endl;
+            // // // outfile << "inverse(2): " << Mersenne::neg(two_inverse) << endl;
+            // // assert();
+            // if (sum != neg_two_inverse) {
 
-            a = x.second;
-            c = y.second;
-            e = (z.second ^ (x.second & y.second) ^ rho.second);
+            //     uint64_t a = x.first;
+            //     uint64_t c = y.first;
+            //     uint64_t b = y.second;
+            //     uint64_t d = x.second;
 
-            b = y.first;
-            d = x.first;
+            //     uint64_t e_should_be = z.first ^ (x.first & y.first) ^ rho.first;
+            //     uint64_t f_should_be = rho.second;
+
+            //     uint64_t t1_should_be = Mersenne::sub(1, 2 * e_should_be);
+            //     uint64_t t2_should_be = Mersenne::sub(1, 2 * f_should_be);
+
+            //     cout << "t1: " << t1 << ", should be " << t1_should_be << endl;
+            //     cout << "t2: " << t2 << ", should be " << t2_should_be << endl;
+    
+            //     cout << "input_left[i][j * 4]: " << input_left[i][j * 4] << ", should be " << Mersenne::neg(Mersenne::mul(2 * a * c, t1_should_be)) << endl;
+            //     cout << "input_left[i][j * 4 + 1]: " << input_left[i][j * 4 + 1] << ", should be " << c * t1_should_be << endl;
+            //     cout << "input_left[i][j * 4 + 2]: " << input_left[i][j * 4 + 2] << ", should be " << a * t1_should_be << endl;
+            //     cout << "input_left[i][j * 4 + 3]: " << input_left[i][j * 4 + 3] << ", should be " << Mersenne::neg(Mersenne::mul(t1_should_be, two_inverse)) << endl;
+
+            //     cout << "input_right[i][j * 4]: " << input_right[i][j * 4] << ", should be " << Mersenne::mul(b * d, t2_should_be) << endl;
+            //     cout << "input_right[i][j * 4 + 1]: " << input_right[i][j * 4 + 1] << ", should be " << Mersenne::mul(d, t2_should_be) << endl;
+            //     cout << "input_right[i][j * 4 + 2]: " << input_right[i][j * 4 + 2] << ", should be " << Mersenne::mul(b, t2_should_be) << endl;
+            //     cout << "input_right[i][j * 4 + 3]: " << input_right[i][j * 4 + 3] << ", should be " <<  t2_should_be << endl;
+
+            //     cout << "sum != neg_inverse(2), temp_pointer: " << temp_pointer << endl;
+            //     cout << "sum: " << sum << endl;
+            //     cout << "neg_inverse(2): " << Mersenne::neg(two_inverse) << endl;
+            // }
+
+            // a = x.second;
+            // c = y.second;
+            e = z.second ^ (x.second & y.second) ^ rho.second;
+
+            // b = y.first;
+            // d = x.first;
             f = rho.first;
 
-            t1 = Mersenne::sub(1, 2 * e);
-            t2 = Mersenne::sub(1, 2 * f);
+            // t1 = Mersenne::sub(1, 2 * e);
+            // t2 = Mersenne::sub(1, 2 * f);
 
-            input_shared_prev[i][j * 4] = Mersenne::neg(Mersenne::mul(2 * a * c, t1));
-            input_shared_prev[i][j * 4 + 1] = c * t1;
-            input_shared_prev[i][j * 4 + 2] = a * t1;
-            input_shared_prev[i][j * 4 + 3] = Mersenne::neg(Mersenne::mul(t1, two_inverse));
-            input_shared_next[i][j * 4] = Mersenne::mul(b * d, t2);
-            input_shared_next[i][j * 4 + 1] = Mersenne::mul(d, t2);
-            input_shared_next[i][j * 4 + 2] = Mersenne::mul(b, t2);
+            t1 = e ? neg_one : 1;
+            t2 = f ? neg_one : 1;
+
+            // input_shared_prev[i][j * 4] = Mersenne::neg(Mersenne::mul(2 * a * c, t1));
+            // input_shared_prev[i][j * 4 + 1] = c * t1;
+            // input_shared_prev[i][j * 4 + 2] = a * t1;
+            // input_shared_prev[i][j * 4 + 3] = Mersenne::neg(Mersenne::mul(t1, two_inverse));
+            // input_shared_next[i][j * 4] = Mersenne::mul(b * d, t2);
+            // input_shared_next[i][j * 4 + 1] = Mersenne::mul(d, t2);
+            // input_shared_next[i][j * 4 + 2] = Mersenne::mul(b, t2);
+            // input_shared_next[i][j * 4 + 3] = t2;
+
+            input_shared_prev[i][j * 4] = x.second & y.second ? (e ? 2 : neg_two) : 0;
+            input_shared_prev[i][j * 4 + 1] = y.second ? t1 : 0;
+            input_shared_prev[i][j * 4 + 2] = x.second ? t1 : 0;
+            input_shared_prev[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
+            input_shared_next[i][j * 4] = y.first & x.first ? t2 : 0;
+            input_shared_next[i][j * 4 + 1] = x.first ? t2 : 0;
+            input_shared_next[i][j * 4 + 2] = y.first ? t2 : 0;
             input_shared_next[i][j * 4 + 3] = t2;
 
             // outfile << "input_shared_prev[" << i << "][" << 4 * j << "]: " << input_shared_prev[i][4 * j] << endl;
@@ -511,12 +554,12 @@ void Malicious3PCProtocol<T>::Check_one() {
         }
     }
 
-    // outfile << "in Check_one, calling prove" << endl;
+    outfile << "in Check_one, calling prove" << endl;
     DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
 
     // dzkproof.print_out();
 
-    // outfile << "in Check_one, pushing status_queue, ID: " << ID << endl;
+    outfile << "in Check_one, pushing status_queue, ID: " << ID << endl;
     status_queue[ID] = StatusData(dzkproof,
                                  input_shared_next, 
                                  input_shared_prev, 
@@ -524,9 +567,10 @@ void Malicious3PCProtocol<T>::Check_one() {
                                  mask_ss_prev,
                                  sz);
 
-    // outfile << "in Check_one, ++wait_size" << endl;
-    ++wait_size;
-    // outfile << "in Check_one, after ++wait_size" << endl;
+    outfile << "in Check_one, ++wait_size" << endl;
+    // ++wait_size;
+    wait_size.add(tid, P.my_real_num());
+    outfile << "in Check_one, after ++wait_size" << endl;
 
     for (int i = 0; i < k; i ++) {
         delete[] input_left[i];
@@ -547,9 +591,7 @@ void Malicious3PCProtocol<T>::Check_one() {
     delete[] _results;
     delete[] _rhos;
 
-    // cout << "Finish check" << endl;
-    // outfile << "Exiting Check_one" << endl;
-
+    outfile << "Exiting Check_one" << endl;
 
 }
 
@@ -558,7 +600,7 @@ template<class T>
 void Malicious3PCProtocol<T>::prepare_mul(const T& x,
         const T& y, int n)
 {
-    // cout << "in prepare_mul" << endl;
+    // cout << "Entering prepare_mul" << endl;
     // cout<< typeid(typename T::value_type).name() << endl;
     typename T::value_type add_share = x.local_mul(y);
 
@@ -567,11 +609,14 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
     register long x0 = x[0].get(), x1 = x[1].get();
     register long y0 = y[0].get(), y1 = y[1].get();
 
+    // cout << "in prepare_mul, calling lock" << endl;
     check_lock.lock();
+    // cout << "in prepare_mul, pushing into input1, input2, this_size: " << this_size << endl;
     for (register short i = 0; i < this_size; i ++) {
         input1.push(ShareType((x0 >> i) & 1, (x1 >> i & 1)));
         input2.push(ShareType((y0 >> i) & 1, (y1 >> i & 1)));
     }
+    // cout << "in prepare_mul, calling unlock" << endl;
     check_lock.unlock();
 
     prepare_reshare(add_share, n);
@@ -589,10 +634,13 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     int this_size = (n == -1 ? T::value_type::length() : n);
     register long rho0 = tmp[0].get(), rho1 = tmp[1].get();
 
+    // cout << "in prepare_reshare, calling unlock" << endl;
     check_lock.lock();
+    // cout << "in prepare_reshare, pushing into rhos, this_size: " << this_size << endl;
     for (register short i = 0; i < this_size; i ++) {
         rhos.push(ShareType((rho0 >> i) & 1, (rho1 >> i & 1)));
     }
+    // cout << "in prepare_reshare, calling unlock" << endl;
     check_lock.unlock();
 
     auto add_share = share + tmp[0] - tmp[1];
@@ -604,7 +652,7 @@ template<class T>
 void Malicious3PCProtocol<T>::exchange()
 {
 
-    // cout<< "in exchange" << endl;
+    cout<< "in exchange" << endl;
 
     // cout << "Send " << os[0].get_length() << endl;
 
@@ -638,8 +686,8 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     this->counter++;
     this->bit_counter += (n == -1 ? T::value_type::length() : n);
 
-    // cout << "Entering finalize_mul, this->counter: " << this->counter << endl;
-    // cout << "in finalize_mul, this->bit_counter: " << this->bit_counter << endl;
+    cout << "Entering finalize_mul, this->counter: " << this->counter << endl;
+    cout << "in finalize_mul, this->bit_counter: " << this->bit_counter << endl;
     
     // cout<< "this n = " << n << endl;
 
@@ -651,8 +699,8 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     // cout << "in finalize_mul, this_size: " << this_size << endl;
     register long z0 = result[0].get(), z1 = result[1].get();
 
-    // cout << "locking, pushing z0, z1" << endl;
     check_lock.lock();
+    // cout << "locking, pushing z0, z1, this_size: " << this_size << endl;
     for (register short i = 0; i < this_size; i ++) {
         results.push(ShareType((z0 >> i) & 1, (z1 >> i & 1)));
     }
@@ -660,49 +708,28 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     // cout << "unlocked" << endl;
     
     this->local_counter += this_size;
-    // cout << "in finalize_mul, this->local_counter: " << this->local_counter << endl;
+    cout << "in finalize_mul, this->local_counter: " << this->local_counter << endl;
 
     while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
         local_counter -= OnlineOptions::singleton.binary_batch_size;
-        // cout << "check" << endl;
-        // cout << "in loop, this->local_counter >= binary_batch_size, this->local_counter: " << this->local_counter << endl;
+        cout << "in loop, this->local_counter >= binary_batch_size, this->local_counter: " << this->local_counter << endl;
+        cout << "pushing true into cv" << endl;
         cv.push(true);
         status_counter ++;
-        // cout << "status_counter: " << status_counter << endl;
+        cout << "status_counter: " << status_counter << endl;
         if (status_counter == (size_t) OnlineOptions::singleton.max_status) {
-
-            // isWaiting.set(true);
-            // verify_cv.wait();
-            // isWaiting.set(false);
-            // lock_all();
-            // cout << "waiting" << endl;
-            wait_size.wait();
-            wait_size.unlock();
-            // cout << "wait end, calling verify" << endl;
+            // if (wait_size.get_now() < (size_t) OnlineOptions::singleton.max_status) {
+                cout << "waiting" << endl;
+                // wait_size.lock();
+                wait_size.wait();
+                cout << "waiting ends" << endl;
+            // }
             verify();
-            // cout << "after verify" << endl;
+            cout << "verify done" << endl;
             wait_size.reset();
-            // verify_cv.reset();
-            // unlock_all();
-
-            // cout << "setting is_waiting to true" << endl;
-            // isWaiting.set(true);
-            // verify_cv.wait();
-            // cout << "after waiting, setting is_waiting to false" << endl;
-            // isWaiting.set(false);
-            // cout << "locking all" << endl;
-            // lock_all();
-            // cout << "after locking all, calling final_verify " << endl;
-            // final_verify();
-            // cout << "resetting verify_cv" << endl;
-            // verify_cv.reset();
-            // cout << "unlocking all" << endl;
-            // unlock_all();
-            // status_counter = 0;
-
         }
     }
-    // cout << "Exiting finalize_mul" << endl;
+    cout << "Exiting finalize_mul" << endl;
     return result;
 }
 
