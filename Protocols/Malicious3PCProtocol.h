@@ -155,6 +155,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     // const static short THREAD_NUM = 4;
 
     vector<std::thread> check_threads, verify_threads;
+
+    array<octetStream, 2> proof_os, vermsg_os;
     size_t verify_index;
     mutex verify_lock;
     VerMsg *vermsgs;
@@ -187,14 +189,16 @@ public:
 
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
-            verify_queue.push(-1);
+            verify_queue.push(0);
         }
 
+        // cout << "Destroying threads." << endl;
         for (auto &each_thread: verify_threads) {
-            if (each_thread.joinable()) {      
-                each_thread.join();
-            }
+            each_thread.join();
         }
+
+        // cout << "Destroyed." << endl;
+
         this->print_debug_info("Binary Part");
         // pthread_mutex_destroy(&mutex);
     }
