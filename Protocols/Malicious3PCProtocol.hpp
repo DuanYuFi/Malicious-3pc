@@ -145,6 +145,31 @@ void Malicious3PCProtocol<T>::thread_handler(int tid) {
     return ;
 }
 
+VerMsg verify_part1(StatusData &data, DZKProof proof, int prev_number, int my_number) {
+    uint64_t **input_shared_next = data.input_shared_next;
+    uint64_t **mask_ss_prev = data.mask_ss_prev;
+    int sz = data.sz;
+    int k = OnlineOptions::singleton.k_size;
+    int cnt = log(4 * sz) / log(k) + 1;
+    VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
+    
+    for (int j = 0; j < k; j ++) {
+            delete[] input_shared_next[j];
+        }
+        delete[] input_shared_next;
+
+        for (int j = 0; j < cnt; j ++) {
+            delete[] mask_ss_prev[j];
+        }
+        delete[] mask_ss_prev;
+    
+    return vermsg;
+}
+
+void verify_part2() {
+
+}
+
 template <class T>
 void Malicious3PCProtocol<T>::verify() {
 
@@ -366,7 +391,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
             if (sum != Mersenne::neg(two_inverse)) {
                 cout << "Error occurs at " << start + temp_pointer << endl;
             }
-            assert(sum == Mersenne::neg(two_inverse));
+            // assert(sum == Mersenne::neg(two_inverse));
 
             a = x.second;
             c = y.second;
@@ -537,7 +562,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
         local_counter -= OnlineOptions::singleton.binary_batch_size;     
         
-        cout << "Indexes are: " << idx_input << " " << idx_rho << " " << idx_result << endl;
+        // cout << "Indexes are: " << idx_input << " " << idx_rho << " " << idx_result << endl;
         
         cv.push(status_pointer);
 
