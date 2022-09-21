@@ -290,7 +290,7 @@ void Malicious3PCProtocol<T>::verify() {
     P.pass_around(proof_os[0], proof_os[1], 1);
 
     auto cp1 = std::chrono::high_resolution_clock::now();
-    outfile << "Exchange proof1 uses " << (cp1 - cp0).count() / 1e6 << "s." << endl;
+    outfile << "Exchange proof1 uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
     for (int i = 0; i < size; i ++) {
         verify_queue.push(1);
@@ -301,7 +301,7 @@ void Malicious3PCProtocol<T>::verify() {
     verify_index = 0;
 
     auto cp2 = std::chrono::high_resolution_clock::now();
-    outfile << "Gen vermsg uses " << (cp2 - cp1).count() / 1e6 << "s." << endl;
+    outfile << "Gen vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
 
     for (int i = 0; i < size; i ++) {
         vermsgs[i].pack(vermsg_os[0]);
@@ -316,7 +316,7 @@ void Malicious3PCProtocol<T>::verify() {
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
     auto cp3 = std::chrono::high_resolution_clock::now();
-    outfile << "Exchange vermsg uses " << (cp3 - cp2).count() / 1e6 << "s." << endl;
+    outfile << "Exchange vermsg uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
 
     for (int i = 0; i < size; i ++) {
         verify_queue.push(2);
@@ -328,7 +328,7 @@ void Malicious3PCProtocol<T>::verify() {
     }
 
     auto cp4 = std::chrono::high_resolution_clock::now();
-    outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "s." << endl;
+    outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "ms." << endl;
 
     status_counter = 0;
     wait_size.reset();
@@ -339,7 +339,7 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     ofstream outfile;
-    outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
+    outfile.open("logs/CheckOne_" + to_string(P.my_real_num()));
 
     // outfile << "Entering Check_one, node_id = " << node_id << endl;
 
@@ -376,7 +376,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     }
 
     auto cp1 = std::chrono::high_resolution_clock::now();
-    outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "s." << endl;
+    outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
     ShareType *_input1, *_input2, *_results, *_rhos;
     _input1 = new ShareType[sz];
@@ -445,10 +445,10 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
                 rho = _rhos[temp_pointer];
             }
 
-            bool res = (x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second;
-            if(z.first != res) {
-                cout << "z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second, temp_pointer: " << temp_pointer << endl;
-            }
+            // bool res = (x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second;
+            // if(z.first != res) {
+            //     cout << "z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second, temp_pointer: " << temp_pointer << endl;
+            // }
 
             bool e = z.first ^ (x.first & y.first) ^ rho.first;
             bool f = rho.second;
@@ -489,13 +489,13 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     auto cp2 = std::chrono::high_resolution_clock::now();
 
-    outfile << "Prepare uses " << (cp2 - cp1).count() / 1e6 << "s." << endl;
+    outfile << "Prepare uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
     // outfile << "in Check_one, calling prove" << endl;
     DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
 
     auto cp3 = std::chrono::high_resolution_clock::now();
 
-    outfile << "Prove uses " << (cp3 - cp2).count() / 1e6 << "s." << endl;
+    outfile << "Prove uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
 
     // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
     status_queue[node_id % ms] = StatusData(dzkproof,
