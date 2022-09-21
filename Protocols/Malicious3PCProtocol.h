@@ -155,6 +155,11 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     // const static short THREAD_NUM = 4;
 
     vector<std::thread> check_threads, verify_threads;
+    size_t verify_index;
+    mutex verify_lock;
+    VerMsg *vermsgs;
+    WaitQueue<u_char> verify_queue;
+    WaitSize verify_tag;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -181,10 +186,10 @@ public:
 
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
-            cv.push(false);
+            verify_queue.push(-1);
         }
 
-        for (auto &each_thread: check_threads) {
+        for (auto &each_thread: verify_threads) {
             if (each_thread.joinable()) {      
                 each_thread.join();
             }
@@ -236,6 +241,10 @@ public:
     void thread_handler(int tid);
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
+
+    void verify_part1(int prev_number, int my_number);
+    void verify_part2(int next_number, int my_number);
+    void verify_thread_handler();
 
 };
 

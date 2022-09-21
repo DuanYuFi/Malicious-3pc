@@ -44,8 +44,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     check_prngs[1].SetSeed(shared_prngs[1]);
 
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-        
         check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this, i));
+        verify_threads.push_back(std::thread(&Malicious3PCProtocol<T>::verify_thread_handler, this));
     }
 
     verify_threads.resize(OnlineOptions::singleton.thread_number);
@@ -65,6 +65,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     input2 = new ShareType[share_tuple_size];
     rhos = new ShareType[share_tuple_size];
     results = new ShareType[share_tuple_size];
+
+    vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
 }
 
 template <class T>
@@ -145,30 +147,66 @@ void Malicious3PCProtocol<T>::thread_handler(int tid) {
     return ;
 }
 
-VerMsg verify_part1(StatusData &data, DZKProof proof, int prev_number, int my_number) {
-    uint64_t **input_shared_next = data.input_shared_next;
-    uint64_t **mask_ss_prev = data.mask_ss_prev;
-    int sz = data.sz;
+template <class T>
+void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
+    DZKProof proof;
+    verify_lock.lock();
+    int ID = verify_index ++;
+    proof.unpack(proof_os[1]);
+    verify_lock.unlock();
+
+    uint64_t **input_shared_next = status_queue[i].input_shared_next;
+    uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
+    int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
+
     VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
-    
+    memcpy(vermsgs + ID, &vermsg, sizeof(VerMsg));
+
     for (int j = 0; j < k; j ++) {
-            delete[] input_shared_next[j];
-        }
-        delete[] input_shared_next;
+        delete[] input_shared_next[j];
+    }
+    delete[] input_shared_next;
 
-        for (int j = 0; j < cnt; j ++) {
-            delete[] mask_ss_prev[j];
-        }
-        delete[] mask_ss_prev;
+    for (int j = 0; j < cnt; j ++) {
+        delete[] mask_ss_prev[j];
+    }
+    delete[] mask_ss_prev;
     
-    return vermsg;
+}
+template <class T>
+void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
+
 }
 
-void verify_part2() {
+template <class T>
+void Malicious3PCProtocol<T>::verify_thread_handler() {
 
+    u_char data = -1;
+    int my_number = P.my_real_num();
+    int prev_number = my_number == 0 ? 2 : my_number - 1;
+    int next_number = my_number == 2 ? 0 : my_number + 1;
+
+    while (true) { 
+        if (!verify_queue.pop_dont_stop(data)) {
+            continue;
+        }
+
+        if (data == -1) {
+            break;
+        }
+
+        else if (data == 1) {
+            verify_part1(prev_number, my_number);
+        }
+
+        else if (data == 2) {
+            verify_part2(next_number, my_number);
+        }
+    }
 }
+
 
 template <class T>
 void Malicious3PCProtocol<T>::verify() {
@@ -179,6 +217,8 @@ void Malicious3PCProtocol<T>::verify() {
         return ;
     }
 
+    verify_index = 0;
+
     int my_number = P.my_real_num();
     int prev_number = my_number == 0 ? 2 : my_number - 1;
     int next_number = my_number == 2 ? 0 : my_number + 1;
@@ -186,6 +226,9 @@ void Malicious3PCProtocol<T>::verify() {
     array<octetStream, 2> proof_os, vermsg_os;
 
     int size = status_counter;
+
+    verify_tag.reset();
+    verify_tag.set_target(size);
     
     for (int i = 0; i < size; i ++) {
         DZKProof proof = status_queue[i].proof;   
@@ -195,29 +238,38 @@ void Malicious3PCProtocol<T>::verify() {
     this->check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
 
+    // for (int i = 0; i < size; i ++) {
+    //     DZKProof proof;
+    //     uint64_t **input_shared_next = status_queue[i].input_shared_next;
+    //     uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
+    //     int sz = status_queue[i].sz;
+    //     int k = OnlineOptions::singleton.k_size;
+    //     int cnt = log(4 * sz) / log(k) + 1;
+
+    //     proof.unpack(proof_os[1]);
+
+    //     VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
+    //     vermsg.pack(vermsg_os[0]);
+
+    //     for (int j = 0; j < k; j ++) {
+    //         delete[] input_shared_next[j];
+    //     }
+    //     delete[] input_shared_next;
+
+    //     for (int j = 0; j < cnt; j ++) {
+    //         delete[] mask_ss_prev[j];
+    //     }
+    //     delete[] mask_ss_prev;
+
+    // }
+
+    // multi_thread part
+
+
+
+
     for (int i = 0; i < size; i ++) {
-        DZKProof proof;
-        uint64_t **input_shared_next = status_queue[i].input_shared_next;
-        uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
-        int sz = status_queue[i].sz;
-        int k = OnlineOptions::singleton.k_size;
-        int cnt = log(4 * sz) / log(k) + 1;
-
-        proof.unpack(proof_os[1]);
-
-        VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
-        vermsg.pack(vermsg_os[0]);
-
-        for (int j = 0; j < k; j ++) {
-            delete[] input_shared_next[j];
-        }
-        delete[] input_shared_next;
-
-        for (int j = 0; j < cnt; j ++) {
-            delete[] mask_ss_prev[j];
-        }
-        delete[] mask_ss_prev;
-
+        vermsgs[i].pack(vermsg_os[0]);
     }
 
     proof_os[1].reset_write_head();
