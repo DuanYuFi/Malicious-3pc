@@ -378,8 +378,6 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     auto cp1 = std::chrono::high_resolution_clock::now();
     outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "s." << endl;
 
-    // outfile << "Range between " << start << " and " << start + sz << endl;
-
     ShareType *_input1, *_input2, *_results, *_rhos;
     _input1 = new ShareType[sz];
     _input2 = new ShareType[sz];
@@ -400,90 +398,94 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     input_shared_next = new uint64_t*[k];
     input_shared_prev = new uint64_t*[k];
 
-
+    uint64_t neg_one = Mersenne::PR - 1;
+    uint64_t neg_two = Mersenne::PR - 2;
+    uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
+    
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 4];
         input_right[i] = new uint64_t[cols * 4];
         input_shared_next[i] = new uint64_t[cols * 4];
         input_shared_prev[i] = new uint64_t[cols * 4];
     
-        memset(input_left[i], 0, sizeof(uint64_t) * cols * 4);
-        memset(input_right[i], 0, sizeof(uint64_t) * cols * 4);
-        memset(input_shared_next[i], 0, sizeof(uint64_t) * cols * 4);
-        memset(input_shared_prev[i], 0, sizeof(uint64_t) * cols * 4);
+        // memset(input_left[i], 0, sizeof(uint64_t) * cols * 4);
+        // memset(input_right[i], 0, sizeof(uint64_t) * cols * 4);
+        // memset(input_shared_next[i], 0, sizeof(uint64_t) * cols * 4);
+        // memset(input_shared_prev[i], 0, sizeof(uint64_t) * cols * 4);
         
         for (int j = 0; j < cols; j++) {
 
+            ShareType x, y, z, rho;
+
             if (temp_pointer >= sz) {
-                break;
+                input_left[i][j * 4] = 0;
+                input_left[i][j * 4 + 1] = 0;
+                input_left[i][j * 4 + 2] = 0;
+                input_left[i][j * 4 + 3] = 0;
+                input_right[i][j * 4] = 0;
+                input_right[i][j * 4 + 1] = 0;
+                input_right[i][j * 4 + 2] = 0;
+                input_right[i][j * 4 + 3] = 0;
+                input_shared_prev[i][j * 4] = 0;
+                input_shared_prev[i][j * 4 + 1] = 0;
+                input_shared_prev[i][j * 4 + 2] = 0;
+                input_shared_prev[i][j * 4 + 3] = 0;
+                input_shared_next[i][j * 4] = 0;
+                input_shared_next[i][j * 4 + 1] = 0;
+                input_shared_next[i][j * 4 + 2] = 0;
+                input_shared_next[i][j * 4 + 3] = 0;
+                temp_pointer ++;
+                continue;
             }
 
-            auto x = _input1[temp_pointer];
-            auto y = _input2[temp_pointer];
-            auto z = _results[temp_pointer];
-            auto rho = _rhos[temp_pointer];
-  
-
-            if (z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second)) {
-         
+            else {
+                x = _input1[temp_pointer];
+                y = _input2[temp_pointer];
+                z = _results[temp_pointer];
+                rho = _rhos[temp_pointer];
             }
-            assert(z.first == ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second));
+
+            bool res = (x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second;
+            if(z.first != res) {
+                cout << "z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second, temp_pointer: " << temp_pointer << endl;
+            }
+
+            bool e = z.first ^ (x.first & y.first) ^ rho.first;
+            bool f = rho.second;
+
+            uint64_t t1 = e ? neg_one : 1;
+            uint64_t t2 = f ? neg_one : 1;
+
             
-            uint64_t a = x.first;
-            uint64_t c = y.first;
-            uint64_t e = (z.first ^ (x.first & y.first) ^ rho.first);
+            input_left[i][j * 4] = x.first & y.first ? (e ? 2 : neg_two) : 0;
+            input_left[i][j * 4 + 1] = y.first ? t1 : 0;
+            input_left[i][j * 4 + 2] = x.first ? t1 : 0;
+            input_left[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
 
-            uint64_t b = y.second;
-            uint64_t d = x.second;
-            uint64_t f = rho.second;
-
-            uint64_t t1 = Mersenne::sub(1, 2 * e);
-            uint64_t t2 = Mersenne::sub(1, 2 * f);
-   
-            input_left[i][j * 4] = Mersenne::neg(Mersenne::mul(2 * a * c, t1));
-            input_left[i][j * 4 + 1] = c * t1;
-            input_left[i][j * 4 + 2] = a * t1;
-            input_left[i][j * 4 + 3] = Mersenne::neg(Mersenne::mul(t1, two_inverse));
-            input_right[i][j * 4] = Mersenne::mul(b * d, t2);
-            input_right[i][j * 4 + 1] = Mersenne::mul(d, t2);
-            input_right[i][j * 4 + 2] = Mersenne::mul(b, t2);
+            input_right[i][j * 4] = y.second & x.second ? t2 : 0;
+            input_right[i][j * 4 + 1] = x.second ? t2 : 0;
+            input_right[i][j * 4 + 2] = y.second ? t2 : 0;
             input_right[i][j * 4 + 3] = t2;
 
-
-
-            uint64_t sum = 0;
-            for (int l = 0; l < 4; l++) {
-                sum = Mersenne::add(sum, Mersenne::mul(input_left[i][j + l], input_right[i][j + l]));
-            }
-         
-            // if (sum != Mersenne::neg(two_inverse)) {
-            //     cout << "Error occurs at " << start + temp_pointer << endl;
-            // }
-            // assert(sum == Mersenne::neg(two_inverse));
-
-            a = x.second;
-            c = y.second;
-            e = (z.second ^ (x.second & y.second) ^ rho.second);
-
-            b = y.first;
-            d = x.first;
+            e = z.second ^ (x.second & y.second) ^ rho.second;
             f = rho.first;
 
-            t1 = Mersenne::sub(1, 2 * e);
-            t2 = Mersenne::sub(1, 2 * f);
+            t1 = e ? neg_one : 1;
+            t2 = f ? neg_one : 1;
 
-            input_shared_prev[i][j * 4] = Mersenne::neg(Mersenne::mul(2 * a * c, t1));
-            input_shared_prev[i][j * 4 + 1] = c * t1;
-            input_shared_prev[i][j * 4 + 2] = a * t1;
-            input_shared_prev[i][j * 4 + 3] = Mersenne::neg(Mersenne::mul(t1, two_inverse));
-            input_shared_next[i][j * 4] = Mersenne::mul(b * d, t2);
-            input_shared_next[i][j * 4 + 1] = Mersenne::mul(d, t2);
-            input_shared_next[i][j * 4 + 2] = Mersenne::mul(b, t2);
-            input_shared_next[i][j * 4 + 3] = t2;          
+            input_shared_prev[i][j * 4] = x.second & y.second ? (e ? 2 : neg_two) : 0;
+            input_shared_prev[i][j * 4 + 1] = y.second ? t1 : 0;
+            input_shared_prev[i][j * 4 + 2] = x.second ? t1 : 0;
+            input_shared_prev[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
+            input_shared_next[i][j * 4] = y.first & x.first ? t2 : 0;
+            input_shared_next[i][j * 4 + 1] = x.first ? t2 : 0;
+            input_shared_next[i][j * 4 + 2] = y.first ? t2 : 0;
+            input_shared_next[i][j * 4 + 3] = t2;
 
             temp_pointer ++;
         }
     }
+
 
     auto cp2 = std::chrono::high_resolution_clock::now();
 
