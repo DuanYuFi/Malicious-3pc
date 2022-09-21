@@ -167,8 +167,6 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     WaitSize verify_tag;
     bool check_passed;
 
-    
-
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
     template<class U>
@@ -197,12 +195,12 @@ public:
             verify_queue.push(0);
         }
 
-        // cout << "Destroying threads." << endl;
+        cout << "Destroying threads." << endl;
         for (auto &each_thread: verify_threads) {
             each_thread.join();
         }
 
-        // cout << "Destroyed." << endl;
+        cout << "Destroyed." << endl;
 
         this->print_debug_info("Binary Part");
         // pthread_mutex_destroy(&mutex);
