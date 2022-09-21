@@ -339,7 +339,7 @@ template <class T>
 void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     ofstream outfile;
-    outfile.open("logs/CheckOne_" + to_string(P.my_real_num()));
+    outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
 
     // outfile << "Entering Check_one, node_id = " << node_id << endl;
 
