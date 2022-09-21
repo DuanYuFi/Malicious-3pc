@@ -143,6 +143,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typename T::clear dotprod_share;
 
     std::mutex check_lock;
+    size_t check_id;
 
     WaitQueue<int> cv;
 
@@ -176,8 +177,8 @@ public:
     static const bool uses_triples = false;
 
     array<PRNG, 2> shared_prngs;
-    array<PRNG, 2> check_prngs;
-    // vector<array<PRNG, 2> > check_prngs;
+    // array<PRNG, 2> *check_prngs;
+    vector<array<PRNG, 2> > check_prngs;
 
     PRNG global_prng;
 

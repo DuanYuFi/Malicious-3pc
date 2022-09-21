@@ -39,9 +39,13 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
         P.receive_player(0, os);
         global_prng.SetSeed(os.get_data());
     }
+    
+    check_prngs.resize(OnlineOptions::singleton.max_status);
 
-    check_prngs[0].SetSeed(shared_prngs[0]);
-    check_prngs[1].SetSeed(shared_prngs[1]);
+    for (auto &prngs: check_prngs) {
+        prngs[0].SetSeed(shared_prngs[0]);
+        prngs[1].SetSeed(shared_prngs[1]);
+    }
 
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
         check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this, i));
@@ -77,8 +81,10 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
         shared_prngs[i].SetSeed(prngs[i]);
     }
 
-    check_prngs[0].SetSeed(shared_prngs[0]);
-    check_prngs[1].SetSeed(shared_prngs[1]);
+    for (auto &prngs: check_prngs) {
+        prngs[0].SetSeed(shared_prngs[0]);
+        prngs[1].SetSeed(shared_prngs[1]);
+    }
 }
 
 template <class T>
@@ -320,8 +326,9 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     // outfile << "Entering Check_one, node_id = " << node_id << endl;
 
     if (size == 0)  return ;
+    int ms = OnlineOptions::singleton.max_status;
 
-    size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
+    size_t start = (node_id % (ZOOM_RATE * ms)) * OnlineOptions::singleton.binary_batch_size;
     if (size == -1) size = OnlineOptions::singleton.binary_batch_size;
 
     int sz = size;
@@ -329,7 +336,6 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     int cnt = log(4 * sz) / log(k) + 1;
 
     // outfile << "in Check_one, calling lock" << endl; 
-    check_lock.lock();
 
     uint64_t **masks, **mask_ss_next, **mask_ss_prev;
 
@@ -343,14 +349,12 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
         mask_ss_prev[i] = new uint64_t[2 * k - 1];
 
         for (int j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[i][j] = check_prngs[1].get_word() & Mersenne::PR;
-            mask_ss_prev[i][j] = check_prngs[0].get_word() & Mersenne::PR;
+            mask_ss_next[i][j] = check_prngs[node_id % ms][1].get_word() & Mersenne::PR;
+            mask_ss_prev[i][j] = check_prngs[node_id % ms][0].get_word() & Mersenne::PR;
             masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
         }
     }
     // outfile << "in Check_one, calling unlock" << endl;
-    
-    check_lock.unlock();
 
     // outfile << "Range between " << start << " and " << start + sz << endl;
 
@@ -465,7 +469,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     
 
     // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
-    status_queue[node_id % OnlineOptions::singleton.max_status] = StatusData(dzkproof,
+    status_queue[node_id % ms] = StatusData(dzkproof,
                                        input_shared_next, 
                                        input_shared_prev, 
                                        mask_ss_next,
