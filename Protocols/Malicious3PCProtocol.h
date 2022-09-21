@@ -40,42 +40,6 @@ struct StatusData {
     
 };
 
-class CV {
-private:
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    int n_times;
-
-public:
-
-    CV(): n_times(0) {}
-    
-    void lock()
-    {
-        // cout << "in lock, calling pthread_mutex_lock" << endl;
-        pthread_mutex_lock(&mutex);
-        // cout << "in lock, after calling pthread_mutex_lock" << endl;
-    }
-
-    void unlock()
-    {
-        // cout << "in unlock, calling pthread_mutex_unlock" << endl;
-        pthread_mutex_unlock(&mutex);
-        // cout << "in unlock, after calling pthread_mutex_unlock" << endl;
-
-    }
-
-    void wait()
-    {
-        pthread_cond_wait(&cond, &mutex);
-    }
-
-    void signal()
-    {
-        pthread_cond_signal(&cond);
-    }
-};
-
 template <typename T1, typename T2>
 struct MyPair {
 public:
@@ -91,7 +55,7 @@ class WaitSize {
 private:
     size_t now;
     size_t target;
-    pthread_mutex_t mutex;
+    pthread_mutex_t mutex, mutex2;
     pthread_cond_t cond;
 
 public:
@@ -101,14 +65,14 @@ public:
     void lock()
     {
         // cout << "in lock, calling pthread_mutex_lock" << endl;
-        pthread_mutex_lock(&mutex);
+        pthread_mutex_lock(&mutex2);
         // cout << "in lock, after calling pthread_mutex_lock" << endl;
     }
 
     void unlock()
     {
         // cout << "in unlock, calling pthread_mutex_unlock" << endl;
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&mutex2);
         // cout << "in unlock, after calling pthread_mutex_unlock" << endl;
 
     }
@@ -181,7 +145,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     WaitQueue<int> cv;
 
-    size_t local_counter, status_counter;
+    size_t local_counter, status_counter, status_pointer;
     WaitSize wait_size;
 
     uint64_t two_inverse = Mersenne::inverse(2);

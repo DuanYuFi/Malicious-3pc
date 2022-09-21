@@ -7,50 +7,68 @@
  
 using namespace std;
  
- 
+
+class CV {
+private:
+    std::mutex mx;
+    std::condition_variable cv;
+    int n_times;
+
+public:
+
+    CV(): n_times(0) {}
+    ~CV() {}
+    
+    void lock()
+    {
+        mx.lock();
+    }
+
+    void unlock()
+    {
+        mx.unlock();
+
+    }
+
+    void wait()
+    {
+        std::unique_lock<std::mutex> lock(mx);
+        if (--n_times < 0) {
+            cv.wait(lock);
+        }
+    }
+
+    void signal()
+    {
+        std::unique_lock<std::mutex> lock(mx);
+        if (++n_times <= 0) {
+            cv.notify_one();
+        }
+    }
+};
+
 template <typename T>
 class SafeQueue{
 public:
-    SafeQueue(){
-        // 锁的初始化
-        pthread_mutex_init(&mutex, 0);
-        // 线程条件变量的初始化
-        pthread_cond_init(&cond, 0);
- 
-    }
-    ~SafeQueue(){
-        // 锁的释放
-        pthread_mutex_destroy(&mutex);
-        pthread_cond_destroy(&cond);
-    }
+    SafeQueue() {}
+    ~SafeQueue() {}
  
     void push(T t){
-        pthread_mutex_lock(&mutex);  //加锁
+        cv.lock();
         q.push(t);
-        // 通知变化 notify
-        // 由系统唤醒一个线程
-        pthread_cond_signal(&cond);
-        // 通知所有的线程
-//        pthread_cond_broadcast(&cond);
-        pthread_mutex_unlock(&mutex);  //操作完成后解锁
+        cv.signal();
+        cv.unlock();
  
     }
     T pop(){
-        pthread_mutex_lock(&mutex);  //加锁
-//        if(!q.empty()){
-//            t = q.front();
-//            q.pop();  //没有返回值，所以使用q.front()拿到首元素 q.back()返回最后一个元素，
-//        }
-        // queue为空是一直等待，直到下一次push进新的数据  java中是wait和notify
+        cv.lock();
         if(q.empty()) {
-            // 挂起状态，释放锁
-            pthread_cond_wait(&cond, & mutex);
+            cv.wait();
         }
-        // 被唤醒以后
         T t = q.front();
         q.pop();
  
-        pthread_mutex_unlock(&mutex);  //操作完成后解锁
+        cv.unlock();
 
         return t;
     }
@@ -60,104 +78,23 @@ public:
     // }
 
     size_t size() {
-        pthread_mutex_lock(&mutex);
+        cv.lock();
         size_t sz = q.size();
-        pthread_mutex_unlock(&mutex);
+        cv.unlock();
         return sz;
     }
 
     bool empty() {
-        pthread_mutex_lock(&mutex);
+        cv.lock();
         bool ep = q.empty();
-        pthread_mutex_unlock(&mutex);
+        cv.unlock();
         return ep;
     }
 private:
     // 如何保证对这个队列的操作是线程安全的？引入互斥锁
     queue<T> q;
-    pthread_mutex_t mutex;
- 
-    // 创建条件变量
-    pthread_cond_t cond;
- 
-};
- 
-template <typename T>
-class SafeVector{
-public:
-    SafeVector(){
-        // 锁的初始化
-        pthread_mutex_init(&mutex, 0);
-        // 线程条件变量的初始化
-        pthread_cond_init(&cond, 0);
- 
-    }
-    ~SafeVector(){
-        // 锁的释放
-        pthread_mutex_destroy(&mutex);
-        pthread_cond_destroy(&cond);
-    }
- 
-    void push_back(T t){
-        pthread_mutex_lock(&mutex);  //加锁
-        q.push_back(t);
-        // 通知变化 notify
-        // 由系统唤醒一个线程
-        pthread_cond_signal(&cond);
-        // 通知所有的线程
-//        pthread_cond_broadcast(&cond);
-        pthread_mutex_unlock(&mutex);  //操作完成后解锁
- 
-    }
-    T pop_back(){
-        pthread_mutex_lock(&mutex);  //加锁
-//        if(!q.empty()){
-//            t = q.front();
-//            q.pop();  //没有返回值，所以使用q.front()拿到首元素 q.back()返回最后一个元素，
-//        }
-        // queue为空是一直等待，直到下一次push进新的数据  java中是wait和notify
-        if(q.empty()) {
-            // 挂起状态，释放锁
-            pthread_cond_wait(&cond, & mutex);
-        }
-        // 被唤醒以后
-        T t = q.back();
-        q.pop_back();
- 
-        pthread_mutex_unlock(&mutex);  //操作完成后解锁
-
-        return t;
-    }
-
-    // T front() {
-    //     return q.front();
-    // }
-
-    size_t size() {
-        pthread_mutex_lock(&mutex);
-        size_t sz = q.size();
-        pthread_mutex_unlock(&mutex);
-        return sz;
-    }
-
-    bool empty() {
-        pthread_mutex_lock(&mutex);
-        bool ep = q.empty();
-        pthread_mutex_unlock(&mutex);
-        return ep;
-    }
-
-    void clear() {
-        q.clear();
-    }
-
-private:
-    // 如何保证对这个队列的操作是线程安全的？引入互斥锁
-    vector<T> q;
-    pthread_mutex_t mutex;
- 
-    // 创建条件变量
-    pthread_cond_t cond;
+    CV cv;
+    // std::mutex queue_lock;
  
 };
 

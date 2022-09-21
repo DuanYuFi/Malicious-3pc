@@ -77,21 +77,6 @@ public:
         return running;
     }
 
-    bool pop(volatile T& value) {
-
-        lock();
-        if (running and queue.size() == 0)
-            wait();
-        if (running)
-        {
-            value = queue.front();
-            queue.pop_front();
-        }
-        unlock();
-        
-        return running;
-    }
-
     T pop()
     {
         T res;
