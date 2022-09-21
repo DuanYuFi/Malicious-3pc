@@ -160,6 +160,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     VerMsg *vermsgs;
     WaitQueue<u_char> verify_queue;
     WaitSize verify_tag;
+    bool check_passed;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);

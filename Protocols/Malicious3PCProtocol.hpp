@@ -164,6 +164,8 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
     memcpy(vermsgs + ID, &vermsg, sizeof(VerMsg));
 
+    ++ verify_tag;
+
     for (int j = 0; j < k; j ++) {
         delete[] input_shared_next[j];
     }
@@ -177,6 +179,42 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
 }
 template <class T>
 void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
+    
+    VerMsg received_vermsg;
+    DZKProof proof;
+    
+    verify_lock.lock();
+    received_vermsg.unpack(vermsg_os[1]);
+    proof.unpack(proof_os[1]);
+    int ID = verify_index ++;
+    verify_lock.unlock();
+
+    uint64_t **input_shared_prev = status_queue[i].input_shared_prev;
+    uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
+
+    int sz = status_queue[i].sz;
+    int k = OnlineOptions::singleton.k_size;
+
+    int cnt = log(4 * sz) / log(k) + 1;
+
+    bool res = _verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    if (!res) {
+        check_passed = false;
+    }
+
+    ++ verify_tag;
+
+    for (int j = 0; j < k; j ++) {
+        delete[] input_shared_prev[j];
+    }
+    delete[] input_shared_prev;
+
+    for (int j = 0; j < cnt; j ++) {
+        delete[] mask_ss_next[j];
+    }
+    delete[] mask_ss_next;
+
+    
 
 }
 
@@ -218,6 +256,7 @@ void Malicious3PCProtocol<T>::verify() {
     }
 
     verify_index = 0;
+    check_passed = true;
 
     int my_number = P.my_real_num();
     int prev_number = my_number == 0 ? 2 : my_number - 1;
@@ -238,35 +277,13 @@ void Malicious3PCProtocol<T>::verify() {
     this->check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
 
-    // for (int i = 0; i < size; i ++) {
-    //     DZKProof proof;
-    //     uint64_t **input_shared_next = status_queue[i].input_shared_next;
-    //     uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
-    //     int sz = status_queue[i].sz;
-    //     int k = OnlineOptions::singleton.k_size;
-    //     int cnt = log(4 * sz) / log(k) + 1;
+    for (int i = 0; i < size; i ++) {
+        verify_queue.push(1);
+    }
 
-    //     proof.unpack(proof_os[1]);
-
-    //     VerMsg vermsg = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
-    //     vermsg.pack(vermsg_os[0]);
-
-    //     for (int j = 0; j < k; j ++) {
-    //         delete[] input_shared_next[j];
-    //     }
-    //     delete[] input_shared_next;
-
-    //     for (int j = 0; j < cnt; j ++) {
-    //         delete[] mask_ss_prev[j];
-    //     }
-    //     delete[] mask_ss_prev;
-
-    // }
-
-    // multi_thread part
-
-
-
+    verify_tag.wait();
+    verify_tag.reset();
+    verify_index = 0;
 
     for (int i = 0; i < size; i ++) {
         vermsgs[i].pack(vermsg_os[0]);
@@ -281,42 +298,50 @@ void Malicious3PCProtocol<T>::verify() {
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
 
-    for (int i = 0; i < size; i ++) {
+    // for (int i = 0; i < size; i ++) {
 
-        uint64_t **input_shared_prev = status_queue[i].input_shared_prev;
-        uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
+    //     uint64_t **input_shared_prev = status_queue[i].input_shared_prev;
+    //     uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
 
-        int sz = status_queue[i].sz;
-        int k = OnlineOptions::singleton.k_size;
+    //     int sz = status_queue[i].sz;
+    //     int k = OnlineOptions::singleton.k_size;
 
-        int cnt = log(4 * sz) / log(k) + 1;
+    //     int cnt = log(4 * sz) / log(k) + 1;
 
-        VerMsg received_vermsg;
-        received_vermsg.unpack(vermsg_os[1]);
+    //     VerMsg received_vermsg;
+    //     received_vermsg.unpack(vermsg_os[1]);
 
-        DZKProof proof;
-        proof.unpack(proof_os[1]);
+    //     DZKProof proof;
+    //     proof.unpack(proof_os[1]);
         
-        bool res = _verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    //     bool res = _verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
 
-        for (int j = 0; j < k; j ++) {
-            delete[] input_shared_prev[j];
-        }
-        delete[] input_shared_prev;
+    //     for (int j = 0; j < k; j ++) {
+    //         delete[] input_shared_prev[j];
+    //     }
+    //     delete[] input_shared_prev;
 
-        for (int j = 0; j < cnt; j ++) {
-            delete[] mask_ss_next[j];
-        }
-        delete[] mask_ss_next;
+    //     for (int j = 0; j < cnt; j ++) {
+    //         delete[] mask_ss_next[j];
+    //     }
+    //     delete[] mask_ss_next;
 
-        if (!res) {
+    //     if (!res) {
             
-            throw mac_fail("ZKP check failed");
-        }
+    //         throw mac_fail("ZKP check failed");
+    //     }
+    // }
+
+    for (int i = 0; i < size; i ++) {
+        verify_queue.push(2);
+    }
+
+    verify_tag.wait();
+    if (!check_passed) {
+        throw mac_fail("ZKP check failed");
     }
 
     status_counter = 0;
-
     wait_size.reset();
 
 }
