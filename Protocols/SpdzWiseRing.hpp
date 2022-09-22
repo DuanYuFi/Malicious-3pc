@@ -4,13 +4,15 @@
  */
 
 #include "SpdzWiseRing.h"
+#include <chrono>
 
 template<class T>
 SpdzWiseRing<T>::SpdzWiseRing(Player& P) :
         SpdzWise<T>(P), zero_prep(0, zero_usage), zero_proc(zero_output,
                 zero_prep, P)
 {
-    // this->check_comm = 0;
+    start = std::chrono::high_resolution_clock::now();
+    cout << "Start at " << start.time_since_epoch().count() << endl;
 }
 
 template<class T>

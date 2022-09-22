@@ -203,7 +203,7 @@ public:
         cout << "Destroyed." << endl;
 
         this->print_debug_info("Binary Part");
-        // pthread_mutex_destroy(&mutex);
+        cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     
 

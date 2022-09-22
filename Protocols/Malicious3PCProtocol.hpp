@@ -13,6 +13,9 @@
 
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
+
+    cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
+
     assert(P.num_players() == 3);
     assert(OnlineOptions::singleton.thread_number > 0);
     assert(OnlineOptions::singleton.max_status > 0);
