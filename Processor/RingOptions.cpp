@@ -26,7 +26,6 @@ RingOptions::RingOptions(ez::ezOptionParser& opt, int argc, const char** argv)
     R_is_set = opt.isSet("-R");
     opt.resetArgs();
 
-    cout << "Machine Start at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     if (R_is_set)
         cerr << "Trying to run " << R << "-bit computation" << endl;
 }

@@ -1126,6 +1126,7 @@ inline void Instruction::execute(Processor<sint, sgf2n>& Proc) const
       case START:
         Proc.machine.set_thread_comm(Proc.P.total_comm());
         Proc.machine.start(n);
+        cout << "Machine start at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
         break;
       case STOP:
         Proc.machine.set_thread_comm(Proc.P.total_comm());
