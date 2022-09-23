@@ -250,13 +250,13 @@ DZKProof Malicious3PCProtocol<T>::prove(
                 
                 temp_result = 0;
                 for(uint64_t l = 0; l < k; l++) {
-                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
+                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT(l, index));
                 }
 
                 input_left[i][j] = Mersenne::modp_128(temp_result);
                 temp_result = 0;
                 for(uint64_t l = 0; l < k; l++) {
-                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
+                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT(l, index));
                 }
 
                 input_right[i][j] = Mersenne::modp_128(temp_result);
@@ -266,8 +266,6 @@ DZKProof Malicious3PCProtocol<T>::prove(
                 input_left[i][j] = 0;
                 input_right[i][j] = 0;
             }
-            
-
         }
     }
     cnt++;
@@ -332,13 +330,13 @@ DZKProof Malicious3PCProtocol<T>::prove(
                     
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT(l, index));
+                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
                     }
 
                     input_left[i][j] = Mersenne::modp_128(temp_result);
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT(l, index));
+                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
                     }
                    
 
