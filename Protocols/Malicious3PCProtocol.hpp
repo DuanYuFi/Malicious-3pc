@@ -497,7 +497,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     outfile << "Prepare uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
     // outfile << "in Check_one, calling prove" << endl;
-    DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
+    DZKProof dzkproof = prove(node_id, input_left, input_right, sz, k, masks);
 
     auto cp3 = std::chrono::high_resolution_clock::now();
 

@@ -254,6 +254,34 @@ public:
     void verify_part2(int next_number, int my_number);
     void verify_thread_handler();
 
+    DZKProof prove(
+        int node_id,
+        uint64_t batch_size, 
+        uint64_t k, 
+        uint64_t** masks
+    );
+
+    VerMsg gen_vermsg(
+        DZKProof proof, 
+        uint64_t** input,
+        uint64_t batch_size, 
+        uint64_t k, 
+        uint64_t** masks_ss,
+        uint64_t prover_ID,
+        uint64_t party_ID
+    );
+
+    bool _verify(
+        DZKProof proof, 
+        uint64_t** input,
+        VerMsg other_vermsg, 
+        uint64_t batch_size, 
+        uint64_t k, 
+        uint64_t** masks_ss,
+        uint64_t prover_ID,
+        uint64_t party_ID
+    );
+
 };
 
 #endif /* PROTOCOLS_MALICIOUS3PCPROTOCOL_H_ */

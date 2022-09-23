@@ -154,39 +154,4 @@ void append_one_msg(LocalHash &hash, uint64_t msg);
 void append_msges(LocalHash &hash, vector<uint64_t> msges);
 uint64_t get_challenge(LocalHash &hash);
 
-DZKProof prove(
-    uint64_t** input_left, 
-    uint64_t** input_right, 
-    uint64_t batch_size, 
-    uint64_t k, 
-    uint64_t sid,
-    uint64_t** masks
-);
-
-VerMsg gen_vermsg(
-    DZKProof proof, 
-    uint64_t** input,
-    uint64_t** input_mono, 
-    uint64_t batch_size, 
-    uint64_t k, 
-    uint64_t sid, 
-    uint64_t** masks_ss,
-    uint64_t prover_ID,
-    uint64_t party_ID
-);
-
-bool _verify(
-    DZKProof proof, 
-    uint64_t** input,
-    uint64_t** input_mono, 
-    VerMsg other_vermsg, 
-    uint64_t batch_size, 
-    uint64_t k, 
-    uint64_t sid, 
-    uint64_t** masks_ss,
-    uint64_t prover_ID,
-    uint64_t party_ID
-);
-
-
 #endif

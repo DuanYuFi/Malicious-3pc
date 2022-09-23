@@ -2,11 +2,35 @@
 #define PROTOCOLS_BINSRYCHECK_HPP_
 
 #include "BinaryCheck.h"
+#include "Malicious3PCMC.h"
 
 #include "Math/mersenne.hpp"
 #include "Math/Z2k.h"
 #include <cstdlib>
 #include <ctime>
+
+#define NEG_ONE Mersenne::PR - 1
+#define NEG_TWO Mersenne::PR - 2
+#define NEG_TWO_INVERSE Mersenne::neg(two_inverse);
+#define input_x(i, j) input1[start + column + (i * cols + (j & 3)) * k]
+#define input_y(i, j) input2[start + column + (i * cols + (j & 3)) * k]
+#define input_z(i, j) results[start + column + (i * cols + (j & 3)) * k]
+#define input_rho(i, j) rhos[start + column + (i * cols + (j & 3)) * k]
+#define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
+#define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
+#define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
+
+#define INPUT_LEFT(i, j) (j % 4 == 0 ? \
+    (input_x(i, j).first & input_y(i, j).first ? (input_e(i, j) ? 2 : NEG_TWO) : 0) : \
+    (j % 4 == 1 ? (input_y(i, j).first ? input_t1(i, j) : 0) : \
+    (j % 4 == 2 ? (input_x(i, j).first ? input_t1(i, j) : 0) : \
+    (input_e(i, j) ? two_inverse : NEG_TWO_INVERSE))))
+
+#define INPUT_RIGHT(i, j) (j % 4 == 0 ? \
+    (input_y(i, j).second & input_x(i, j).second ? input_t2(i, j) : 0) : \
+    (j % 4 == 1 ? (input_x(i, j).second ? input_t2(i, j) : 0) : \
+    (j % 4 == 2 ? (input_y(i, j).second ? input_t2(i, j) : 0) : \
+    (input_t2(i, j)))))
 
 
 uint64_t get_rand() {
@@ -80,20 +104,19 @@ uint64_t get_challenge(LocalHash &hash) {
     return r & Mersenne::PR;
 }
 
-DZKProof prove(
-    uint64_t** input_left, 
-    uint64_t** input_right, 
+template <class T>
+DZKProof Malicious3PCProtocol<T>::prove(
+    int node_id,
     uint64_t batch_size, 
     uint64_t k, 
     uint64_t** masks
 ) {
 
     uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t s = (T - 1) / k + 1;
+    uint64_t s = (T - 1) / k + 1, cols = (batch_size - 1) / k + 1;
 
     LocalHash transcript_hash;
 
-    s *= 4;
     vector<vector<uint64_t>> p_evals_masked;
 
     uint64_t** base = new uint64_t*[k - 1];
@@ -107,13 +130,153 @@ DZKProof prove(
     uint64_t s0;
     uint64_t** eval_result = new uint64_t*[k];
     for(uint64_t i = 0; i < k; i++) {
-        eval_result[i] = new uint64_t[k];
+        eval_result[i] = (uint64_t*)calloc(k, sizeof(uint64_t));
     }
     uint64_t* eval_p_poly = new uint64_t[2 * k - 1];  
     uint128_t temp_result;
     uint64_t index;
     uint16_t cnt = 0;
     
+    /*
+                    ==================================================================================
+                        From this comment to next comment (comment mark two), the codes between are 
+                        the first round in the new optimize 
+                        for reducing the time cost in prepare data for prove and gen_vermsg.
+                    ==================================================================================
+    */
+
+    uint64_t** input_left, input_right;
+    input_left = new uint64_t*[k];
+    input_right = new uint64_t*[k];
+
+
+    // alloc the space
+    for (int i = 0; i < k; i ++) {
+        input_left[i] = new uint64_t[cols * 4];
+        input_right[i] = new uint64_t[cols * 4];
+        input_shared_next[i] = new uint64_t[cols * 4];
+        input_shared_prev[i] = new uint64_t[cols * 4];
+    }
+
+    
+    size_t start = node_id * OnlineOptions::singleton.binary_batch_size;
+    uint64_t neg_one = NEG_ONE;
+    uint64_t neg_two = NEG_TWO;
+    uint64_t neg_two_inverse = NEG_TWO_INVERSE;
+
+    for (int column = 0; column < (int) s; column ++) {
+        int es[k];
+        for (int i = 0; i < (int) k; i ++)  // preprocess e
+        {
+            es[i] = input1[start + column + i * k].first & input2[start + column + i * k].first ^ \
+            results[start + column + i * k].first & rhos[start + column + i * k].first;
+        }
+
+
+        // split the inner product into monomials' sum
+        for(uint64_t i = 0; i < k; i++) {
+            for(uint64_t j = 0; j < k; j++) {
+                uint64_t t1i = es[i] ? neg_one : 1;
+                uint64_t t1j = es[j] ? neg_one : 1;
+                uint64_t t2i = rhos[start + column + i * k].second ? neg_one : 1;
+                uint64_t t2j = rhos[start + column + j * k].second ? neg_one : 1;
+
+                eval_result[i][j] += es[i] * es[j];
+
+                eval_result[i][j] += Mersenne::mul(
+                    input1[start + column + i * k].first & input2[start + column + i * k].first ? (es[i] ? 2 : neg_two) : 0, 
+                    input2[start + column + j * k].second & input1[start + column + j * k].second ? t2j : 0
+                );
+
+                eval_result[i][j] += Mersenne::mul(
+                    input2[start + column + i * k].first ? t1i : 0,
+                    input1[start + column + j * k].second ? t2j : 0
+                );
+
+                eval_result[i][j] += Mersenne::mul(
+                    input1[start + column + i * k].first ? t1i : 0,
+                    input2[start + column + j * k].second ? t2j : 0
+                );
+
+                eval_result[i][j] += Mersenne::mul(
+                    e[i] ? two_inverse : neg_two_inverse,
+                    t2j
+                );
+            }
+        }
+    }
+    
+    s *= 4;
+
+    for(uint64_t i = 0; i < k; i++) {
+        eval_p_poly[i] = eval_result[i][i];
+    }
+
+    for(uint64_t i = 0; i < k - 1; i++) {
+        eval_p_poly[i + k] = 0;
+        for(uint64_t j = 0; j < k; j++) {
+            for (uint64_t l = 0; l < k; l++) {
+                eval_p_poly[i + k] = Mersenne::add(eval_p_poly[i + k], Mersenne::mul(base[i][j], Mersenne::mul(eval_result[j][l], base[i][l])));
+            }
+        }
+    }  
+
+    vector<uint64_t> ss(2 * k - 1);       
+    for(uint64_t i = 0; i < 2 * k - 1; i++) {           
+        ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt][i]);
+    }
+
+    uint64_t sum = 0;
+    for(uint64_t j = 0; j < k; j++) {
+        sum += eval_p_poly[j];
+    }
+    sum = Mersenne::modp(sum);
+
+    p_evals_masked.push_back(ss);
+    
+    append_msges(transcript_hash, ss);
+    uint64_t r = get_challenge(transcript_hash);
+
+    evaluate_bases(k, r, eval_base);
+
+    s0 = s;
+    s = (s - 1) / k + 1;
+    
+    for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t j = 0; j < s; j++) {
+            index = i * s + j;
+            
+            if (index < s0) {
+                
+                temp_result = 0;
+                for(uint64_t l = 0; l < k; l++) {
+                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
+                }
+
+                input_left[i][j] = Mersenne::modp_128(temp_result);
+                temp_result = 0;
+                for(uint64_t l = 0; l < k; l++) {
+                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
+                }
+
+                input_right[i][j] = Mersenne::modp_128(temp_result);
+                
+            }
+            else {
+                input_left[i][j] = 0;
+                input_right[i][j] = 0;
+            }
+            
+
+        }
+    }
+    cnt++;
+
+    /*
+                                            =========================
+                                                comment mark two.
+                                            =========================
+    */
     
     while(true){
 
@@ -169,13 +332,13 @@ DZKProof prove(
                     
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
+                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT(l, index));
                     }
 
                     input_left[i][j] = Mersenne::modp_128(temp_result);
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
+                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT(l, index));
                     }
                    
 
@@ -184,7 +347,6 @@ DZKProof prove(
                 }
                 else {
                     input_left[i][j] = 0;
-                   
                     input_right[i][j] = 0;
                 }
                
@@ -193,8 +355,6 @@ DZKProof prove(
         }
         cnt++;
     }
-
-   
 
     for(uint64_t i = 0; i < k; i++) {
         delete[] eval_result[i];
@@ -214,8 +374,8 @@ DZKProof prove(
     return proof;
 }
 
-
-VerMsg gen_vermsg(
+template <class T>
+VerMsg Malicious3PCProtocol<T>::gen_vermsg(
     DZKProof proof, 
     uint64_t** input,
     uint64_t batch_size, 
@@ -333,7 +493,8 @@ VerMsg gen_vermsg(
     return vermsg;
 }
 
-bool _verify(
+template <class T>
+bool Malicious3PCProtocol<T>::_verify(
     DZKProof proof, 
     uint64_t** input, 
     VerMsg other_vermsg, 
