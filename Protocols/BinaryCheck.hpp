@@ -114,6 +114,7 @@ DZKProof prove(
     uint64_t index;
     uint16_t cnt = 0;
     
+    
     while(true){
 
         for(uint64_t i = 0; i < k; i++) {
