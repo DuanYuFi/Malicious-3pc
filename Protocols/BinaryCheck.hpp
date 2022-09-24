@@ -179,17 +179,17 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                 bool this_value = 0;
 
                 if (!overflow1 && !overflow2) {
-                    this_value ^= (input1[start + column + i * k].first & input2[start + column + j * k].second);
-                    this_value ^= (input1[start + column + j * k].second & input2[start + column + i * k].first);
-                    this_value ^= (input1[start + column + j * k].first & input2[start + column + i * k].first);
+                    this_value ^= (input1[start + column + i * s].first & input2[start + column + j * s].second);
+                    this_value ^= (input1[start + column + j * s].second & input2[start + column + i * s].first);
+                    this_value ^= (input1[start + column + j * s].first & input2[start + column + i * s].first);
                 }
 
                 if (!overflow1) {
-                    this_value ^= results[start + column + i * k].first;
+                    this_value ^= results[start + column + i * s].first;
                 }
 
                 if (!overflow2) {
-                    this_value ^= rhos[start + column + j * k].second;
+                    this_value ^= rhos[start + column + j * s].second;
                 }
 
                 eval_result[i][j] += this_value;
@@ -596,6 +596,7 @@ bool Malicious3PCProtocol<_T>::_verify(
     p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[0], other_vermsg.p_eval_ksum_ss[0]);
     
     if(p_eval_ksum != first_output) {  
+        cout << "p_eval_ksum != first_output" << endl;
         return false;
     }
 
@@ -603,14 +604,16 @@ bool Malicious3PCProtocol<_T>::_verify(
         p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[i], other_vermsg.p_eval_ksum_ss[i]);
         p_eval_r = Mersenne::add(self_vermsg.p_eval_r_ss[i - 1], other_vermsg.p_eval_r_ss[i - 1]);
         
-        if(p_eval_ksum != p_eval_r) {     
+        if(p_eval_ksum != p_eval_r) {    
+            cout << "p_eval_ksum != p_eval_r at index " << i << endl; 
             return false;
         }
     }
     uint64_t res = Mersenne::mul(self_vermsg.final_input, other_vermsg.final_input);
     p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
     
-    if(res != p_eval_r) {      
+    if(res != p_eval_r) {   
+        cout << "res != p_eval_r" << endl;   
         return false;
     } 
     return true;
