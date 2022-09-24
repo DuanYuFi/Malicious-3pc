@@ -268,7 +268,8 @@ public:
         uint64_t k, 
         uint64_t** masks_ss,
         uint64_t prover_ID,
-        uint64_t party_ID
+        uint64_t party_ID,
+        bool is_verify = false
     );
 
     bool _verify(

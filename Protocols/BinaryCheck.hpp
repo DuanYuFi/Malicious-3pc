@@ -19,6 +19,9 @@
 #define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
 #define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
 #define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
+#define input_e_2(i, j) (input_z(i, j).second ^ (input_x(i, j).second & input_y(i, j).second) ^ input_rho(i, j).second)
+#define input_t1_2(i, j) (input_e_2(i, j) ? NEG_ONE : 1)
+#define input_t2_2(i, j) (input_rho(i, j).first ? NEG_ONE : 1)
 
 #define INPUT_LEFT(i, j) (j % 4 == 0 ? \
     (input_x(i, j).first & input_y(i, j).first ? (input_e(i, j) ? 2 : NEG_TWO) : 0) : \
@@ -32,11 +35,17 @@
     (j % 4 == 2 ? (input_y(i, j).second ? input_t2(i, j) : 0) : \
     (input_t2(i, j)))))
 
+#define INPUT_PREV(i, j) ( \
+    j % 4 == 0 ? (input_y(i, j).first & input_x(i, j).first ? input_t2_2(i, j) : 0) : \
+    (j % 4 == 1 ? (input_x(i, j).first ? input_t2_2(i, j) : 0) : \
+    (j % 4 == 2 ? (input_y(i, j).first ? input_t2_2(i, j) : 0) : \
+    (input_t2_2(i, j)))))
+
 #define INPUT_NEXT(i, j) ( \
-    j % 4 == 0 ? (input_y(i, j).first & input_x(i, j).first ? input_t2(i, j) : 0) : \
-    (j % 4 == 1 ? (input_x(i, j).first ? input_t2(i, j) : 0) : \
-    (j % 4 == 2 ? (input_y(i, j).first ? input_t2(i, j) : 0) : \
-    (input_t2(i, j)))))
+    j % 4 == 0 ? (input_x(i, j).second & input_y(i, j).second ? (input_e_2(i, j) ? 2 : NEG_TWO) : 0) : \
+    (j % 4 == 1 ? (input_y(i, j).second ? input_t1_2(i, j) : 0) : \
+    (j % 4 == 2 ? (input_x(i, j).second ? input_t1_2(i, j) : 0) : \
+    (input_e_2(i, j) ? two_inverse : NEG_TWO_INVERSE))))
 
 uint64_t get_rand() {
     uint64_t left, right;
@@ -163,34 +172,30 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     }
 
     for (int column = 0; column < (int) s; column ++) {
-        bool overflow1, overflow2;
         
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
-            overflow1 = (i * s + column >= batch_size);
             for(uint64_t j = 0; j < k; j++) {
                 
-                overflow2 = (j * s + column >= batch_size);
+                if (i * s + column >= batch_size || j * s + column >= batch_size) {
+                    eval_result[i][j] = Mersenne::add(eval_result[i][j], two_inverse);
+                    continue;
+                }
                 
                 if (i == j) {
+                    // eval_result[i][j] = Mersenne::add(eval_result[i][j], two_inverse);
                     continue;
                 }
 
                 bool this_value = 0;
 
-                if (!overflow1 && !overflow2) {
-                    this_value ^= (input1[start + column + i * s].first & input2[start + column + j * s].second);
-                    this_value ^= (input1[start + column + j * s].second & input2[start + column + i * s].first);
-                }
+                this_value ^= (input1[start + column + i * s].first & input2[start + column + j * s].second);
+                this_value ^= (input1[start + column + j * s].second & input2[start + column + i * s].first);
 
-                if (!overflow1) {
-                    this_value ^= (results[start + column + i * s].first ^ rhos[start + column + i * s].first);
-                    this_value ^= (input1[start + column + i * s].first & input2[start + column + i * s].first);
-                }
-
-                if (!overflow2) {
-                    this_value ^= rhos[start + column + j * s].second;
-                }
+                this_value ^= (results[start + column + i * s].first ^ rhos[start + column + i * s].first);
+                this_value ^= (input1[start + column + i * s].first & input2[start + column + i * s].first);
+                
+                this_value ^= rhos[start + column + j * s].second;
 
                 eval_result[i][j] += this_value;
             }
@@ -373,7 +378,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     delete[] input_left;
     delete[] input_right;
 
-    DZKProof proof = { 
+    DZKProof proof = {
         p_evals_masked,
     };
     return proof;
@@ -387,7 +392,8 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     uint64_t k, 
     uint64_t** masks_ss,
     uint64_t prover_ID,
-    uint64_t party_ID
+    uint64_t party_ID,
+    bool is_verify
 ) {
    
     uint64_t T = ((batch_size - 1) / k + 1) * k;
@@ -454,20 +460,42 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     s0 = s;
     s = (s - 1) / k + 1;
 
-    for(uint64_t i = 0; i < k; i++) {
-        input[i] = new uint64_t[s];
+    if (is_verify) {
+        for(uint64_t i = 0; i < k; i++) {
+            input[i] = new uint64_t[s];
 
-        for(uint64_t j = 0; j < s; j++) {
-            index = i * s + j;
-            if (index < s0) {
-                temp_result = 0;
-                for(uint64_t l = 0; l < k; l++) {
-                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT(l, index));
+            for(uint64_t j = 0; j < s; j++) {
+                index = i * s + j;
+                if (index < s0) {
+                    temp_result = 0;
+                    for(uint64_t l = 0; l < k; l++) {
+                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV(l, index));
+                    }
+                    input[i][j] = Mersenne::modp_128(temp_result);
                 }
-                input[i][j] = Mersenne::modp_128(temp_result);
+                else {
+                    input[i][j] = 0;
+                }
             }
-            else {
-                input[i][j] = 0;
+        }
+    }
+
+    else {
+        for(uint64_t i = 0; i < k; i++) {
+            input[i] = new uint64_t[s];
+
+            for(uint64_t j = 0; j < s; j++) {
+                index = i * s + j;
+                if (index < s0) {
+                    temp_result = 0;
+                    for(uint64_t l = 0; l < k; l++) {
+                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT(l, index));
+                    }
+                    input[i][j] = Mersenne::modp_128(temp_result);
+                }
+                else {
+                    input[i][j] = 0;
+                }
             }
         }
     }
@@ -588,10 +616,10 @@ bool Malicious3PCProtocol<_T>::_verify(
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t len = log(4 * T) / log(k) + 1;
     
-    VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID);
+    VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID, true);
     
     uint64_t p_eval_ksum, p_eval_r;
-    uint64_t first_output = Mersenne::mul(Mersenne::neg(Mersenne::inverse(2)), batch_size);
+    uint64_t first_output = Mersenne::mul(NEG_TWO_INVERSE, batch_size);
 
     p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[0], other_vermsg.p_eval_ksum_ss[0]);
     
