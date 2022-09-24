@@ -181,11 +181,11 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                 if (!overflow1 && !overflow2) {
                     this_value ^= (input1[start + column + i * s].first & input2[start + column + j * s].second);
                     this_value ^= (input1[start + column + j * s].second & input2[start + column + i * s].first);
-                    this_value ^= (input1[start + column + j * s].first & input2[start + column + i * s].first);
                 }
 
                 if (!overflow1) {
-                    this_value ^= results[start + column + i * s].first;
+                    this_value ^= (results[start + column + i * s].first ^ rhos[start + column + i * s].first);
+                    this_value ^= (input1[start + column + i * s].first & input2[start + column + i * s].first);
                 }
 
                 if (!overflow2) {
