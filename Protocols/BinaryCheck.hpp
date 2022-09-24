@@ -104,8 +104,8 @@ uint64_t get_challenge(LocalHash &hash) {
     return r & Mersenne::PR;
 }
 
-template <class T>
-DZKProof Malicious3PCProtocol<T>::prove(
+template <class _T>
+DZKProof Malicious3PCProtocol<_T>::prove(
     int node_id,
     uint64_t batch_size, 
     uint64_t k, 
@@ -148,60 +148,36 @@ DZKProof Malicious3PCProtocol<T>::prove(
     uint64_t** input_left, input_right;
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
-
-
-    // alloc the space
-    for (int i = 0; i < k; i ++) {
-        input_left[i] = new uint64_t[cols * 4];
-        input_right[i] = new uint64_t[cols * 4];
-        input_shared_next[i] = new uint64_t[cols * 4];
-        input_shared_prev[i] = new uint64_t[cols * 4];
-    }
-
     
     size_t start = node_id * OnlineOptions::singleton.binary_batch_size;
     uint64_t neg_one = NEG_ONE;
     uint64_t neg_two = NEG_TWO;
     uint64_t neg_two_inverse = NEG_TWO_INVERSE;
+    uint64_t extra_addition = (-s / 2) % Mersenne::PR;
+    if (s % 2 == 1) {
+        extra_addition = Mersenne::add(extra_addition, neg_two_inverse);   
+    }
 
     for (int column = 0; column < (int) s; column ++) {
-        int es[k];
-        for (int i = 0; i < (int) k; i ++)  // preprocess e
-        {
-            es[i] = input1[start + column + i * k].first & input2[start + column + i * k].first ^ \
-            results[start + column + i * k].first & rhos[start + column + i * k].first;
-        }
-
-
+        
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
-                uint64_t t1i = es[i] ? neg_one : 1;
-                uint64_t t1j = es[j] ? neg_one : 1;
-                uint64_t t2i = rhos[start + column + i * k].second ? neg_one : 1;
-                uint64_t t2j = rhos[start + column + j * k].second ? neg_one : 1;
 
-                eval_result[i][j] += es[i] * es[j];
+                if (i == j) {
+                    eval_result[i][j] = extra_addition;
+                    continue;
+                }
 
-                eval_result[i][j] += Mersenne::mul(
-                    input1[start + column + i * k].first & input2[start + column + i * k].first ? (es[i] ? 2 : neg_two) : 0, 
-                    input2[start + column + j * k].second & input1[start + column + j * k].second ? t2j : 0
-                );
+                bool this_value = 0;
 
-                eval_result[i][j] += Mersenne::mul(
-                    input2[start + column + i * k].first ? t1i : 0,
-                    input1[start + column + j * k].second ? t2j : 0
-                );
+                this_value ^= (input1[start + column + i * k].first & input2[start + column + j * k].second);
+                this_value ^= (input1[start + column + j * k].second & input2[start + column + i * k].first);
+                this_value ^= (input1[start + column + j * k].first & input2[start + column + i * k].first);
+                this_value ^= results[start + column + i * k].first;
+                this_value ^= rhos[start + column + j * k].second;
 
-                eval_result[i][j] += Mersenne::mul(
-                    input1[start + column + i * k].first ? t1i : 0,
-                    input2[start + column + j * k].second ? t2j : 0
-                );
-
-                eval_result[i][j] += Mersenne::mul(
-                    e[i] ? two_inverse : neg_two_inverse,
-                    t2j
-                );
+                eval_result[i][j] = Mersenne::add(this_value, extra_addition);
             }
         }
     }
@@ -241,6 +217,12 @@ DZKProof Malicious3PCProtocol<T>::prove(
 
     s0 = s;
     s = (s - 1) / k + 1;
+
+    // alloc the space
+    for (int i = 0; i < k; i ++) {
+        input_left[i] = new uint64_t[s];
+        input_right[i] = new uint64_t[s];
+    }
     
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
