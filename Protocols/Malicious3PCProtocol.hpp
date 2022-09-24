@@ -162,20 +162,14 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     proof.unpack(proof_os[1]);
     verify_lock.unlock();
 
-    uint64_t **input_shared_next = status_queue[i].input_shared_next;
     uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
 
-    vermsgs[i] = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
+    vermsgs[i] = gen_vermsg(proof, status_queue[i].node_id, sz, k, mask_ss_prev, prev_number, my_number);
 
     ++ verify_tag;
-
-    for (int j = 0; j < k; j ++) {
-        delete[] input_shared_next[j];
-    }
-    delete[] input_shared_next;
 
     for (int j = 0; j < cnt; j ++) {
         delete[] mask_ss_prev[j];
@@ -195,7 +189,6 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     int i = verify_index ++;
     verify_lock.unlock();
 
-    uint64_t **input_shared_prev = status_queue[i].input_shared_prev;
     uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
 
     int sz = status_queue[i].sz;
@@ -203,25 +196,17 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
 
     int cnt = log(4 * sz) / log(k) + 1;
 
-    bool res = _verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    bool res = _verify(proof, status_queue[i].node_id, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
     if (!res) {
         check_passed = false;
     }
 
     ++ verify_tag;
 
-    for (int j = 0; j < k; j ++) {
-        delete[] input_shared_prev[j];
-    }
-    delete[] input_shared_prev;
-
     for (int j = 0; j < cnt; j ++) {
         delete[] mask_ss_next[j];
     }
     delete[] mask_ss_next;
-
-    
-
 }
 
 template <class T>
@@ -351,11 +336,10 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     if (size == 0)  return ;
     int ms = OnlineOptions::singleton.max_status;
 
-    size_t start = (node_id % (ZOOM_RATE * ms)) * OnlineOptions::singleton.binary_batch_size;
     if (size == -1) size = OnlineOptions::singleton.binary_batch_size;
 
     int sz = size;
-    int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
+    int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
 
     outfile << "Check one with size " << sz << endl; 
@@ -381,147 +365,19 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     auto cp1 = std::chrono::high_resolution_clock::now();
     outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
-    ShareType *_input1, *_input2, *_results, *_rhos;
-    _input1 = new ShareType[sz];
-    _input2 = new ShareType[sz];
-    _results = new ShareType[sz];
-    _rhos = new ShareType[sz];
-
-    memcpy(_input1, input1 + start, sizeof(ShareType) * sz);
-    memcpy(_input2, input2 + start, sizeof(ShareType) * sz);
-    memcpy(_results, results + start, sizeof(ShareType) * sz);
-    memcpy(_rhos, rhos + start, sizeof(ShareType) * sz);
-
-    auto cp1_5 = std::chrono::high_resolution_clock::now();
-    outfile << "Memcpy uses " << (cp1_5 - cp1).count() / 1e6 << "ms." << endl;
-
-
-    int temp_pointer = 0;
-    uint64_t **input_left, **input_right, **input_shared_next, **input_shared_prev;
-
-    input_left = new uint64_t*[k];
-    input_right = new uint64_t*[k];
-    input_shared_next = new uint64_t*[k];
-    input_shared_prev = new uint64_t*[k];
-
-    uint64_t neg_one = Mersenne::PR - 1;
-    uint64_t neg_two = Mersenne::PR - 2;
-    uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
-    
-    for (int i = 0; i < k; i ++) {
-        input_left[i] = new uint64_t[cols * 4];
-        input_right[i] = new uint64_t[cols * 4];
-        input_shared_next[i] = new uint64_t[cols * 4];
-        input_shared_prev[i] = new uint64_t[cols * 4];
-    
-        // memset(input_left[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_right[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_shared_next[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_shared_prev[i], 0, sizeof(uint64_t) * cols * 4);
-        
-        for (int j = 0; j < cols; j++) {
-
-            ShareType x, y, z, rho;
-
-            if (temp_pointer >= sz) {
-                input_left[i][j * 4] = 0;
-                input_left[i][j * 4 + 1] = 0;
-                input_left[i][j * 4 + 2] = 0;
-                input_left[i][j * 4 + 3] = 0;
-                input_right[i][j * 4] = 0;
-                input_right[i][j * 4 + 1] = 0;
-                input_right[i][j * 4 + 2] = 0;
-                input_right[i][j * 4 + 3] = 0;
-                input_shared_prev[i][j * 4] = 0;
-                input_shared_prev[i][j * 4 + 1] = 0;
-                input_shared_prev[i][j * 4 + 2] = 0;
-                input_shared_prev[i][j * 4 + 3] = 0;
-                input_shared_next[i][j * 4] = 0;
-                input_shared_next[i][j * 4 + 1] = 0;
-                input_shared_next[i][j * 4 + 2] = 0;
-                input_shared_next[i][j * 4 + 3] = 0;
-                temp_pointer ++;
-                continue;
-            }
-
-            else {
-                x = _input1[temp_pointer];
-                y = _input2[temp_pointer];
-                z = _results[temp_pointer];
-                rho = _rhos[temp_pointer];
-            }
-
-            // bool res = (x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second;
-            // if(z.first != res) {
-            //     cout << "z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second, temp_pointer: " << temp_pointer << endl;
-            // }
-
-            bool e = z.first ^ (x.first & y.first) ^ rho.first;
-            bool f = rho.second;
-
-            uint64_t t1 = e ? neg_one : 1;
-            uint64_t t2 = f ? neg_one : 1;
-
-            
-            input_left[i][j * 4] = x.first & y.first ? (e ? 2 : neg_two) : 0;
-            input_left[i][j * 4 + 1] = y.first ? t1 : 0;
-            input_left[i][j * 4 + 2] = x.first ? t1 : 0;
-            input_left[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
-
-            input_right[i][j * 4] = y.second & x.second ? t2 : 0;
-            input_right[i][j * 4 + 1] = x.second ? t2 : 0;
-            input_right[i][j * 4 + 2] = y.second ? t2 : 0;
-            input_right[i][j * 4 + 3] = t2;
-
-            e = z.second ^ (x.second & y.second) ^ rho.second;
-            f = rho.first;
-
-            t1 = e ? neg_one : 1;
-            t2 = f ? neg_one : 1;
-
-            input_shared_prev[i][j * 4] = x.second & y.second ? (e ? 2 : neg_two) : 0;
-            input_shared_prev[i][j * 4 + 1] = y.second ? t1 : 0;
-            input_shared_prev[i][j * 4 + 2] = x.second ? t1 : 0;
-            input_shared_prev[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
-            input_shared_next[i][j * 4] = y.first & x.first ? t2 : 0;
-            input_shared_next[i][j * 4 + 1] = x.first ? t2 : 0;
-            input_shared_next[i][j * 4 + 2] = y.first ? t2 : 0;
-            input_shared_next[i][j * 4 + 3] = t2;
-
-            temp_pointer ++;
-        }
-    }
-
-
-    auto cp2 = std::chrono::high_resolution_clock::now();
-
-    outfile << "Prepare uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
-    // outfile << "in Check_one, calling prove" << endl;
-    DZKProof dzkproof = prove(node_id, input_left, input_right, sz, k, masks);
+    DZKProof dzkproof = prove(node_id, sz, k, masks);
 
     auto cp3 = std::chrono::high_resolution_clock::now();
 
-    outfile << "Prove uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
+    outfile << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
 
-    // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
     status_queue[node_id % ms] = StatusData(dzkproof,
-                                       input_shared_next, 
-                                       input_shared_prev, 
+                                       node_id,
                                        mask_ss_next,
                                        mask_ss_prev,
                                        sz);
 
-    // outfile << "in Check_one, ++wait_size" << endl;
     ++wait_size;
-    // outfile << "in Check_one, after ++wait_size" << endl;
-
-    for (int i = 0; i < k; i ++) {
-        delete[] input_left[i];
-        delete[] input_right[i];
-    }
-
-    delete[] input_left;
-    delete[] input_right;
 
     for (int i = 0; i < cnt; i ++) {
         delete[] masks[i];
@@ -529,12 +385,6 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     delete[] masks;
 
-    delete[] _input1;
-    delete[] _input2;
-    delete[] _results;
-    delete[] _rhos;
-
-    // outfile << "Finish check" << endl;
     
 }
 

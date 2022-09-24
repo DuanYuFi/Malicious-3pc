@@ -11,11 +11,11 @@
 
 #define NEG_ONE Mersenne::PR - 1
 #define NEG_TWO Mersenne::PR - 2
-#define NEG_TWO_INVERSE Mersenne::neg(two_inverse);
-#define input_x(i, j) input1[start + column + (i * cols + (j & 3)) * k]
-#define input_y(i, j) input2[start + column + (i * cols + (j & 3)) * k]
-#define input_z(i, j) results[start + column + (i * cols + (j & 3)) * k]
-#define input_rho(i, j) rhos[start + column + (i * cols + (j & 3)) * k]
+#define NEG_TWO_INVERSE Mersenne::neg(two_inverse)
+#define input_x(i, j) input1[start + (i * cols + (j & 3)) * k]
+#define input_y(i, j) input2[start + (i * cols + (j & 3)) * k]
+#define input_z(i, j) results[start + (i * cols + (j & 3)) * k]
+#define input_rho(i, j) rhos[start + (i * cols + (j & 3)) * k]
 #define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
 #define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
 #define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
@@ -32,6 +32,11 @@
     (j % 4 == 2 ? (input_y(i, j).second ? input_t2(i, j) : 0) : \
     (input_t2(i, j)))))
 
+#define INPUT_NEXT(i, j) ( \
+    j % 4 == 0 ? (input_y(i, j).first & input_x(i, j).first ? input_t2(i, j) : 0) : \
+    (j % 4 == 1 ? (input_x(i, j).first ? input_t2(i, j) : 0) : \
+    (j % 4 == 2 ? (input_y(i, j).first ? input_t2(i, j) : 0) : \
+    (input_t2(i, j)))))
 
 uint64_t get_rand() {
     uint64_t left, right;
@@ -113,7 +118,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 ) {
 
     uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t s = (T - 1) / k + 1, cols = (batch_size - 1) / k + 1;
+    uint64_t s = (T - 1) / k + 1;
 
     LocalHash transcript_hash;
 
@@ -145,13 +150,12 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                     ==================================================================================
     */
 
-    uint64_t** input_left, input_right;
+    uint64_t **input_left, **input_right;
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
+    size_t cols = s;
     
-    size_t start = node_id * OnlineOptions::singleton.binary_batch_size;
-    uint64_t neg_one = NEG_ONE;
-    uint64_t neg_two = NEG_TWO;
+    size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
     uint64_t neg_two_inverse = NEG_TWO_INVERSE;
     uint64_t extra_addition = (-s / 2) % Mersenne::PR;
     if (s % 2 == 1) {
@@ -162,7 +166,14 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
+            if (i * s + column >= batch_size) {
+                continue;
+            }
             for(uint64_t j = 0; j < k; j++) {
+                
+                if (j * s + column >= batch_size) {
+                    continue;
+                }
 
                 if (i == j) {
                     eval_result[i][j] = extra_addition;
@@ -177,7 +188,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                 this_value ^= results[start + column + i * k].first;
                 this_value ^= rhos[start + column + j * k].second;
 
-                eval_result[i][j] = Mersenne::add(this_value, extra_addition);
+                eval_result[i][j] = Mersenne::add((uint64_t) this_value, extra_addition);
             }
         }
     }
@@ -217,14 +228,12 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
     s0 = s;
     s = (s - 1) / k + 1;
-
-    // alloc the space
-    for (int i = 0; i < k; i ++) {
-        input_left[i] = new uint64_t[s];
-        input_right[i] = new uint64_t[s];
-    }
     
     for(uint64_t i = 0; i < k; i++) {
+
+        input_left[i] = new uint64_t[s];
+        input_right[i] = new uint64_t[s];
+
         for(uint64_t j = 0; j < s; j++) {
             index = i * s + j;
             
@@ -329,8 +338,6 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                     input_left[i][j] = 0;
                     input_right[i][j] = 0;
                 }
-               
-
             }
         }
         cnt++;
@@ -348,16 +355,24 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     delete[] base;
     delete[] eval_base;
 
+    for(uint64_t i = 0; i < k; i++) {
+        delete[] input_left[i];
+        delete[] input_right[i];
+    }
+
+    delete[] input_left;
+    delete[] input_right;
+
     DZKProof proof = { 
         p_evals_masked,
     };
     return proof;
 }
 
-template <class T>
-VerMsg Malicious3PCProtocol<T>::gen_vermsg(
+template <class _T>
+VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     DZKProof proof, 
-    uint64_t** input,
+    int node_id,
     uint64_t batch_size, 
     uint64_t k, 
     uint64_t** masks_ss,
@@ -381,6 +396,81 @@ VerMsg Malicious3PCProtocol<T>::gen_vermsg(
     uint64_t final_input;
     uint64_t final_result_ss;
     s *= 4;
+
+    /*
+                    ==================================================================================
+                        From this comment to next comment (comment mark two), the codes between are 
+                        the first round in the new optimize 
+                        for reducing the time cost in prepare data for prove and gen_vermsg.
+                    ==================================================================================
+    */
+
+    uint64_t **input;
+    input = new uint64_t*[k];
+    
+    size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
+    size_t cols = (T - 1) / k + 1;
+
+    append_msges(transcript_hash, proof.p_evals_masked[cnt]);
+
+    if(((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0) {
+        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+            proof.p_evals_masked[cnt][i] = Mersenne::add(proof.p_evals_masked[cnt][i], masks_ss[cnt][i]);
+            
+        } 
+    } else {
+        
+        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+            proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
+        }
+    }
+    
+    uint64_t res = 0;
+    for(uint64_t j = 0; j < k; j++) { 
+        res += proof.p_evals_masked[cnt][j];
+    }
+    p_eval_ksum_ss[cnt] = Mersenne::modp(res);
+
+    r = get_challenge(transcript_hash);
+
+    evaluate_bases(2 * k - 1, r, eval_base_2k);
+    temp_result = 0;
+    for(uint64_t i = 0; i < 2 * k - 1; i++) {
+        temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
+    }
+    p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
+
+    evaluate_bases(k, r, eval_base);
+    s0 = s;
+    s = (s - 1) / k + 1;
+
+    for(uint64_t i = 0; i < k; i++) {
+        input[i] = new uint64_t[s];
+
+        for(uint64_t j = 0; j < s; j++) {
+            index = i * s + j;
+            if (index < s0) {
+                temp_result = 0;
+                for(uint64_t l = 0; l < k; l++) {
+                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT(l, index));
+                }
+                input[i][j] = Mersenne::modp_128(temp_result);
+            }
+            else {
+                input[i][j] = 0;
+            }
+        }
+    }
+
+    cnt++;
+
+
+    /*
+                                            =========================
+                                                comment mark two.
+                                            =========================
+    */
+
     while(true)
     {
         append_msges(transcript_hash, proof.p_evals_masked[cnt]);
@@ -473,10 +563,10 @@ VerMsg Malicious3PCProtocol<T>::gen_vermsg(
     return vermsg;
 }
 
-template <class T>
-bool Malicious3PCProtocol<T>::_verify(
+template <class _T>
+bool Malicious3PCProtocol<_T>::_verify(
     DZKProof proof, 
-    uint64_t** input, 
+    int node_id,
     VerMsg other_vermsg, 
     uint64_t batch_size, 
     uint64_t k, 
@@ -488,7 +578,7 @@ bool Malicious3PCProtocol<T>::_verify(
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t len = log(4 * T) / log(k) + 1;
     
-    VerMsg self_vermsg = gen_vermsg(proof, input, batch_size, k, masks_ss, prover_ID, party_ID);
+    VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID);
     
     uint64_t p_eval_ksum, p_eval_r;
     uint64_t first_output = Mersenne::mul(Mersenne::neg(Mersenne::inverse(2)), batch_size);

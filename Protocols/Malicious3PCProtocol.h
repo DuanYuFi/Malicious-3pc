@@ -32,13 +32,13 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    uint64_t **input_shared_prev, **input_shared_next;
+    int node_id;
     uint64_t **mask_ss_prev, **mask_ss_next;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
-        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+    StatusData(DZKProof proof, int node_id, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
+        proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
 
@@ -263,7 +263,7 @@ public:
 
     VerMsg gen_vermsg(
         DZKProof proof, 
-        uint64_t** input,
+        int node_id,
         uint64_t batch_size, 
         uint64_t k, 
         uint64_t** masks_ss,
@@ -273,7 +273,7 @@ public:
 
     bool _verify(
         DZKProof proof, 
-        uint64_t** input,
+        int node_id,
         VerMsg other_vermsg, 
         uint64_t batch_size, 
         uint64_t k, 
