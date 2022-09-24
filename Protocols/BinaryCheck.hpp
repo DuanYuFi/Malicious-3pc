@@ -12,10 +12,10 @@
 #define NEG_ONE (Mersenne::PR - 1)
 #define NEG_TWO (Mersenne::PR - 2)
 #define NEG_TWO_INVERSE Mersenne::neg(two_inverse)
-#define input_x(i, j) input1[start + (i * cols + (j & 3))]
-#define input_y(i, j) input2[start + (i * cols + (j & 3))]
-#define input_z(i, j) results[start + (i * cols + (j & 3))]
-#define input_rho(i, j) rhos[start + (i * cols + (j & 3))]
+#define input_x(i, j) input1[start + (i * cols + (j >> 2))]
+#define input_y(i, j) input2[start + (i * cols + (j >> 2))]
+#define input_z(i, j) results[start + (i * cols + (j >> 2))]
+#define input_rho(i, j) rhos[start + (i * cols + (j >> 2))]
 #define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
 #define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
 #define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
@@ -23,28 +23,28 @@
 #define input_t1_2(i, j) (input_e_2(i, j) ? NEG_ONE : 1)
 #define input_t2_2(i, j) (input_rho(i, j).first ? NEG_ONE : 1)
 
-#define INPUT_LEFT(i, j) (j % 4 == 0 ? \
+#define INPUT_LEFT(i, j) ((j & 3) == 0 ? \
     (input_x(i, j).first & input_y(i, j).first ? (input_e(i, j) ? 2 : NEG_TWO) : 0) : \
-    (j % 4 == 1 ? (input_y(i, j).first ? input_t1(i, j) : 0) : \
-    (j % 4 == 2 ? (input_x(i, j).first ? input_t1(i, j) : 0) : \
+    ((j & 3) == 1 ? (input_y(i, j).first ? input_t1(i, j) : 0) : \
+    ((j & 3) == 2 ? (input_x(i, j).first ? input_t1(i, j) : 0) : \
     (input_e(i, j) ? two_inverse : NEG_TWO_INVERSE))))
 
-#define INPUT_RIGHT(i, j) (j % 4 == 0 ? \
+#define INPUT_RIGHT(i, j) ((j & 3) == 0 ? \
     (input_y(i, j).second & input_x(i, j).second ? input_t2(i, j) : 0) : \
-    (j % 4 == 1 ? (input_x(i, j).second ? input_t2(i, j) : 0) : \
-    (j % 4 == 2 ? (input_y(i, j).second ? input_t2(i, j) : 0) : \
+    ((j & 3) == 1 ? (input_x(i, j).second ? input_t2(i, j) : 0) : \
+    ((j & 3) == 2 ? (input_y(i, j).second ? input_t2(i, j) : 0) : \
     (input_t2(i, j)))))
 
 #define INPUT_PREV(i, j) ( \
-    j % 4 == 0 ? (input_y(i, j).first & input_x(i, j).first ? input_t2_2(i, j) : 0) : \
-    (j % 4 == 1 ? (input_x(i, j).first ? input_t2_2(i, j) : 0) : \
-    (j % 4 == 2 ? (input_y(i, j).first ? input_t2_2(i, j) : 0) : \
+    (j & 3) == 0 ? (input_y(i, j).first & input_x(i, j).first ? input_t2_2(i, j) : 0) : \
+    ((j & 3) == 1 ? (input_x(i, j).first ? input_t2_2(i, j) : 0) : \
+    ((j & 3) == 2 ? (input_y(i, j).first ? input_t2_2(i, j) : 0) : \
     (input_t2_2(i, j)))))
 
 #define INPUT_NEXT(i, j) ( \
-    j % 4 == 0 ? (input_x(i, j).second & input_y(i, j).second ? (input_e_2(i, j) ? 2 : NEG_TWO) : 0) : \
-    (j % 4 == 1 ? (input_y(i, j).second ? input_t1_2(i, j) : 0) : \
-    (j % 4 == 2 ? (input_x(i, j).second ? input_t1_2(i, j) : 0) : \
+    (j & 3) == 0 ? (input_x(i, j).second & input_y(i, j).second ? (input_e_2(i, j) ? 2 : NEG_TWO) : 0) : \
+    ((j & 3) == 1 ? (input_y(i, j).second ? input_t1_2(i, j) : 0) : \
+    ((j & 3) == 2 ? (input_x(i, j).second ? input_t1_2(i, j) : 0) : \
     (input_e_2(i, j) ? two_inverse : NEG_TWO_INVERSE))))
 
 uint64_t get_rand() {
