@@ -9,13 +9,13 @@
 #include <cstdlib>
 #include <ctime>
 
-#define NEG_ONE Mersenne::PR - 1
-#define NEG_TWO Mersenne::PR - 2
+#define NEG_ONE (Mersenne::PR - 1)
+#define NEG_TWO (Mersenne::PR - 2)
 #define NEG_TWO_INVERSE Mersenne::neg(two_inverse)
-#define input_x(i, j) input1[start + (i * cols + (j & 3)) * k]
-#define input_y(i, j) input2[start + (i * cols + (j & 3)) * k]
-#define input_z(i, j) results[start + (i * cols + (j & 3)) * k]
-#define input_rho(i, j) rhos[start + (i * cols + (j & 3)) * k]
+#define input_x(i, j) input1[start + (i * cols + (j & 3))]
+#define input_y(i, j) input2[start + (i * cols + (j & 3))]
+#define input_z(i, j) results[start + (i * cols + (j & 3))]
+#define input_rho(i, j) rhos[start + (i * cols + (j & 3))]
 #define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
 #define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
 #define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
@@ -157,39 +157,49 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     
     size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
     uint64_t neg_two_inverse = NEG_TWO_INVERSE;
-    uint64_t extra_addition = (-s / 2) % Mersenne::PR;
+    uint64_t extra_addition = Mersenne::neg(s / 2);
     if (s % 2 == 1) {
         extra_addition = Mersenne::add(extra_addition, neg_two_inverse);   
     }
 
     for (int column = 0; column < (int) s; column ++) {
+        bool overflow1, overflow2;
         
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
-            if (i * s + column >= batch_size) {
-                continue;
-            }
+            overflow1 = (i * s + column >= batch_size);
             for(uint64_t j = 0; j < k; j++) {
                 
-                if (j * s + column >= batch_size) {
-                    continue;
-                }
-
+                overflow2 = (j * s + column >= batch_size);
+                
                 if (i == j) {
-                    eval_result[i][j] = extra_addition;
                     continue;
                 }
 
                 bool this_value = 0;
 
-                this_value ^= (input1[start + column + i * k].first & input2[start + column + j * k].second);
-                this_value ^= (input1[start + column + j * k].second & input2[start + column + i * k].first);
-                this_value ^= (input1[start + column + j * k].first & input2[start + column + i * k].first);
-                this_value ^= results[start + column + i * k].first;
-                this_value ^= rhos[start + column + j * k].second;
+                if (!overflow1 && !overflow2) {
+                    this_value ^= (input1[start + column + i * k].first & input2[start + column + j * k].second);
+                    this_value ^= (input1[start + column + j * k].second & input2[start + column + i * k].first);
+                    this_value ^= (input1[start + column + j * k].first & input2[start + column + i * k].first);
+                }
 
-                eval_result[i][j] = Mersenne::add((uint64_t) this_value, extra_addition);
+                if (!overflow1) {
+                    this_value ^= results[start + column + i * k].first;
+                }
+
+                if (!overflow2) {
+                    this_value ^= rhos[start + column + j * k].second;
+                }
+
+                eval_result[i][j] += this_value;
             }
+        }
+    }
+
+    for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t j = 0; j < k; j++) {
+            eval_result[i][j] = Mersenne::add(eval_result[i][j], extra_addition);
         }
     }
     
@@ -407,7 +417,7 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
 
     uint64_t **input;
     input = new uint64_t*[k];
-    
+
     size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
     size_t cols = (T - 1) / k + 1;
 
