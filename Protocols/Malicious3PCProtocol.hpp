@@ -331,7 +331,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     // outfile << "Entering Check_one, node_id = " << node_id << endl;
 
-    auto cp0 = std::chrono::high_resolution_clock::now();
+    // auto cp0 = std::chrono::high_resolution_clock::now();
 
     if (size == 0)  return ;
     int ms = OnlineOptions::singleton.max_status;
@@ -363,7 +363,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     }
 
     auto cp1 = std::chrono::high_resolution_clock::now();
-    outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
+    // outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
     DZKProof dzkproof = prove(node_id, sz, k, masks);
 

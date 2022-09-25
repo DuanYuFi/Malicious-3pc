@@ -23,29 +23,49 @@
 #define input_t1_2(i, j) (input_e_2(i, j) ? NEG_ONE : 1)
 #define input_t2_2(i, j) (input_rho(i, j).first ? NEG_ONE : 1)
 
-#define INPUT_LEFT(i, j) ((j & 3) == 0 ? \
-    (input_x(i, j).first & input_y(i, j).first ? (input_e(i, j) ? 2 : NEG_TWO) : 0) : \
-    ((j & 3) == 1 ? (input_y(i, j).first ? input_t1(i, j) : 0) : \
-    ((j & 3) == 2 ? (input_x(i, j).first ? input_t1(i, j) : 0) : \
-    (input_e(i, j) ? two_inverse : NEG_TWO_INVERSE))))
+#define INPUT_LEFT_0(i, j) (input_x(i, j).first & input_y(i, j).first ? (input_e(i, j) ? 2 : NEG_TWO) : 0)
+#define INPUT_LEFT_1(i, j) (input_y(i, j).first ? input_t1(i, j) : 0)
+#define INPUT_LEFT_2(i, j) (input_x(i, j).first ? input_t1(i, j) : 0)
+#define INPUT_LEFT_3(i, j) (input_e(i, j) ? two_inverse : NEG_TWO_INVERSE)
 
-#define INPUT_RIGHT(i, j) ((j & 3) == 0 ? \
-    (input_y(i, j).second & input_x(i, j).second ? input_t2(i, j) : 0) : \
-    ((j & 3) == 1 ? (input_x(i, j).second ? input_t2(i, j) : 0) : \
-    ((j & 3) == 2 ? (input_y(i, j).second ? input_t2(i, j) : 0) : \
-    (input_t2(i, j)))))
+#define INPUT_LEFT(i, j) \
+    ((j & 3) == 0 ? INPUT_LEFT_0(i, j) : \
+    ((j & 3) == 1 ? INPUT_LEFT_1(i, j) : \
+    ((j & 3) == 2 ? INPUT_LEFT_2(i, j) : \
+    INPUT_LEFT_3(i, j))))
+
+#define INPUT_RIGHT_0(i, j) (input_y(i, j).second & input_x(i, j).second ? input_t2(i, j) : 0)
+#define INPUT_RIGHT_1(i, j) (input_x(i, j).second ? input_t2(i, j) : 0)
+#define INPUT_RIGHT_2(i, j) (input_y(i, j).second ? input_t2(i, j) : 0)
+#define INPUT_RIGHT_3(i, j) (input_t2(i, j))
+
+#define INPUT_RIGHT(i, j) \
+    ((j & 3) == 0 ? INPUT_RIGHT_0(i, j) : \
+    ((j & 3) == 1 ? INPUT_RIGHT_1(i, j) : \
+    ((j & 3) == 2 ? INPUT_RIGHT_2(i, j) : \
+    INPUT_RIGHT_3(i, j))))
+
+#define INPUT_PREV_0(i, j) (input_y(i, j).first & input_x(i, j).first ? input_t2_2(i, j) : 0)
+#define INPUT_PREV_1(i, j) (input_x(i, j).first ? input_t2_2(i, j) : 0)
+#define INPUT_PREV_2(i, j) (input_y(i, j).first ? input_t2_2(i, j) : 0)
+#define INPUT_PREV_3(i, j) (input_t2_2(i, j))
 
 #define INPUT_PREV(i, j) ( \
-    (j & 3) == 0 ? (input_y(i, j).first & input_x(i, j).first ? input_t2_2(i, j) : 0) : \
-    ((j & 3) == 1 ? (input_x(i, j).first ? input_t2_2(i, j) : 0) : \
-    ((j & 3) == 2 ? (input_y(i, j).first ? input_t2_2(i, j) : 0) : \
-    (input_t2_2(i, j)))))
+    (j & 3) == 0 ? INPUT_PREV_0(i, j) : \
+    ((j & 3) == 1 ? INPUT_PREV_1(i, j) : \
+    ((j & 3) == 2 ? INPUT_PREV_2(i, j) : \
+    INPUT_PREV_3(i, j))))
+
+#define INPUT_NEXT_0(i, j) (input_x(i, j).second & input_y(i, j).second ? (input_e_2(i, j) ? 2 : NEG_TWO) : 0)
+#define INPUT_NEXT_1(i, j) (input_y(i, j).second ? input_t1_2(i, j) : 0)
+#define INPUT_NEXT_2(i, j) (input_x(i, j).second ? input_t1_2(i, j) : 0)
+#define INPUT_NEXT_3(i, j) (input_e_2(i, j) ? two_inverse : NEG_TWO_INVERSE)
 
 #define INPUT_NEXT(i, j) ( \
-    (j & 3) == 0 ? (input_x(i, j).second & input_y(i, j).second ? (input_e_2(i, j) ? 2 : NEG_TWO) : 0) : \
-    ((j & 3) == 1 ? (input_y(i, j).second ? input_t1_2(i, j) : 0) : \
-    ((j & 3) == 2 ? (input_x(i, j).second ? input_t1_2(i, j) : 0) : \
-    (input_e_2(i, j) ? two_inverse : NEG_TWO_INVERSE))))
+    (j & 3) == 0 ? INPUT_NEXT_0(i, j) : \
+    ((j & 3) == 1 ? INPUT_NEXT_1(i, j) : \
+    ((j & 3) == 2 ? INPUT_NEXT_2(i, j) : \
+    INPUT_NEXT_3(i, j))))
 
 uint64_t get_rand() {
     uint64_t left, right;
@@ -126,6 +146,9 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     uint64_t** masks
 ) {
 
+    ofstream outfile;
+    outfile.open("logs/Prove", ios::app);
+
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
 
@@ -148,7 +171,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     }
     uint64_t* eval_p_poly = new uint64_t[2 * k - 1];  
     uint128_t temp_result;
-    uint64_t index;
+    size_t index = 0;
     uint16_t cnt = 0;
     
     /*
@@ -158,6 +181,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                         for reducing the time cost in prepare data for prove and gen_vermsg.
                     ==================================================================================
     */
+
+    auto cp1 = std::chrono::high_resolution_clock::now();
 
     uint64_t **input_left, **input_right;
     input_left = new uint64_t*[k];
@@ -176,8 +201,16 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
+
+            ShareType xi = input1[start + this_column + i];
+            ShareType yi = input2[start + this_column + i];
+            ShareType zi = results[start + this_column + i];
+            ShareType rhoi = rhos[start + this_column + i];
+
             for(uint64_t j = 0; j < k; j++) {
                 
+                size_t idxj = start + this_column + j;
+
                 if (this_column + i >= batch_size || this_column + j >= batch_size) {
                     eval_result[i][j] = Mersenne::add(eval_result[i][j], two_inverse);
                     continue;
@@ -190,13 +223,13 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
                 bool this_value = 0;
 
-                this_value ^= (input1[start + this_column + i].first & input2[start + this_column + j].second);
-                this_value ^= (input1[start + this_column + j].second & input2[start + this_column + i].first);
+                this_value ^= (xi.first & input2[idxj].second);
+                this_value ^= (input1[idxj].second & yi.first);
 
-                this_value ^= (results[start + this_column + i].first ^ rhos[start + this_column + i].first);
-                this_value ^= (input1[start + this_column + i].first & input2[start + this_column + i].first);
+                this_value ^= (zi.first ^ rhoi.first);
+                this_value ^= (xi.first & yi.first);
                 
-                this_value ^= rhos[start + this_column + j].second;
+                this_value ^= rhos[idxj].second;
 
                 eval_result[i][j] += this_value;
             }
@@ -204,6 +237,9 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
         this_column += k;
     }
+
+    auto cp2 = std::chrono::high_resolution_clock::now();
+    
 
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < k; j++) {
@@ -253,31 +289,83 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         input_right[i] = new uint64_t[s];
 
         for(uint64_t j = 0; j < s; j++) {
-            index = i * s + j;
             
             if (index < s0) {
                 
                 temp_result = 0;
-                for(uint64_t l = 0; l < k; l++) {
-                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT(l, index));
+                switch (index & 3) {
+                    case 0: {
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_0(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_0(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                    case 1: {
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_1(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_1(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                    case 2: {
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_2(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_2(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                    case 3: {
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_3(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_3(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
                 }
 
-                input_left[i][j] = Mersenne::modp_128(temp_result);
-                temp_result = 0;
-                for(uint64_t l = 0; l < k; l++) {
-                    temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT(l, index));
-                }
-
-                input_right[i][j] = Mersenne::modp_128(temp_result);
-                
             }
             else {
                 input_left[i][j] = 0;
                 input_right[i][j] = 0;
             }
+
+            index ++;
         }
     }
     cnt++;
+
+    auto cp3 = std::chrono::high_resolution_clock::now();
+
+    outfile << "First round uses " << (cp3 - cp1).count() / 1e6 << " ms, while inner product uses " << (cp2 - cp1).count() / 1e6 << " ms." << endl;
 
     /*
                                             =========================
@@ -286,6 +374,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     */
     
     while(true){
+
+        // auto start = std::chrono::high_resolution_clock::now();
 
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
@@ -359,6 +449,9 @@ DZKProof Malicious3PCProtocol<_T>::prove(
             }
         }
         cnt++;
+
+        // auto end = std::chrono::high_resolution_clock::now();
+        // outfile << "This round uses " << (end - start).count() / 1e6 << " ms." << endl;
     }
 
     for(uint64_t i = 0; i < k; i++) {
@@ -405,7 +498,8 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
 
     uint64_t* eval_base = new uint64_t[k];
     uint64_t* eval_base_2k = new uint64_t[2 * k - 1];
-    uint64_t r, s0, index, cnt = 0;
+    uint64_t r, s0, cnt = 0;
+    size_t index = 0;
     uint128_t temp_result;
 
     uint64_t len = log(4 * T) / log(k) + 1;
@@ -468,17 +562,42 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
             input[i] = new uint64_t[s];
 
             for(uint64_t j = 0; j < s; j++) {
-                index = i * s + j;
                 if (index < s0) {
                     temp_result = 0;
-                    for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV(l, index));
+                    switch (index & 3) {
+                        case 0: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_0(l, index));
+                            }
+                            break;
+                        }
+                        case 1: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_1(l, index));
+                            }
+                            break;
+                        }
+                        case 2: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_2(l, index));
+                            }
+                            break;
+                        }
+                        case 3: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_3(l, index));
+                            }
+                            break;
+                        }
                     }
+                    
+                    
                     input[i][j] = Mersenne::modp_128(temp_result);
                 }
                 else {
                     input[i][j] = 0;
                 }
+                index ++;
             }
         }
     }
@@ -488,17 +607,41 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
             input[i] = new uint64_t[s];
 
             for(uint64_t j = 0; j < s; j++) {
-                index = i * s + j;
                 if (index < s0) {
                     temp_result = 0;
-                    for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT(l, index));
+                    switch (index & 3) {
+                        case 0: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_0(l, index));
+                            }
+                            break;
+                        }
+                        case 1: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_1(l, index));
+                            }
+                            break;
+                        }
+                        case 2: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_2(l, index));
+                            }
+                            break;
+                        }
+                        case 3: {
+                            for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_3(l, index));
+                            }
+                            break;
+                        }
                     }
+                    
                     input[i][j] = Mersenne::modp_128(temp_result);
                 }
                 else {
                     input[i][j] = 0;
                 }
+                index ++;
             }
         }
     }
@@ -594,6 +737,12 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
 
     delete[] eval_base;
     delete[] eval_base_2k;
+
+    for(uint64_t i = 0; i < k; i++) {
+        delete[] input[i];
+    }
+
+    delete[] input;
 
     VerMsg vermsg(
         p_eval_ksum_ss,
