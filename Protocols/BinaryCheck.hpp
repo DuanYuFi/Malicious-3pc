@@ -12,10 +12,10 @@
 #define NEG_ONE (Mersenne::PR - 1)
 #define NEG_TWO (Mersenne::PR - 2)
 #define NEG_TWO_INVERSE Mersenne::neg(two_inverse)
-#define input_x(i, j) input1[start + (i * cols + (j >> 2))]
-#define input_y(i, j) input2[start + (i * cols + (j >> 2))]
-#define input_z(i, j) results[start + (i * cols + (j >> 2))]
-#define input_rho(i, j) rhos[start + (i * cols + (j >> 2))]
+#define input_x(i, j) input1[start + (i + (j >> 2) * k)]
+#define input_y(i, j) input2[start + (i + (j >> 2) * k)]
+#define input_z(i, j) results[start + (i + (j >> 2) * k)]
+#define input_rho(i, j) rhos[start + (i + (j >> 2) * k)]
 #define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
 #define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
 #define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
@@ -171,13 +171,14 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         extra_addition = Mersenne::add(extra_addition, neg_two_inverse);   
     }
 
+    int this_column = 0;
     for (int column = 0; column < (int) s; column ++) {
-        
+
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
                 
-                if (i * s + column >= batch_size || j * s + column >= batch_size) {
+                if (this_column + i >= batch_size || this_column + j >= batch_size) {
                     eval_result[i][j] = Mersenne::add(eval_result[i][j], two_inverse);
                     continue;
                 }
@@ -189,17 +190,19 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
                 bool this_value = 0;
 
-                this_value ^= (input1[start + column + i * s].first & input2[start + column + j * s].second);
-                this_value ^= (input1[start + column + j * s].second & input2[start + column + i * s].first);
+                this_value ^= (input1[start + this_column + i].first & input2[start + this_column + j].second);
+                this_value ^= (input1[start + this_column + j].second & input2[start + this_column + i].first);
 
-                this_value ^= (results[start + column + i * s].first ^ rhos[start + column + i * s].first);
-                this_value ^= (input1[start + column + i * s].first & input2[start + column + i * s].first);
+                this_value ^= (results[start + this_column + i].first ^ rhos[start + this_column + i].first);
+                this_value ^= (input1[start + this_column + i].first & input2[start + this_column + i].first);
                 
-                this_value ^= rhos[start + column + j * s].second;
+                this_value ^= rhos[start + this_column + j].second;
 
                 eval_result[i][j] += this_value;
             }
         }
+
+        this_column += k;
     }
 
     for(uint64_t i = 0; i < k; i++) {
