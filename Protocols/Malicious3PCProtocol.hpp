@@ -66,10 +66,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     
     cout << "Using tuple size: " << share_tuple_size << endl;
 
-    input1 = new ShareType[share_tuple_size];
-    input2 = new ShareType[share_tuple_size];
-    rhos = new ShareType[share_tuple_size];
-    results = new ShareType[share_tuple_size];
+    share_tuples = new ShareTuple[share_tuple_size];
 
     vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
 }
@@ -402,8 +399,8 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
     register long y0 = y[0].get(), y1 = y[1].get();
 
     for (register short i = 0; i < this_size; i ++) {
-        input1[idx_input] = ShareType((x0 >> i) & 1, (x1 >> i & 1));
-        input2[idx_input] = ShareType((y0 >> i) & 1, (y1 >> i & 1));
+        share_tuples[idx_input].input1 = ShareType((x0 >> i) & 1, (x1 >> i & 1));
+        share_tuples[idx_input].input2 = ShareType((y0 >> i) & 1, (y1 >> i & 1));
         idx_input ++;
         if (idx_input == share_tuple_size) {
             idx_input = 0;
@@ -426,7 +423,7 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     register long rho0 = tmp[0].get(), rho1 = tmp[1].get();
 
     for (register short i = 0; i < this_size; i ++) {
-        rhos[idx_rho] = ShareType((rho0 >> i) & 1, (rho1 >> i & 1));
+        share_tuples[idx_rho].rho = ShareType((rho0 >> i) & 1, (rho1 >> i & 1));
         idx_rho ++;
         if (idx_rho == share_tuple_size) {
             idx_rho = 0;
@@ -480,7 +477,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 
     
     for (register short i = 0; i < this_size; i ++) {
-        results[idx_result] = ShareType((z0 >> i) & 1, (z1 >> i & 1));
+        share_tuples[idx_result].result = ShareType((z0 >> i) & 1, (z1 >> i & 1));
         idx_result ++;
         if (idx_result == share_tuple_size) {
             idx_result = 0;

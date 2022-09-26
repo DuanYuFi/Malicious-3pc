@@ -116,9 +116,9 @@ public:
 
 typedef MyPair<bool, bool> ShareType;
 
-// struct ShareTuple {
-//     ShareType input1, input2, result, rho;
-// };
+struct ShareTuple {
+    ShareType input1, input2, result, rho;
+};
 
 
 // #define THREAD_NUM 5
@@ -132,7 +132,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    ShareType *input1, *input2, *results, *rhos;
+    ShareTuple *share_tuples;
     size_t idx_input, idx_rho, idx_result;
     size_t share_tuple_size;
     const size_t ZOOM_RATE = 2;

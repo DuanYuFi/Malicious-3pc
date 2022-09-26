@@ -12,14 +12,28 @@
 #define NEG_ONE (Mersenne::PR - 1)
 #define NEG_TWO (Mersenne::PR - 2)
 #define NEG_TWO_INVERSE Mersenne::neg(two_inverse)
-#define input_x(i, j) input1[start + (i + (j >> 2) * k)]
-#define input_y(i, j) input2[start + (i + (j >> 2) * k)]
-#define input_z(i, j) results[start + (i + (j >> 2) * k)]
-#define input_rho(i, j) rhos[start + (i + (j >> 2) * k)]
+#define input_x(i, j) share_tuples[start + (i + (j >> 2) * k)].input1
+#define input_y(i, j) share_tuples[start + (i + (j >> 2) * k)].input2
+#define input_z(i, j) share_tuples[start + (i + (j >> 2) * k)].result
+#define input_rho(i, j) share_tuples[start + (i + (j >> 2) * k)].rho
+
+#define tmp_input_x(i, j) tmp_share_tuples[i + (j >> 2) * k].input1
+#define tmp_input_y(i, j) tmp_share_tuples[i + (j >> 2) * k].input2
+#define tmp_input_z(i, j) tmp_share_tuples[i + (j >> 2) * k].result
+#define tmp_input_rho(i, j) tmp_share_tuples[i + (j >> 2) * k].rho
+
 #define input_e(i, j) (input_z(i, j).first ^ (input_x(i, j).first & input_y(i, j).first) ^ input_rho(i, j).first)
 #define input_t1(i, j) (input_e(i, j) ? NEG_ONE : 1)
+
+#define tmp_input_e(i, j) (tmp_input_z(i, j).first ^ (tmp_input_x(i, j).first & tmp_input_y(i, j).first) ^ tmp_input_rho(i, j).first)
+#define tmp_input_t1(i, j) (tmp_input_e(i, j) ? NEG_ONE : 1)
+
 #define input_t2(i, j) (input_rho(i, j).second ? NEG_ONE : 1)
 #define input_e_2(i, j) (input_z(i, j).second ^ (input_x(i, j).second & input_y(i, j).second) ^ input_rho(i, j).second)
+
+#define tmp_input_t2(i, j) (tmp_input_rho(i, j).second ? NEG_ONE : 1)
+#define tmp_input_e_2(i, j) (tmp_input_z(i, j).second ^ (tmp_input_x(i, j).second & tmp_input_y(i, j).second) ^ tmp_input_rho(i, j).second)
+
 #define input_t1_2(i, j) (input_e_2(i, j) ? NEG_ONE : 1)
 #define input_t2_2(i, j) (input_rho(i, j).first ? NEG_ONE : 1)
 
@@ -44,6 +58,28 @@
     ((j & 3) == 1 ? INPUT_RIGHT_1(i, j) : \
     ((j & 3) == 2 ? INPUT_RIGHT_2(i, j) : \
     INPUT_RIGHT_3(i, j))))
+
+#define TMP_INPUT_LEFT_0(i, j) (tmp_input_x(i, j).first & tmp_input_y(i, j).first ? (tmp_input_e(i, j) ? 2 : NEG_TWO) : 0)
+#define TMP_INPUT_LEFT_1(i, j) (tmp_input_y(i, j).first ? tmp_input_t1(i, j) : 0)
+#define TMP_INPUT_LEFT_2(i, j) (tmp_input_x(i, j).first ? tmp_input_t1(i, j) : 0)
+#define TMP_INPUT_LEFT_3(i, j) (tmp_input_e(i, j) ? two_inverse : NEG_TWO_INVERSE)
+
+#define TMP_INPUT_LEFT(i, j) \
+    ((j & 3) == 0 ? TMP_INPUT_LEFT_0(i, j) : \
+    ((j & 3) == 1 ? TMP_INPUT_LEFT_1(i, j) : \
+    ((j & 3) == 2 ? TMP_INPUT_LEFT_2(i, j) : \
+    TMP_INPUT_LEFT_3(i, j))))
+
+#define TMP_INPUT_RIGHT_0(i, j) (tmp_input_y(i, j).second & tmp_input_x(i, j).second ? tmp_input_t2(i, j) : 0)
+#define TMP_INPUT_RIGHT_1(i, j) (tmp_input_x(i, j).second ? tmp_input_t2(i, j) : 0)
+#define TMP_INPUT_RIGHT_2(i, j) (tmp_input_y(i, j).second ? tmp_input_t2(i, j) : 0)
+#define TMP_INPUT_RIGHT_3(i, j) (tmp_input_t2(i, j))
+
+#define TMP_INPUT_RIGHT(i, j) \
+    ((j & 3) == 0 ? TMP_INPUT_RIGHT_0(i, j) : \
+    ((j & 3) == 1 ? TMP_INPUT_RIGHT_1(i, j) : \
+    ((j & 3) == 2 ? TMP_INPUT_RIGHT_2(i, j) : \
+    TMP_INPUT_RIGHT_3(i, j))))
 
 #define INPUT_PREV_0(i, j) (input_y(i, j).first & input_x(i, j).first ? input_t2_2(i, j) : 0)
 #define INPUT_PREV_1(i, j) (input_x(i, j).first ? input_t2_2(i, j) : 0)
@@ -196,20 +232,18 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         extra_addition = Mersenne::add(extra_addition, neg_two_inverse);   
     }
 
+    ShareTuple tmp_share_tuple[k];
+
     int this_column = 0;
     for (int column = 0; column < (int) s; column ++) {
 
+        memcpy(tmp_share_tuple, share_tuples + start + this_column, sizeof(ShareTuple) * k);
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
 
-            ShareType xi = input1[start + this_column + i];
-            ShareType yi = input2[start + this_column + i];
-            ShareType zi = results[start + this_column + i];
-            ShareType rhoi = rhos[start + this_column + i];
+            ShareTuple this_tuple = share_tuples[start + this_column + i];
 
-            for(uint64_t j = 0; j < k; j++) {
-                
-                size_t idxj = start + this_column + j;
+            for(uint64_t j = 0; j < k; j++) {                
 
                 if (this_column + i >= batch_size || this_column + j >= batch_size) {
                     eval_result[i][j] = Mersenne::add(eval_result[i][j], two_inverse);
@@ -223,13 +257,13 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
                 bool this_value = 0;
 
-                this_value ^= (xi.first & input2[idxj].second);
-                this_value ^= (input1[idxj].second & yi.first);
+                this_value ^= (this_tuple.input1.first & tmp_share_tuple[j].input2.second);
+                this_value ^= (tmp_share_tuple[j].input1.second & this_tuple.input2.first);
 
-                this_value ^= (zi.first ^ rhoi.first);
-                this_value ^= (xi.first & yi.first);
+                this_value ^= (this_tuple.result.first ^ this_tuple.rho.first);
+                this_value ^= (this_tuple.input1.first & this_tuple.input2.first);
                 
-                this_value ^= rhos[idxj].second;
+                this_value ^= tmp_share_tuple[j].rho.second;
 
                 eval_result[i][j] += this_value;
             }
@@ -291,6 +325,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         for(uint64_t j = 0; j < s; j++) {
             
             if (index < s0) {
+
+                // memcpy(tmp_share_tuple, share_tuples + start + l, sizeof(ShareTuple) * k);
                 
                 temp_result = 0;
                 switch (index & 3) {
