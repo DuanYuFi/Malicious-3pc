@@ -316,6 +316,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
     s0 = s;
     s = (s - 1) / k + 1;
+
+    uint64_t k2 = (batch_size - 1) % k + 1;
     
     for(uint64_t i = 0; i < k; i++) {
 
@@ -324,7 +326,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
 
         for(uint64_t j = 0; j < s; j++) {
             
-            if (index < s0) {
+            if ((index >> 2) < (s0 >> 2) - 1) {
 
                 // memcpy(tmp_share_tuple, share_tuples + start + l, sizeof(ShareTuple) * k);
                 
@@ -388,6 +390,67 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                     }
                 }
 
+            }
+            else if ((index >> 2) == (s0 >> 2) - 1) {
+                temp_result = 0;
+                switch (index & 3) {
+                    case 0: {
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_0(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_0(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                    case 1: {
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_1(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_1(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                    case 2: {
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_2(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_2(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                    case 3: {
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_LEFT_3(l, index));
+                        }
+
+                        input_left[i][j] = Mersenne::modp_128(temp_result);
+                        temp_result = 0;
+                        for(uint64_t l = 0; l < k2; l++) {
+                            temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_RIGHT_3(l, index));
+                        }
+
+                        input_right[i][j] = Mersenne::modp_128(temp_result);
+                        break;
+                    }
+                }
             }
             else {
                 input_left[i][j] = 0;
@@ -593,12 +656,14 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     s0 = s;
     s = (s - 1) / k + 1;
 
+    uint64_t k2 = (batch_size - 1) % k + 1;
+
     if (is_verify) {
         for(uint64_t i = 0; i < k; i++) {
             input[i] = new uint64_t[s];
 
             for(uint64_t j = 0; j < s; j++) {
-                if (index < s0) {
+                if ((index >> 2) < (s0 >> 2) - 1) {
                     temp_result = 0;
                     switch (index & 3) {
                         case 0: {
@@ -630,6 +695,37 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
                     
                     input[i][j] = Mersenne::modp_128(temp_result);
                 }
+                else if ((index >> 2) == (s0 >> 2) - 1) {
+                    temp_result = 0;
+                    switch (index & 3) {
+                        case 0: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_0(l, index));
+                            }
+                            break;
+                        }
+                        case 1: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_1(l, index));
+                            }
+                            break;
+                        }
+                        case 2: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_2(l, index));
+                            }
+                            break;
+                        }
+                        case 3: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_PREV_3(l, index));
+                            }
+                            break;
+                        }
+                    }
+                    
+                    input[i][j] = Mersenne::modp_128(temp_result);
+                }
                 else {
                     input[i][j] = 0;
                 }
@@ -643,7 +739,7 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
             input[i] = new uint64_t[s];
 
             for(uint64_t j = 0; j < s; j++) {
-                if (index < s0) {
+                if ((index >> 2) < (s0 >> 2) - 1) {
                     temp_result = 0;
                     switch (index & 3) {
                         case 0: {
@@ -666,6 +762,38 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
                         }
                         case 3: {
                             for(uint64_t l = 0; l < k; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_3(l, index));
+                            }
+                            break;
+                        }
+                    }
+                    
+                    
+                    input[i][j] = Mersenne::modp_128(temp_result);
+                }
+                else if ((index >> 2) == (s0 >> 2) - 1) {
+                    temp_result = 0;
+                    switch (index & 3) {
+                        case 0: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_0(l, index));
+                            }
+                            break;
+                        }
+                        case 1: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_1(l, index));
+                            }
+                            break;
+                        }
+                        case 2: {
+                            for(uint64_t l = 0; l < k2; l++) {
+                                temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_2(l, index));
+                            }
+                            break;
+                        }
+                        case 3: {
+                            for(uint64_t l = 0; l < k2; l++) {
                                 temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) INPUT_NEXT_3(l, index));
                             }
                             break;
