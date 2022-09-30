@@ -237,7 +237,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     int this_column = 0;
     for (int column = 0; column < (int) s; column ++) {
 
-        memcpy(tmp_share_tuple, share_tuples + start + this_column, sizeof(ShareTuple) * k);
+        memcpy(tmp_share_tuple, share_tuples + start + this_column, sizeof(ShareTuple) * min(k, batch_size - this_column));
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
 

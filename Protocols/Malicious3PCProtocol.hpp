@@ -97,6 +97,8 @@ void Malicious3PCProtocol<T>::init_mul()
         o.reset_write_head();
     add_shares.clear();
 
+    round_counter = 0;
+
     // cout << "local_counter: " << local_counter << endl;
 }
 
@@ -408,7 +410,7 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
     }
 
     prepare_reshare(add_share, n);
-    
+    round_counter += this_size;
 }
 
 template<class T>
@@ -443,6 +445,8 @@ void Malicious3PCProtocol<T>::exchange()
         this->exchange_comm += os[0].get_length();
         P.pass_around(os[0], os[1], 1);
     }
+
+    // cout << "Round size = " << round_counter << endl;
 
     this->rounds++;
 }

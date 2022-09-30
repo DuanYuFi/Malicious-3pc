@@ -149,7 +149,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     WaitQueue<int> cv;
 
-    size_t local_counter, status_counter, status_pointer;
+    size_t local_counter, status_counter, status_pointer, round_counter;
     WaitSize wait_size;
 
     uint64_t two_inverse = Mersenne::inverse(2);
