@@ -86,29 +86,36 @@ struct DZKProof {
 };
 
 struct VerMsg {
-    vector<uint64_t> p_eval_ksum_ss;
-    vector<uint64_t> p_eval_r_ss;
+    // vector<uint64_t> p_eval_ksum_ss;
+    // vector<uint64_t> p_eval_r_ss;
+    vector<uint64_t> b_ss;
     uint64_t final_input;
     uint64_t final_result_ss;
 
     VerMsg() {}
-    VerMsg(vector<uint64_t> p_eval_ksum_ss, vector<uint64_t> p_eval_r_ss, uint64_t final_input, uint64_t final_result_ss) {
-        this->p_eval_ksum_ss = p_eval_ksum_ss;
-        this->p_eval_r_ss = p_eval_r_ss;
+    // VerMsg(vector<uint64_t> p_eval_ksum_ss, vector<uint64_t> p_eval_r_ss, uint64_t final_input, uint64_t final_result_ss) {
+    VerMsg(vector<uint64_t> b_ss, uint64_t final_input, uint64_t final_result_ss) {
+        // this->p_eval_ksum_ss = p_eval_ksum_ss;
+        // this->p_eval_r_ss = p_eval_r_ss;
+        this->b_ss = b_ss;
         this->final_input = final_input;
         this->final_result_ss = final_result_ss;
     }
 
     size_t get_size() {
-        return p_eval_ksum_ss.size() + p_eval_r_ss.size() + 2;
+        // return p_eval_ksum_ss.size() + p_eval_r_ss.size() + 2;
+        return b_ss.size() + 2;
     }
 
     uint64_t get_hash() {
         LocalHash hash;
-        for (uint64_t each: p_eval_ksum_ss) {
-            hash.update(each);
-        }
-        for (uint64_t each: p_eval_r_ss) {
+        // for (uint64_t each: p_eval_ksum_ss) {
+        //     hash.update(each);
+        // }
+        // for (uint64_t each: p_eval_r_ss) {
+        //     hash.update(each);
+        // }
+        for (uint64_t each: b_ss) {
             hash.update(each);
         }
         hash.update(final_input);
@@ -117,13 +124,17 @@ struct VerMsg {
     }
 
     void pack(octetStream &os) {
-        os.store(p_eval_ksum_ss.size());
-        for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
-            os.store(p_eval_ksum_ss[i]);
-        }
-        os.store(p_eval_r_ss.size());
-        for(uint64_t i = 0; i < p_eval_r_ss.size(); i++) {
-            os.store(p_eval_r_ss[i]);
+        // os.store(p_eval_ksum_ss.size());
+        // for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
+        //     os.store(p_eval_ksum_ss[i]);
+        // }
+        // os.store(p_eval_r_ss.size());
+        // for(uint64_t i = 0; i < p_eval_r_ss.size(); i++) {
+        //     os.store(p_eval_r_ss[i]);
+        // }
+        os.store(b_ss.size());
+        for(uint64_t i = 0; i < b_ss.size(); i++) {
+            os.store(b_ss[i]);
         }
         os.store(final_input);
         os.store(final_result_ss);
@@ -131,15 +142,20 @@ struct VerMsg {
 
     void unpack(octetStream &os) {
         uint64_t size = 0;
+        // os.get(size);
+        // p_eval_ksum_ss.resize(size);
+        // for(uint64_t i = 0; i < size; i++) {
+        //     os.get(p_eval_ksum_ss[i]);
+        // }
+        // os.get(size);
+        // p_eval_r_ss.resize(size);
+        // for(uint64_t i = 0; i < size; i++) {
+        //     os.get(p_eval_r_ss[i]);
+        // }
         os.get(size);
-        p_eval_ksum_ss.resize(size);
+        b_ss.resize(size);
         for(uint64_t i = 0; i < size; i++) {
-            os.get(p_eval_ksum_ss[i]);
-        }
-        os.get(size);
-        p_eval_r_ss.resize(size);
-        for(uint64_t i = 0; i < size; i++) {
-            os.get(p_eval_r_ss[i]);
+            os.get(b_ss[i]);
         }
         os.get(final_input);
         os.get(final_result_ss);
