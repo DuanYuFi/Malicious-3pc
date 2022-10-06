@@ -18,6 +18,7 @@ template<class T>
 SpdzWise<T>::~SpdzWise()
 {
     check();
+    cout << "Total: " << this->mult_counter << endl;
 }
 
 template<class T>
@@ -66,6 +67,7 @@ T SpdzWise<T>::finalize_mul(int)
     res.set_share(internal.finalize_mul());
     res.set_mac(internal2.finalize_mul());
     results.push_back(res);
+    mult_counter ++;
     return res;
 }
 

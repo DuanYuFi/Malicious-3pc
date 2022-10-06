@@ -15,7 +15,7 @@
 
 #include <chrono>
 
-#define USE_THREAD
+#define DO_CHECK
 
 // #ifdef USE_THREAD
 // #define Queue SafeQueue
@@ -149,7 +149,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     WaitQueue<int> cv;
 
-    size_t local_counter, status_counter, status_pointer, round_counter;
+    size_t local_counter, status_counter, status_pointer, round_counter, verify_counter;
     WaitSize wait_size;
 
     uint64_t two_inverse = Mersenne::inverse(2);
@@ -190,19 +190,19 @@ public:
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
 
+#ifdef DO_CHECK
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-            // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             verify_queue.push(0);
         }
 
-        cout << "Destroying threads." << endl;
         for (auto &each_thread: verify_threads) {
             each_thread.join();
         }
+#endif
 
-        cout << "Destroyed." << endl;
-
-        this->print_debug_info("Binary Part");
+        cout << "Binary mul rounds: " << this->rounds << endl;
+        cout << "Verified times: " << this->verify_counter << endl;
+        cout << "Total bit numbers: " << this->bit_counter << endl;
         cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     

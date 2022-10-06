@@ -11,8 +11,8 @@ SpdzWiseRing<T>::SpdzWiseRing(Player& P) :
         SpdzWise<T>(P), zero_prep(0, zero_usage), zero_proc(zero_output,
                 zero_prep, P)
 {
-    start = std::chrono::high_resolution_clock::now();
-    cout << "Start at " << start.time_since_epoch().count() << endl;
+    // start = std::chrono::high_resolution_clock::now();
+    // cout << "Start sy-ring at " << start.time_since_epoch().count() << endl;
 }
 
 template<class T>

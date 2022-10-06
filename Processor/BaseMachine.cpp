@@ -128,7 +128,7 @@ void BaseMachine::stop(int n)
 
 void BaseMachine::print_timers()
 {
-  cout << "Machine stop at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
+  // cout << "Machine stop at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
   cerr << "The following timing is ";
   if (OnlineOptions::singleton.live_prep)
     cerr << "in";

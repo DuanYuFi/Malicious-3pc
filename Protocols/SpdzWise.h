@@ -32,6 +32,8 @@ class SpdzWise : public ProtocolBase<T>
 
     virtual void zero_check(check_type t);
 
+    size_t mult_counter;
+
 public:
     Player& P;
 

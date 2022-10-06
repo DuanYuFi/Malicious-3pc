@@ -14,7 +14,7 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 
-    cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
+    // cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
 
     assert(P.num_players() == 3);
     assert(OnlineOptions::singleton.thread_number > 0);
@@ -43,6 +43,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
         global_prng.SetSeed(os.get_data());
     }
     
+#ifdef DO_CHECK
+
     check_prngs.resize(OnlineOptions::singleton.max_status);
 
     for (auto &prngs: check_prngs) {
@@ -55,20 +57,22 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
         verify_threads.push_back(std::thread(&Malicious3PCProtocol<T>::verify_thread_handler, this));
     }
 
+    wait_size.set_target(OnlineOptions::singleton.max_status);
+    share_tuple_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE;
+    
+    // cout << "Using tuple size: " << share_tuple_size << endl;
+
+    share_tuples = new ShareTuple[share_tuple_size];
+    vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
+    idx_input = idx_result = idx_rho = 0;
+
+#endif
+
     this->local_counter = 0;
     this->status_counter = 0;
     this->status_pointer = 0;
-
-    wait_size.set_target(OnlineOptions::singleton.max_status);
-
-    idx_input = idx_result = idx_rho = 0;
-    share_tuple_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE;
+    this->verify_counter = 0;
     
-    cout << "Using tuple size: " << share_tuple_size << endl;
-
-    share_tuples = new ShareTuple[share_tuple_size];
-
-    vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
 }
 
 template <class T>
@@ -79,10 +83,15 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs) 
         shared_prngs[i].SetSeed(prngs[i]);
     }
 
+#ifdef DO_CHECK
+
     for (auto &prngs: check_prngs) {
         prngs[0].SetSeed(shared_prngs[0]);
         prngs[1].SetSeed(shared_prngs[1]);
     }
+
+#endif
+
 }
 
 template <class T>
@@ -106,6 +115,7 @@ template <class T>
 void Malicious3PCProtocol<T>::finalize_check() {
 
     // cout << "in finalize_check" << endl;
+#ifdef DO_CHECK
 
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
         cv.push(-1);
@@ -125,6 +135,8 @@ void Malicious3PCProtocol<T>::finalize_check() {
         // cout << "status_counter = " << status_counter << endl;
         verify();
     }
+
+#endif
     
 }
 
@@ -242,8 +254,8 @@ void Malicious3PCProtocol<T>::verify() {
 
     // cout << "in Malicious3PCProtocol::verify, this->bit_counter: " << this->bit_counter << endl;
 
-    ofstream outfile;
-    outfile.open("logs/Verify_" + to_string(P.my_real_num()), ios::app);
+    // ofstream outfile;
+    // outfile.open("logs/Verify_" + to_string(P.my_real_num()), ios::app);
     
     if (status_counter == 0) {
         return ;
@@ -258,15 +270,16 @@ void Malicious3PCProtocol<T>::verify() {
     }
 
     int size = status_counter;
+    verify_counter ++;
 
-    outfile << "Verify with size " << size << endl;
+    // outfile << "Verify with size " << size << endl;
 
     verify_index = 0;
     check_passed = true;
     verify_tag.reset();
     verify_tag.set_target(size);
 
-    auto cp0 = std::chrono::high_resolution_clock::now();
+    // auto cp0 = std::chrono::high_resolution_clock::now();
     
     for (int i = 0; i < size; i ++) {
         DZKProof proof = status_queue[i].proof;   
@@ -276,8 +289,8 @@ void Malicious3PCProtocol<T>::verify() {
     this->check_comm += proof_os[0].get_length();
     P.pass_around(proof_os[0], proof_os[1], 1);
 
-    auto cp1 = std::chrono::high_resolution_clock::now();
-    outfile << "Exchange proof1 uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
+    // auto cp1 = std::chrono::high_resolution_clock::now();
+    // outfile << "Exchange proof1 uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
     for (int i = 0; i < size; i ++) {
         verify_queue.push(1);
@@ -287,8 +300,8 @@ void Malicious3PCProtocol<T>::verify() {
     verify_tag.reset();
     verify_index = 0;
 
-    auto cp2 = std::chrono::high_resolution_clock::now();
-    outfile << "Gen vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
+    // auto cp2 = std::chrono::high_resolution_clock::now();
+    // outfile << "Gen vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
 
     for (int i = 0; i < size; i ++) {
         vermsgs[i].pack(vermsg_os[0]);
@@ -302,8 +315,8 @@ void Malicious3PCProtocol<T>::verify() {
     P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
-    auto cp3 = std::chrono::high_resolution_clock::now();
-    outfile << "Exchange vermsg uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
+    // auto cp3 = std::chrono::high_resolution_clock::now();
+    // outfile << "Exchange vermsg uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
 
     for (int i = 0; i < size; i ++) {
         verify_queue.push(2);
@@ -314,8 +327,8 @@ void Malicious3PCProtocol<T>::verify() {
         throw mac_fail("ZKP check failed");
     }
 
-    auto cp4 = std::chrono::high_resolution_clock::now();
-    outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "ms." << endl;
+    // auto cp4 = std::chrono::high_resolution_clock::now();
+    // outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "ms." << endl;
 
     status_counter = 0;
     wait_size.reset();
@@ -325,8 +338,8 @@ void Malicious3PCProtocol<T>::verify() {
 template <class T>
 void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
-    ofstream outfile;
-    outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
+    // ofstream outfile;
+    // outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
 
     // outfile << "Entering Check_one, node_id = " << node_id << endl;
 
@@ -341,7 +354,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
 
-    outfile << "Check one with size " << sz << endl; 
+    // outfile << "Check one with size " << sz << endl; 
 
     uint64_t **masks, **mask_ss_next, **mask_ss_prev;
 
@@ -361,14 +374,14 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
         }
     }
 
-    auto cp1 = std::chrono::high_resolution_clock::now();
+    // auto cp1 = std::chrono::high_resolution_clock::now();
     // outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
     DZKProof dzkproof = prove(node_id, sz, k, masks);
 
-    auto cp3 = std::chrono::high_resolution_clock::now();
+    // auto cp3 = std::chrono::high_resolution_clock::now();
 
-    outfile << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
+    // outfile << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
 
     status_queue[node_id % ms] = StatusData(dzkproof,
                                        node_id,
@@ -397,6 +410,8 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
 
     int this_size = (n == -1 ? T::value_type::length() : n);
 
+#ifdef DO_CHECK
+
     register long x0 = x[0].get(), x1 = x[1].get();
     register long y0 = y[0].get(), y1 = y[1].get();
 
@@ -408,6 +423,8 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
             idx_input = 0;
         }
     }
+
+#endif
 
     prepare_reshare(add_share, n);
     round_counter += this_size;
@@ -422,6 +439,9 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
         tmp[i].randomize(shared_prngs[i], n);
     
     int this_size = (n == -1 ? T::value_type::length() : n);
+
+#ifdef DO_CHECK
+
     register long rho0 = tmp[0].get(), rho1 = tmp[1].get();
 
     for (register short i = 0; i < this_size; i ++) {
@@ -431,6 +451,8 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
             idx_rho = 0;
         }
     }
+
+#endif
 
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
@@ -477,6 +499,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 
     int this_size = (n == -1 ? T::value_type::length() : n);
     
+#ifdef DO_CHECK
     register long z0 = result[0].get(), z1 = result[1].get();
 
     
@@ -506,6 +529,8 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
             verify();
         }
     }
+    
+#endif
     
     return result;
 }
