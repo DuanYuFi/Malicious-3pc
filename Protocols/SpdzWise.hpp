@@ -18,7 +18,7 @@ template<class T>
 SpdzWise<T>::~SpdzWise()
 {
     check();
-    cout << "Total: " << this->mult_counter << endl;
+    // cout << "Total: " << this->mult_counter << endl;
 }
 
 template<class T>
@@ -124,6 +124,8 @@ void SpdzWise<T>::check()
     // results.clear();
     // cout << "T type: " << typeid(T).name() << endl;
 
+    
+
     if (results.empty())
         return;
 
@@ -147,6 +149,7 @@ void SpdzWise<T>::check()
     auto t = u - internal.mul(mac_key, w);
     zero_check(t);
     results.clear();
+
 }
 
 template<class T>

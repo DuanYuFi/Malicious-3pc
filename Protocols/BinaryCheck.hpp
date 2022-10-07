@@ -182,8 +182,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     uint64_t** masks
 ) {
 
-    ofstream outfile;
-    outfile.open("logs/Prove", ios::app);
+    // ofstream outfile;
+    // outfile.open("logs/Prove", ios::app);
 
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
@@ -218,7 +218,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                     ==================================================================================
     */
 
-    auto cp1 = std::chrono::high_resolution_clock::now();
+    // auto cp1 = std::chrono::high_resolution_clock::now();
 
     uint64_t **input_left, **input_right;
     input_left = new uint64_t*[k];
@@ -272,7 +272,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         this_column += k;
     }
 
-    auto cp2 = std::chrono::high_resolution_clock::now();
+    // auto cp2 = std::chrono::high_resolution_clock::now();
     
 
     for(uint64_t i = 0; i < k; i++) {
@@ -462,9 +462,9 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     }
     cnt++;
 
-    auto cp3 = std::chrono::high_resolution_clock::now();
+    // auto cp3 = std::chrono::high_resolution_clock::now();
 
-    outfile << "First round uses " << (cp3 - cp1).count() / 1e6 << " ms, while inner product uses " << (cp2 - cp1).count() / 1e6 << " ms." << endl;
+    // outfile << "First round uses " << (cp3 - cp1).count() / 1e6 << " ms, while inner product uses " << (cp2 - cp1).count() / 1e6 << " ms." << endl;
 
     /*
                                             =========================

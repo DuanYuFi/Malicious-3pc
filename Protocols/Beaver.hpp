@@ -94,8 +94,11 @@ T Beaver<T>::finalize_mul(int n)
 template<class T>
 void Beaver<T>::check()
 {
+    auto start = std::chrono::high_resolution_clock::now();
     assert(MC);
     MC->Check(P);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "Check uses " << (end - start).count() / 1e6 << "ms." << endl;
 }
 
 #endif

@@ -196,7 +196,7 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     
     verify_lock.lock();
     received_vermsg.unpack(vermsg_os[1]);
-    proof.unpack(proof_os[1]);
+    proof.unpack(vermsg_os[1]);
     int i = verify_index ++;
     verify_lock.unlock();
 
@@ -303,16 +303,21 @@ void Malicious3PCProtocol<T>::verify() {
     // auto cp2 = std::chrono::high_resolution_clock::now();
     // outfile << "Gen vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
 
+    DZKProof _proof;
+    proof_os[1].reset_read_head();
+    
     for (int i = 0; i < size; i ++) {
         vermsgs[i].pack(vermsg_os[0]);
+        _proof.unpack(proof_os[1]);
+        _proof.pack(vermsg_os[0]);
     }
 
-    proof_os[1].reset_write_head();
+    // proof_os[1].reset_write_head();
 
-    this->check_comm += proof_os[0].get_length();
+    // this->check_comm += proof_os[0].get_length();
     this->check_comm += vermsg_os[0].get_length();
   
-    P.pass_around(proof_os[0], proof_os[1], -1);
+    // P.pass_around(proof_os[0], proof_os[1], -1);
     P.pass_around(vermsg_os[0], vermsg_os[1], 1);
 
     // auto cp3 = std::chrono::high_resolution_clock::now();
@@ -328,7 +333,7 @@ void Malicious3PCProtocol<T>::verify() {
     }
 
     // auto cp4 = std::chrono::high_resolution_clock::now();
-    // outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "ms." << endl;
+    // cout << "Verify uses " << (cp4 - cp0).count() / 1e6 << "ms." << endl;
 
     status_counter = 0;
     wait_size.reset();
@@ -375,13 +380,12 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     }
 
     // auto cp1 = std::chrono::high_resolution_clock::now();
-    // outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
     DZKProof dzkproof = prove(node_id, sz, k, masks);
 
     // auto cp3 = std::chrono::high_resolution_clock::now();
 
-    // outfile << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
+    // cout << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
 
     status_queue[node_id % ms] = StatusData(dzkproof,
                                        node_id,

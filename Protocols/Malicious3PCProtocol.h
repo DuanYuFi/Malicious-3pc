@@ -200,10 +200,10 @@ public:
         }
 #endif
 
-        cout << "Binary mul rounds: " << this->rounds << endl;
-        cout << "Verified times: " << this->verify_counter << endl;
-        cout << "Total bit numbers: " << this->bit_counter << endl;
-        cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
+        // cout << "Binary mul rounds: " << this->rounds << endl;
+        // cout << "Verified times: " << this->verify_counter << endl;
+        // cout << "Total bit numbers: " << this->bit_counter << endl;
+        // cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     
 
