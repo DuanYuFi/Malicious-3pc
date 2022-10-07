@@ -223,7 +223,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     uint64_t **input_left, **input_right;
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
-    size_t cols = s;
+    // size_t cols = s;
     
     size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
     uint64_t neg_two_inverse = NEG_TWO_INVERSE;
@@ -603,12 +603,12 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
 
     uint64_t len = log(4 * T) / log(k) + 1;
 
+    vector<uint64_t> b_ss(len);
     vector<uint64_t> p_eval_ksum_ss(len);
     vector<uint64_t> p_eval_r_ss(len);
     uint64_t final_input;
     uint64_t final_result_ss;
     s *= 4;
-
     /*
                     ==================================================================================
                         From this comment to next comment (comment mark two), the codes between are 
@@ -621,27 +621,30 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     input = new uint64_t*[k];
 
     size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
-    size_t cols = (T - 1) / k + 1;
+    // size_t cols = (T - 1) / k + 1;
 
     append_msges(transcript_hash, proof.p_evals_masked[cnt]);
 
-    if(((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0) {
+    uint64_t out_ss;
+    bool prev_party = ((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0;
+    if(prev_party) {
+        out_ss = Mersenne::mul(NEG_TWO_INVERSE, batch_size);
         for(uint64_t i = 0; i < 2 * k - 1; i++) { 
             proof.p_evals_masked[cnt][i] = Mersenne::add(proof.p_evals_masked[cnt][i], masks_ss[cnt][i]);
-            
         } 
     } else {
-        
+        out_ss = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) { 
             proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
         }
     }
     
-    uint64_t res = 0;
+    uint64_t sum_ss = 0;
     for(uint64_t j = 0; j < k; j++) { 
-        res += proof.p_evals_masked[cnt][j];
+        sum_ss += proof.p_evals_masked[cnt][j];
     }
-    p_eval_ksum_ss[cnt] = Mersenne::modp(res);
+    // p_eval_ksum_ss[cnt] = Mersenne::modp(sum_ss);
+    b_ss[cnt] = Mersenne::sub(Mersenne::modp(sum_ss), out_ss);
 
     r = get_challenge(transcript_hash);
 
@@ -650,7 +653,8 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     for(uint64_t i = 0; i < 2 * k - 1; i++) {
         temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
     }
-    p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
+    // p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
+    out_ss = Mersenne::modp_128(temp_result);
 
     evaluate_bases(k, r, eval_base);
     s0 = s;
@@ -823,10 +827,9 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     {
         append_msges(transcript_hash, proof.p_evals_masked[cnt]);
 
-        if(((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0) {
+        if(prev_party) {
             for(uint64_t i = 0; i < 2 * k - 1; i++) { 
                 proof.p_evals_masked[cnt][i] = Mersenne::add(proof.p_evals_masked[cnt][i], masks_ss[cnt][i]);
-               
             } 
         } else {
             
@@ -835,11 +838,12 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
             }
         }
         
-        uint64_t res = 0;
+        sum_ss = 0;
         for(uint64_t j = 0; j < k; j++) { 
-            res += proof.p_evals_masked[cnt][j];
+            sum_ss += proof.p_evals_masked[cnt][j];
         }
-        p_eval_ksum_ss[cnt] = Mersenne::modp(res);
+        // p_eval_ksum_ss[cnt] = Mersenne::modp(res);
+        b_ss[cnt] = Mersenne::sub(Mersenne::modp(sum_ss), out_ss);
 
         if(s == 1) {
             r = get_challenge(transcript_hash);
@@ -873,8 +877,8 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
         }
-        p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
-
+        // p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
+        out_ss = Mersenne::modp_128(temp_result);
        
 
         evaluate_bases(k, r, eval_base);
@@ -909,8 +913,9 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     delete[] input;
 
     VerMsg vermsg(
-        p_eval_ksum_ss,
-        p_eval_r_ss,
+        b_ss,
+        // p_eval_ksum_ss,
+        // p_eval_r_ss,
         final_input,
         final_result_ss
     );
@@ -934,27 +939,38 @@ bool Malicious3PCProtocol<_T>::_verify(
     
     VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID, true);
     
-    uint64_t p_eval_ksum, p_eval_r;
-    uint64_t first_output = Mersenne::mul(NEG_TWO_INVERSE, batch_size);
+    // uint64_t p_eval_ksum, p_eval_r;
+    // uint64_t first_output = Mersenne::mul(NEG_TWO_INVERSE, batch_size);
 
-    p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[0], other_vermsg.p_eval_ksum_ss[0]);
+    // p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[0], other_vermsg.p_eval_ksum_ss[0]);
     
-    if(p_eval_ksum != first_output) {  
-        cout << "p_eval_ksum != first_output" << endl;
-        return false;
-    }
+    // if(p_eval_ksum != first_output) {  
+    //     cout << "p_eval_ksum != first_output" << endl;
+    //     return false;
+    // }
 
-    for(uint64_t i = 1; i < len; i++) {
-        p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[i], other_vermsg.p_eval_ksum_ss[i]);
-        p_eval_r = Mersenne::add(self_vermsg.p_eval_r_ss[i - 1], other_vermsg.p_eval_r_ss[i - 1]);
+    // for(uint64_t i = 1; i < len; i++) {
+    //     p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[i], other_vermsg.p_eval_ksum_ss[i]);
+    //     p_eval_r = Mersenne::add(self_vermsg.p_eval_r_ss[i - 1], other_vermsg.p_eval_r_ss[i - 1]);
         
-        if(p_eval_ksum != p_eval_r) {    
-            cout << "p_eval_ksum != p_eval_r at index " << i << endl; 
+    //     if(p_eval_ksum != p_eval_r) {    
+    //         cout << "p_eval_ksum != p_eval_r at index " << i << endl; 
+    //         return false;
+    //     }
+    // }
+
+    uint64_t b;
+
+    for(uint64_t i = 0; i < len; i++) {
+        b = Mersenne::add(self_vermsg.b_ss[i], other_vermsg.b_ss[i]);
+        
+        if(b) {    
+            cout << "b != 0 at index " << i << endl; 
             return false;
         }
     }
     uint64_t res = Mersenne::mul(self_vermsg.final_input, other_vermsg.final_input);
-    p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
+    uint64_t p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
     
     if(res != p_eval_r) {   
         cout << "res != p_eval_r" << endl;   
