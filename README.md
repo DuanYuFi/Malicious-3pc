@@ -11,6 +11,13 @@ make tldr
 
 then the environment will automatically prepared. And you can build other protocols.
 
+```
+make mal3pc-ring -j 8 // our protocol
+make replicated-ring-party.x -j 8 // ABY3
+make sy-rep-ring-party.x -j 8 // SpdzWise ring
+
+```
+
 ## Malicious
 
 Our protocol with SpdzWise is in Protocols/Malicious3PCProtocol.h, Protocols/Malicious3PCProtocol.hpp. The VM file is Machines/mal3pc-ring-party.cpp. If you want to compile this protocol, please DO NOT FORGET to uncomment GC/ShareThread.hpp: line 88 `protocol->finalize_check();` and comment line 89 `protocol->check();`. The test running script is in Scripts/mal3pc-ring.sh .
