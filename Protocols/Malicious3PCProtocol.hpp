@@ -58,8 +58,8 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     }
 
     wait_size.set_target(OnlineOptions::singleton.max_status);
-    share_tuple_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE;
-    
+    // share_tuple_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE;
+    share_tuple_size = 2560000000;
     // cout << "Using tuple size: " << share_tuple_size << endl;
 
     share_tuples = new ShareTuple[share_tuple_size];
