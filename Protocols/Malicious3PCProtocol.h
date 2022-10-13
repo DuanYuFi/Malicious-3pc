@@ -17,14 +17,6 @@
 
 #define DO_CHECK
 
-// #ifdef USE_THREAD
-// #define Queue SafeQueue
-// #else
-// #define Queue queue
-// #endif
-
-// #define Queue SafeQueue
-
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
 class Player;
