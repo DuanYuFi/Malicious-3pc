@@ -1,5 +1,7 @@
 # Malicious-3PC
 
+**Note: The real protocol was in the branch 'static_bincheck'**
+
 Usage: After pull the repository, run:
 ```
 sudo apt update
@@ -9,25 +11,9 @@ make tldr
 
 then the environment will automatically prepared. And you can build other protocols.
 
-## Semi-Honest
-
-Protocol name is semi-ring, and the protocol implementation is in:
-- SemiRingProtocol.h
-- SemiRingProtocol.hpp
-
-Share is in :
-- SemiRingShare.h
-
-If you want to compile the protocol, just run:
-```
-make semi-ring
-```
-
-and the script file is in `Scripts/semi-ring.sh`.
-
 ## Malicious
 
-Our binary check is in Protocols/Malicious3PCProtocol.h, and the VM file is Machines/mal3pc-ring-party.cpp. If you want to compile this protocol, please DO NOT FORGET to uncomment GC/ShareThread.hpp: line 80 `protocol->finalize_check();` and comment line 81.
+Our protocol with SpdzWise is in Protocols/Malicious3PCProtocol.h, Protocols/Malicious3PCProtocol.hpp. The VM file is Machines/mal3pc-ring-party.cpp. If you want to compile this protocol, please DO NOT FORGET to uncomment GC/ShareThread.hpp: line 88 `protocol->finalize_check();` and comment line 89 `protocol->check();`. The test running script is in Scripts/mal3pc-ring.sh .
 
 ## About mpir:
 
