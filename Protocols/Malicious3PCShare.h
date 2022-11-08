@@ -6,8 +6,7 @@
 #ifndef PROTOCOLS_MALICIOUS3PCSHARE_H_
 #define PROTOCOLS_MALICIOUS3PCSHARE_H_
 
-#include "SemiRingShare.h"
-#include "SemiRingProtocol.h"
+#include "Rep3Share.h"
 #include "SpdzWiseShare.h"
 #include "SpdzWise.h"
 #include "Math/Z2k.h"

@@ -341,13 +341,6 @@ void Malicious3PCFieldProtocol<T>::verify() {
 template <class T>
 void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
 
-    ofstream outfile;
-    outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
-
-    // outfile << "Entering Check_one, node_id = " << node_id << endl;
-
-    auto cp0 = std::chrono::high_resolution_clock::now();
-
     if (size == 0)  return ;
     int ms = OnlineOptions::singleton.max_status;
 
@@ -357,8 +350,6 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
     int sz = size;
     int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
     int cnt = log(4 * sz) / log(k) + 1;
-
-    outfile << "Check one with size " << sz << endl; 
 
     uint64_t **masks, **mask_ss_next, **mask_ss_prev;
 
@@ -378,9 +369,6 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
         }
     }
 
-    auto cp1 = std::chrono::high_resolution_clock::now();
-    outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
-
     ShareType *_input1, *_input2, *_results, *_rhos;
     _input1 = new ShareType[sz];
     _input2 = new ShareType[sz];
@@ -391,10 +379,6 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
     memcpy(_input2, input2 + start, sizeof(ShareType) * sz);
     memcpy(_results, results + start, sizeof(ShareType) * sz);
     memcpy(_rhos, rhos + start, sizeof(ShareType) * sz);
-
-    auto cp1_5 = std::chrono::high_resolution_clock::now();
-    outfile << "Memcpy uses " << (cp1_5 - cp1).count() / 1e6 << "ms." << endl;
-
 
     int temp_pointer = 0;
     uint64_t **input_left, **input_right, **input_shared_next, **input_shared_prev;
@@ -493,17 +477,9 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
     }
 
 
-    auto cp2 = std::chrono::high_resolution_clock::now();
-
-    outfile << "Prepare uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
-    // outfile << "in Check_one, calling prove" << endl;
     DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
 
-    auto cp3 = std::chrono::high_resolution_clock::now();
-
-    outfile << "Prove uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
-
-    // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
+   // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
     status_queue[node_id % ms] = StatusData(dzkproof,
                                        input_shared_next, 
                                        input_shared_prev, 
@@ -546,21 +522,11 @@ void Malicious3PCFieldProtocol<T>::prepare_mul(const T& x,
     
     typename T::value_type add_share = x.local_mul(y);
 
-    int this_size = (n == -1 ? T::value_type::length() : n);
+    // int this_size = (n == -1 ? T::value_type::length() : n);
 
-    register long x0 = x[0].get(), x1 = x[1].get();
-    register long y0 = y[0].get(), y1 = y[1].get();
-
-
-
-    for (register short i = 0; i < this_size; i ++) {
-        input1[idx_input] = ShareType((x0 >> i) & 1, (x1 >> i & 1));
-        input2[idx_input] = ShareType((y0 >> i) & 1, (y1 >> i & 1));
-        idx_input ++;
-        if (idx_input == share_tuple_size) {
-            idx_input = 0;
-        }
-    }
+    input1[idx_input] = ShareType(x[0], x[1]);
+    input2[idx_input] = ShareType(y[0], y[1]);
+    idx_input ++;
 
     prepare_reshare(add_share, n);
     
@@ -574,16 +540,7 @@ void Malicious3PCFieldProtocol<T>::prepare_reshare(const typename T::clear& shar
     for (int i = 0; i < 2; i++) 
         tmp[i].randomize(shared_prngs[i], n);
     
-    int this_size = (n == -1 ? T::value_type::length() : n);
-    register long rho0 = tmp[0].get(), rho1 = tmp[1].get();
-
-    for (register short i = 0; i < this_size; i ++) {
-        rhos[idx_rho] = ShareType((rho0 >> i) & 1, (rho1 >> i & 1));
-        idx_rho ++;
-        if (idx_rho == share_tuple_size) {
-            idx_rho = 0;
-        }
-    }
+    rhos[idx_rho++] = ShareType(tmp[0], tmp[1]);
 
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
@@ -620,30 +577,20 @@ template<class T>
 inline T Malicious3PCFieldProtocol<T>::finalize_mul(int n)
 {
     this->counter++;
-    this->bit_counter += (n == -1 ? T::value_type::length() : n);
 
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
 
-    int this_size = (n == -1 ? T::value_type::length() : n);
-    
-    register long z0 = result[0].get(), z1 = result[1].get();
-
-    
-    for (register short i = 0; i < this_size; i ++) {
-        results[idx_result] = ShareType((z0 >> i) & 1, (z1 >> i & 1));
-        idx_result ++;
-        if (idx_result == share_tuple_size) {
-            idx_result = 0;
-        }
-    } 
+    int this_size = 1;
+    results[idx_result] = ShareType(result[0], result[1]);
+    idx_result ++;
     
     this->local_counter += this_size;
     
 
-    while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
-        local_counter -= OnlineOptions::singleton.binary_batch_size;     
+    while (local_counter >= (size_t) OnlineOptions::singleton.batch_size) {
+        local_counter -= OnlineOptions::singleton.batch_size;     
         
         // cout << "Indexes are: " << idx_input << " " << idx_rho << " " << idx_result << endl;
         
