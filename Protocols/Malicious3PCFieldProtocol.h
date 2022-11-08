@@ -1,5 +1,5 @@
-#ifndef PROTOCOLS_MALICIOUS3PCPROTOCOL_H_
-#define PROTOCOLS_MALICIOUS3PCPROTOCOL_H_
+#ifndef PROTOCOLS_MALICIOUS3PCFIELDPROTOCOL_H_
+#define PROTOCOLS_MALICIOUS3PCFIELDPROTOCOL_H_
 
 #include "Replicated.h"
 #include "BinaryCheck.h"
@@ -13,7 +13,15 @@
 
 #include <chrono>
 
-#define DO_CHECK
+#define USE_THREAD
+
+// #ifdef USE_THREAD
+// #define Queue SafeQueue
+// #else
+// #define Queue queue
+// #endif
+
+// #define Queue SafeQueue
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
@@ -22,22 +30,20 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    int node_id;
+    uint64_t **input_shared_prev, **input_shared_next;
     uint64_t **mask_ss_prev, **mask_ss_next;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, int node_id, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
-        proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
+        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
 
 
-typedef MyPair<bool, bool> ShareType;
-
-struct ShareTuple {
-    ShareType input1, input2, result, rho;
-};
+// struct ShareTuple {
+//     ShareType input1, input2, result, rho;
+// };
 
 
 // #define THREAD_NUM 5
@@ -47,11 +53,11 @@ struct ShareTuple {
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
  */
 template<class T>
-class Malicious3PCProtocol : public ProtocolBase<T> {
+class Malicious3PCFieldProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
-    typedef Malicious3PCProtocol This;
+    typedef Malicious3PCFieldProtocol This;
 
-    ShareTuple *share_tuples;
+    ShareType *input1, *input2, *results, *rhos;
     size_t idx_input, idx_rho, idx_result;
     size_t share_tuple_size;
     const size_t ZOOM_RATE = 2;
@@ -68,7 +74,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     WaitQueue<int> cv;
 
-    size_t local_counter, status_counter, status_pointer, round_counter, verify_counter;
+    size_t local_counter, status_counter, status_pointer;
     WaitSize wait_size;
 
     uint64_t two_inverse = Mersenne::inverse(2);
@@ -95,6 +101,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
 public:
 
+    typedef T::clear value_type;
+    typedef MyPair<value_type, value_type> ShareType;
     static const bool uses_triples = false;
 
     array<PRNG, 2> shared_prngs;
@@ -105,24 +113,24 @@ public:
 
     Player& P;
 
-    Malicious3PCProtocol(Player& P);
-    Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
-    ~Malicious3PCProtocol() {
+    Malicious3PCFieldProtocol(Player& P);
+    Malicious3PCFieldProtocol(Player& P, array<PRNG, 2>& prngs);
+    ~Malicious3PCFieldProtocol() {
 
-#ifdef DO_CHECK
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+            // cout << "in ~Malicious3PCFieldProtocol, pushing false in cv" << endl;
             verify_queue.push(0);
         }
 
+        cout << "Destroying threads." << endl;
         for (auto &each_thread: verify_threads) {
             each_thread.join();
         }
-#endif
 
-        // cout << "Binary mul rounds: " << this->rounds << endl;
-        // cout << "Verified times: " << this->verify_counter << endl;
-        // cout << "Total bit numbers: " << this->bit_counter << endl;
-        // cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
+        cout << "Destroyed." << endl;
+
+        this->print_debug_info("Binary Part");
+        cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     
 
@@ -156,7 +164,7 @@ public:
     void start_exchange();
     void stop_exchange();
         
-    Malicious3PCProtocol branch() {
+    Malicious3PCFieldProtocol branch() {
         return {P, shared_prngs};
         // return {P, shared_prngs, check_prngs};
     }
@@ -172,35 +180,6 @@ public:
     void verify_part1(int prev_number, int my_number);
     void verify_part2(int next_number, int my_number);
     void verify_thread_handler();
-
-    DZKProof prove(
-        int node_id,
-        uint64_t batch_size, 
-        uint64_t k, 
-        uint64_t** masks
-    );
-
-    VerMsg gen_vermsg(
-        DZKProof proof, 
-        int node_id,
-        uint64_t batch_size, 
-        uint64_t k, 
-        uint64_t** masks_ss,
-        uint64_t prover_ID,
-        uint64_t party_ID,
-        bool is_verify = false
-    );
-
-    bool _verify(
-        DZKProof proof, 
-        int node_id,
-        VerMsg other_vermsg, 
-        uint64_t batch_size, 
-        uint64_t k, 
-        uint64_t** masks_ss,
-        uint64_t prover_ID,
-        uint64_t party_ID
-    );
 
 };
 
