@@ -349,7 +349,7 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
 
     int sz = size;
     int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
-    int cnt = log(4 * sz) / log(k) + 1;
+    int cnt = log(2 * sz) / log(k) + 1;
 
     uint64_t **masks, **mask_ss_next, **mask_ss_prev;
 
@@ -408,22 +408,14 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
             ShareType x, y, z, rho;
 
             if (temp_pointer >= sz) {
-                input_left[i][j * 4] = 0;
-                input_left[i][j * 4 + 1] = 0;
-                input_left[i][j * 4 + 2] = 0;
-                input_left[i][j * 4 + 3] = 0;
-                input_right[i][j * 4] = 0;
-                input_right[i][j * 4 + 1] = 0;
-                input_right[i][j * 4 + 2] = 0;
-                input_right[i][j * 4 + 3] = 0;
-                input_shared_prev[i][j * 4] = 0;
-                input_shared_prev[i][j * 4 + 1] = 0;
-                input_shared_prev[i][j * 4 + 2] = 0;
-                input_shared_prev[i][j * 4 + 3] = 0;
-                input_shared_next[i][j * 4] = 0;
-                input_shared_next[i][j * 4 + 1] = 0;
-                input_shared_next[i][j * 4 + 2] = 0;
-                input_shared_next[i][j * 4 + 3] = 0;
+                input_left[i][j * 2] = 0;
+                input_left[i][j * 2 + 1] = 0;
+                input_right[i][j * 2] = 0;
+                input_right[i][j * 2 + 1] = 0;
+                input_shared_prev[i][j * 2] = 0;
+                input_shared_prev[i][j * 2 + 1] = 0;
+                input_shared_next[i][j * 2] = 0;
+                input_shared_next[i][j * 2 + 1] = 0;
                 temp_pointer ++;
                 continue;
             }
@@ -434,43 +426,17 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
                 z = _results[temp_pointer];
                 rho = _rhos[temp_pointer];
             }
+          
+            input_left[i][j * 2] = x.first;
+            input_left[i][j * 2 + 1] = x.second;
+            input_right[i][j * 2] = y.first + y.second;
+            input_right[i][j * 2 + 1] = y.first;
 
-            // bool res = (x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second;
-            // if(z.first != res) {
-            //     cout << "z.first != ((x.first & y.first) ^ (x.second & y.first) ^ (x.first & y.second) ^ rho.first ^ rho.second, temp_pointer: " << temp_pointer << endl;
-            // }
+            input_shared_prev[i][j * 2] = x.second;
+            input_shared_prev[i][j * 2 + 1] = x.first;
 
-            bool e = z.first ^ (x.first & y.first) ^ rho.first;
-            bool f = rho.second;
-
-            uint64_t t1 = e ? neg_one : 1;
-            uint64_t t2 = f ? neg_one : 1;
-
-            
-            input_left[i][j * 4] = x.first & y.first ? (e ? 2 : neg_two) : 0;
-            input_left[i][j * 4 + 1] = y.first ? t1 : 0;
-            input_left[i][j * 4 + 2] = x.first ? t1 : 0;
-            input_left[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
-
-            input_right[i][j * 4] = y.second & x.second ? t2 : 0;
-            input_right[i][j * 4 + 1] = x.second ? t2 : 0;
-            input_right[i][j * 4 + 2] = y.second ? t2 : 0;
-            input_right[i][j * 4 + 3] = t2;
-
-            e = z.second ^ (x.second & y.second) ^ rho.second;
-            f = rho.first;
-
-            t1 = e ? neg_one : 1;
-            t2 = f ? neg_one : 1;
-
-            input_shared_prev[i][j * 4] = x.second & y.second ? (e ? 2 : neg_two) : 0;
-            input_shared_prev[i][j * 4 + 1] = y.second ? t1 : 0;
-            input_shared_prev[i][j * 4 + 2] = x.second ? t1 : 0;
-            input_shared_prev[i][j * 4 + 3] = e ? two_inverse : neg_two_inverse;
-            input_shared_next[i][j * 4] = y.first & x.first ? t2 : 0;
-            input_shared_next[i][j * 4 + 1] = x.first ? t2 : 0;
-            input_shared_next[i][j * 4 + 2] = y.first ? t2 : 0;
-            input_shared_next[i][j * 4 + 3] = t2;
+            input_shared_next[i][j * 2] = y.first + y.second;
+            input_shared_next[i][j * 2 + 1] = y.second;
 
             temp_pointer ++;
         }
