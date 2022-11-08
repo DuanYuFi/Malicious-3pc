@@ -91,16 +91,16 @@ class Malicious3PCFieldShare: public Rep3Share<T> {
 public:
     typedef T clear;
 
-    typedef Malicious3PCFieldProtocol<MaliciousRep3Share<T>> Protocol;
-    typedef HashMaliciousRepMC<MaliciousRep3Share<T>> MAC_Check;
+    typedef Malicious3PCFieldProtocol<Malicious3PCFieldShare<T>> Protocol;
+    typedef HashMaliciousRepMC<Malicious3PCFieldShare<T>> MAC_Check;
     typedef MAC_Check Direct_MC;
-    typedef ReplicatedInput<MaliciousRep3Share<T>> Input;
-    typedef MaliciousRepPO<MaliciousRep3Share> PO;
+    typedef ReplicatedInput<Malicious3PCFieldShare<T>> Input;
+    typedef MaliciousRepPO<Malicious3PCFieldShare> PO;
     typedef SpecificPrivateOutput<This> PrivateOutput;
     typedef Rep3Share<T> Honest;
-    typedef MaliciousRepPrepWithBits<MaliciousRep3Share> LivePrep;
-    typedef MaliciousRepPrep<MaliciousRep3Share> TriplePrep;
-    typedef MaliciousRep3Share prep_type;
+    typedef MaliciousRepPrepWithBits<Malicious3PCFieldShare> LivePrep;
+    typedef MaliciousRepPrep<Malicious3PCFieldShare> TriplePrep;
+    typedef Malicious3PCFieldShare prep_type;
     typedef T random_type;
     typedef This Scalar;
 
