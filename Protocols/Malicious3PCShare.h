@@ -106,6 +106,28 @@ public:
 
     typedef GC::Malicious3PCSecret bit_type;
 
+    typedef T mac_key_type;
+
+    const static bool expensive = true;
+    static const bool has_trunc_pr = false;
+    static const bool malicious = true;
+
+    static string type_short()
+    {
+        return "M" + string(1, T::type_char());
+    }
+
+    Malicious3PCFieldShare()
+    {
+    }
+    Malicious3PCFieldShare(const T& other, int my_num, T alphai = {}) :
+            super(other, my_num, alphai)
+    {
+    }
+    template<class U>
+    Malicious3PCFieldShare(const U& other) : super(other)
+    {
+    }
 };
 
 template <int K, int S>
