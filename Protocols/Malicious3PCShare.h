@@ -83,7 +83,30 @@ template<class T> class SpdzWiseInput;
 template<class T> class SpdzWiseRingPrep;
 template<class T> class SpdzWiseRing;
 
+template <class T>
+class Malicious3PCFieldShare: public Rep3Share<T> {
+    typedef Malicious3PCFieldShare This;
+    typedef Rep3Share<T> super;
 
+public:
+    typedef T clear;
+
+    typedef Malicious3PCFieldProtocol<MaliciousRep3Share<T>> Protocol;
+    typedef HashMaliciousRepMC<MaliciousRep3Share<T>> MAC_Check;
+    typedef MAC_Check Direct_MC;
+    typedef ReplicatedInput<MaliciousRep3Share<T>> Input;
+    typedef MaliciousRepPO<MaliciousRep3Share> PO;
+    typedef SpecificPrivateOutput<This> PrivateOutput;
+    typedef Rep3Share<T> Honest;
+    typedef MaliciousRepPrepWithBits<MaliciousRep3Share> LivePrep;
+    typedef MaliciousRepPrep<MaliciousRep3Share> TriplePrep;
+    typedef MaliciousRep3Share prep_type;
+    typedef T random_type;
+    typedef This Scalar;
+
+    typedef GC::Malicious3PCSecret bit_type;
+
+};
 
 template <int K, int S>
 class Malicious3PCRingShare : public SpdzWiseShare<Malicious3PCShare<Z2<K + S>>> {
