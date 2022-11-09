@@ -4,7 +4,6 @@
 #include "ArithmeticCheck.h"
 #include "Malicious3PCMC.h"
 
-#include "Math/mersenne.hpp"
 #include "Math/Z2k.h"
 #include <cstdlib>
 #include <ctime>
@@ -21,75 +20,20 @@ uint64_t get_rand() {
     }
 }
 
-void get_bases(uint64_t n, uint64_t** result) {
-    for (uint64_t i = 0; i < n - 1; i++) {
-        for(uint64_t j = 0; j < n; j++) {
-            result[i][j] = 1;
-            for(uint64_t l = 0; l < n; l++) {
-                if (l != j) {
-                    uint64_t denominator, numerator;
-                    if (j > l) {
-                        denominator = j - l;
-                    }
-                    else {
-                        denominator = Mersenne::neg(l - j);
-                    }
-                    numerator = i + n - l;
-                    result[i][j] = Mersenne::mul(result[i][j], Mersenne::mul(Mersenne::inverse(denominator), numerator));
-                }
-            }
-        }
-    }
-}
-
-void evaluate_bases(uint64_t n, uint64_t r, uint64_t* result) {
-    for(uint64_t i = 0; i < n; i++) {
-        result[i] = 1;
-        for(uint64_t j = 0; j < n; j++) {
-            if (j != i) {
-                uint64_t denominator, numerator; 
-                if (i > j) { 
-                    denominator = i - j;
-                } 
-                else { 
-                    denominator = Mersenne::neg(j - i);
-                }
-                if (r > j) { 
-                    numerator = r - j; 
-                } 
-                else { 
-                    numerator = Mersenne::neg(j - r);
-                }
-                result[i] = Mersenne::mul(result[i], Mersenne::mul(Mersenne::inverse(denominator), numerator));
-            }
-        }
-    }
-}
-
-void append_one_msg(LocalHash &hash, uint64_t msg) {
-    hash.update(msg);
-}
-
-void append_msges(LocalHash &hash, vector<uint64_t> msges) {
-    for(uint64_t msg: msges) {
-        hash.update(msg);
-    }
-}
-
 uint64_t get_challenge(LocalHash &hash) {
     uint64_t r = hash.final();
     return r & Mersenne::PR;  // TODO
 }
 
 template <class _T>
-DZKProof Malicious3PCFieldProtocol<_T>::prove(
+ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
     // int node_id,
     uint64_t** input_left, 
     uint64_t** input_right, 
     uint64_t batch_size, 
     uint64_t k, 
     uint64_t** masks,
-    uint64_t sid,
+    uint64_t sid
 ) {
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
@@ -221,15 +165,15 @@ DZKProof Malicious3PCFieldProtocol<_T>::prove(
     delete[] input_left;
     delete[] input_right;
 
-    DZKProof proof = {
+    ArithDZKProof proof = {
         p_evals_masked,
     };
     return proof;
 }
 
 template <class _T>
-VerMsg Malicious3PCFieldProtocol<_T>::gen_vermsg(
-    DZKProof proof, 
+ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
+    ArithDZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono,
     uint64_t batch_size, 
@@ -237,8 +181,7 @@ VerMsg Malicious3PCFieldProtocol<_T>::gen_vermsg(
     uint64_t** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID,
-    uint64_t sid,
-
+    uint64_t sid
 ) {
    
     uint64_t T = ((batch_size - 1) / k + 1) * k;
@@ -382,7 +325,7 @@ VerMsg Malicious3PCFieldProtocol<_T>::gen_vermsg(
 
     delete[] input;
 
-    VerMsg vermsg(
+    ArithVerMsg vermsg(
         b_ss,
         final_input,
         final_result_ss
@@ -391,23 +334,24 @@ VerMsg Malicious3PCFieldProtocol<_T>::gen_vermsg(
 }
 
 template <class _T>
-bool Malicious3PCFieldProtocol<_T>::_verify(
-    DZKProof proof, 
-    int node_id,
-    VerMsg other_vermsg, 
+bool Malicious3PCFieldProtocol<_T>::arith_verify(
+    ArithDZKProof proof, 
+    uint64_t** input_right,
+    uint64_t** input_mono,
+    ArithVerMsg other_vermsg, 
     uint64_t batch_size, 
     uint64_t k, 
     uint64_t** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID,
-    uint64_t sid,
+    uint64_t sid
 ) {
     
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t len = log(2 * T) / log(k) + 1;
     
-    VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID, sid);
-    
+    ArithVerMsg self_vermsg = arith_gen_vermsg(proof, input_right, input_mono, batch_size, k, masks_ss, prover_ID, party_ID, sid);
+
     uint64_t b;
 
     for(uint64_t i = 0; i < len; i++) {

@@ -2,32 +2,11 @@
 #define PROTOCOLS_ARITHMETICCHECK_H_
 
 #include <vector>
-#include "Tools/Hash.h"
+#include "Tools/my-utils.hpp"
 
 using namespace std;
 
-typedef unsigned __int128 uint128_t;
-
-class LocalHash {
-    octetStream buffer;
-public:
-
-    template <typename T>
-    void update(T data) {
-        buffer.store(data);
-    }
-
-    uint64_t final() {
-        Hash hash;
-        hash.reset();
-        hash.update(buffer);
-        uint64_t result;
-        hash.final().get(result);
-        return result;
-    }
-};
-
-struct DZKProof {
+struct ArithDZKProof {
     vector<vector<uint64_t>> p_evals_masked;
 
     size_t get_size() {
@@ -84,13 +63,13 @@ struct DZKProof {
     }
 };
 
-struct VerMsg {
+struct ArithVerMsg {
     vector<uint64_t> b_ss;
     uint64_t final_input;
     uint64_t final_result_ss;
 
-    VerMsg() {}
-    VerMsg(vector<uint64_t> b_ss, uint64_t final_input, uint64_t final_result_ss) {
+    ArithVerMsg() {}
+    ArithVerMsg(vector<uint64_t> b_ss, uint64_t final_input, uint64_t final_result_ss) {
         this->b_ss = b_ss;
         this->final_input = final_input;
         this->final_result_ss = final_result_ss;
@@ -132,11 +111,6 @@ struct VerMsg {
 };
 
 uint64_t get_rand();
-uint64_t** get_bases(uint64_t n);
-uint64_t* evaluate_bases(uint64_t n, uint64_t r);
-
-void append_one_msg(LocalHash &hash, uint64_t msg);
-void append_msges(LocalHash &hash, vector<uint64_t> msges);
 uint64_t get_challenge(LocalHash &hash);
 
 #endif

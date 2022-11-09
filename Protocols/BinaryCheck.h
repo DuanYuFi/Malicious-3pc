@@ -2,31 +2,10 @@
 #define PROTOCOLS_BINARYCHECK_H_
 
 #include <vector>
-#include "Tools/Hash.h"
+#include "Tools/my-utils.hpp"
 
 using namespace std;
 
-typedef unsigned __int128 uint128_t;
-
-// clock_t begin_time, finish_time;
-class LocalHash {
-    octetStream buffer;
-public:
-
-    template <typename T>
-    void update(T data) {
-        buffer.store(data);
-    }
-
-    uint64_t final() {
-        Hash hash;
-        hash.reset();
-        hash.update(buffer);
-        uint64_t result;
-        hash.final().get(result);
-        return result;
-    }
-};
 
 struct DZKProof {
     vector<vector<uint64_t>> p_evals_masked;
@@ -163,11 +142,6 @@ struct VerMsg {
 };
 
 uint64_t get_rand();
-uint64_t** get_bases(uint64_t n);
-uint64_t* evaluate_bases(uint64_t n, uint64_t r);
-
-void append_one_msg(LocalHash &hash, uint64_t msg);
-void append_msges(LocalHash &hash, vector<uint64_t> msges);
 uint64_t get_challenge(LocalHash &hash);
 
 #endif

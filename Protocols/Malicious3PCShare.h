@@ -7,9 +7,11 @@
 #define PROTOCOLS_MALICIOUS3PCSHARE_H_
 
 #include "Rep3Share.h"
+#include "Rep3Share2k.h"
 #include "SpdzWiseShare.h"
 #include "SpdzWise.h"
 #include "Math/Z2k.h"
+#include "Malicious3PCFieldProtocol.h"
 
 template<class T> class HashMaliciousRepMC;
 template<class T> class MaliciousRepPrepWithBits;
@@ -203,7 +205,7 @@ public:
     }
 };
 
-template <class T>
-using Malicious3PCFieldShare = SpdzWiseShare<Malicious3PCShare<T>>;
+// template <class T>
+// using Malicious3PCFieldShare = SpdzWiseShare<Malicious3PCShare<T>>;
 
 #endif /* PROTOCOLS_MALICIOUS3PCSHARE_H_ */

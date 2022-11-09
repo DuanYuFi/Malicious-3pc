@@ -158,7 +158,7 @@ void Malicious3PCFieldProtocol<T>::thread_handler(int tid) {
 
 template <class T>
 void Malicious3PCFieldProtocol<T>::verify_part1(int prev_number, int my_number) {
-    DZKProof proof;
+    ArithDZKProof proof;
     verify_lock.lock();
     int i = verify_index ++;
     proof.unpack(proof_os[1]);
@@ -171,7 +171,7 @@ void Malicious3PCFieldProtocol<T>::verify_part1(int prev_number, int my_number) 
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
 
-    vermsgs[i] = gen_vermsg(proof, input_right_prev, input_mono_prev, sz, k, mask_ss_prev, prev_number, my_number);
+    vermsgs[i] = arith_gen_vermsg(proof, input_right_prev, input_mono_prev, sz, k, mask_ss_prev, prev_number, my_number, sid);
 
     ++ verify_tag;
 
@@ -185,12 +185,16 @@ void Malicious3PCFieldProtocol<T>::verify_part1(int prev_number, int my_number) 
     }
     delete[] mask_ss_prev;
     
+    for (int j = 0; j < cnt; j ++) {
+        delete[] input_mono_prev[j];
+    }
+    delete[] input_mono_prev;
 }
 template <class T>
 void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) {
     
-    VerMsg received_vermsg;
-    DZKProof proof;
+    ArithVerMsg received_vermsg;
+    ArithDZKProof proof;
     
     verify_lock.lock();
     received_vermsg.unpack(vermsg_os[1]);
@@ -199,7 +203,7 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
     verify_lock.unlock();
 
     uint64_t **input_left_next = status_queue[i].input_left_next;
-    uint64_t **input_momo_next = status_queue[i].input_mono_next;
+    uint64_t **input_mono_next = status_queue[i].input_mono_next;
     uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
 
     int sz = status_queue[i].sz;
@@ -207,7 +211,7 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
 
     int cnt = log(4 * sz) / log(k) + 1;
 
-    bool res = _verify(proof, input_left_next, input_mono_next, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    bool res = arith_verify(proof, input_left_next, input_mono_next, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
     if (!res) {
         check_passed = false;
     }
@@ -224,7 +228,10 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
     }
     delete[] mask_ss_next;
 
-    
+    for (int j = 0; j < k; j ++) {
+        delete[] input_mono_next[j];
+    }
+    delete[] input_mono_next;
 
 }
 
@@ -445,17 +452,17 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
             input_right_prev[i][j * 2 + 1] = x.first;
 
             input_mono_prev[i][j * 2] = rho.second;
-            input_mono_next[i][j * 2 + 1] = Mersenne::sub((Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
+            input_mono_next[i][j * 2 + 1] = Mersenne::sub(Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
 
             temp_pointer ++;
         }
     }
 
 
-    DZKProof dzkproof = prove(input_left, input_right, sz, k, masks);
+    ArithDZKProof dzkproof = arith_prove(input_left, input_right, sz, k, masks);
 
    // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
-    status_queue[node_id % ms] = StatusData(dzkproof,
+    status_queue[node_id % ms] = ArithStatusData(dzkproof,
                                        input_right_prev, 
                                        input_left_next, 
                                        input_mono_prev,
@@ -501,8 +508,8 @@ void Malicious3PCFieldProtocol<T>::prepare_mul(const T& x,
 
     // int this_size = (n == -1 ? T::value_type::length() : n);
 
-    input1[idx_input] = ShareType(x[0], x[1]);
-    input2[idx_input] = ShareType(y[0], y[1]);
+    input1[idx_input] = ArithShareType(x[0].get(), x[1].get());
+    input2[idx_input] = ArithShareType(y[0].get(), y[1].get());
     idx_input ++;
 
     prepare_reshare(add_share, n);
@@ -517,7 +524,7 @@ void Malicious3PCFieldProtocol<T>::prepare_reshare(const typename T::clear& shar
     for (int i = 0; i < 2; i++) 
         tmp[i].randomize(shared_prngs[i], n);
     
-    rhos[idx_rho++] = ShareType(tmp[0], tmp[1]);
+    rhos[idx_rho++] = ArithShareType(tmp[0].get(), tmp[1].get());
 
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
@@ -560,7 +567,7 @@ inline T Malicious3PCFieldProtocol<T>::finalize_mul(int n)
     result[1].unpack(os[1], n);
 
     int this_size = 1;
-    results[idx_result] = ShareType(result[0], result[1]);
+    results[idx_result] = ArithShareType(result[0].get(), result[1].get());
     idx_result ++;
     
     this->local_counter += this_size;
