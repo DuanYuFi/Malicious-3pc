@@ -65,7 +65,7 @@ ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
     for (uint64_t i = 0; i < k - 1; i++) {
         base[i] = new uint64_t[k];
     }
-    get_bases(k, base);
+    DZKP_UTILS::get_bases(k, base);
     
     uint64_t* eval_base = new uint64_t[k];
     uint64_t** eval_result = new uint64_t*[k];
@@ -113,7 +113,7 @@ ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
         append_msges(transcript_hash, ss);
         uint64_t r = get_challenge(transcript_hash);
 
-        evaluate_bases(k, r, eval_base);
+        DZKP_UTILS::evaluate_bases(k, r, eval_base);
 
         s0 = s;
         s = (s - 1) / k + 1;
@@ -227,14 +227,14 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
     uint64_t* eval_base = new uint64_t[k];
     uint64_t* eval_base_2k = new uint64_t[2 * k - 1];
 
-    evaluate_bases(2 * k - 1, r, eval_base_2k);
+    DZKP_UTILS::evaluate_bases(2 * k - 1, r, eval_base_2k);
     temp_result = 0;
     for(uint64_t i = 0; i < 2 * k - 1; i++) {
         temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
     }
     out_ss = Mersenne::modp_128(temp_result);
 
-    evaluate_bases(k, r, eval_base);
+    DZKP_UTILS::evaluate_bases(k, r, eval_base);
 
     size_t index = 0;
     uint16_t cnt = 0;
@@ -268,7 +268,7 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
             
             assert(r < Mersenne::PR);
             
-            evaluate_bases(k, r, eval_base);
+            DZKP_UTILS::evaluate_bases(k, r, eval_base);
             temp_result = 0;
 
             for(uint64_t i = 0; i < k; i++) {
@@ -276,7 +276,7 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
             }
             final_input = Mersenne::modp_128(temp_result);
 
-            evaluate_bases(2 * k - 1, r, eval_base_2k);
+            DZKP_UTILS::evaluate_bases(2 * k - 1, r, eval_base_2k);
             temp_result = 0;
             for(uint64_t i = 0; i < 2 * k - 1; i++) {
                 temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
@@ -287,14 +287,14 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
 
         r = get_challenge(transcript_hash);
 
-        evaluate_bases(2 * k - 1, r, eval_base_2k);
+        DZKP_UTILS::evaluate_bases(2 * k - 1, r, eval_base_2k);
         temp_result = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
             temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
         }
         out_ss = Mersenne::modp_128(temp_result);
 
-        evaluate_bases(k, r, eval_base);
+        DZKP_UTILS::evaluate_bases(k, r, eval_base);
         s0 = s;
         s = (s - 1) / k + 1;
         for(uint64_t i = 0; i < k; i++) {

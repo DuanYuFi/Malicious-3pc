@@ -2,7 +2,7 @@
 #define PROTOCOLS_ARITHMETICCHECK_H_
 
 #include <vector>
-#include "Tools/my-utils.h"
+#include "Tools/my-utils.hpp"
 
 using namespace std;
 
