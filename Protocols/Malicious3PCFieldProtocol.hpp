@@ -72,6 +72,8 @@ Malicious3PCFieldProtocol<T>::Malicious3PCFieldProtocol(Player& P) : P(P) {
     results = new ShareType[share_tuple_size];
 
     vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
+
+    sid = global_prng.get_word();
 }
 
 template <class T>
@@ -162,20 +164,21 @@ void Malicious3PCFieldProtocol<T>::verify_part1(int prev_number, int my_number) 
     proof.unpack(proof_os[1]);
     verify_lock.unlock();
 
-    uint64_t **input_shared_next = status_queue[i].input_shared_next;
+    uint64_t **input_right_prev = status_queue[i].input_right_prev;
+    uint64_t **input_mono_prev = status_queue[i].input_mono_prev;
     uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
 
-    vermsgs[i] = gen_vermsg(proof, input_shared_next, sz, k, mask_ss_prev, prev_number, my_number);
+    vermsgs[i] = gen_vermsg(proof, input_right_prev, input_mono_prev, sz, k, mask_ss_prev, prev_number, my_number);
 
     ++ verify_tag;
 
     for (int j = 0; j < k; j ++) {
-        delete[] input_shared_next[j];
+        delete[] input_right_prev[j];
     }
-    delete[] input_shared_next;
+    delete[] input_right_prev;
 
     for (int j = 0; j < cnt; j ++) {
         delete[] mask_ss_prev[j];
@@ -195,7 +198,8 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
     int i = verify_index ++;
     verify_lock.unlock();
 
-    uint64_t **input_shared_prev = status_queue[i].input_shared_prev;
+    uint64_t **input_left_next = status_queue[i].input_left_next;
+    uint64_t **input_momo_next = status_queue[i].input_mono_next;
     uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
 
     int sz = status_queue[i].sz;
@@ -203,7 +207,7 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
 
     int cnt = log(4 * sz) / log(k) + 1;
 
-    bool res = _verify(proof, input_shared_prev, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    bool res = _verify(proof, input_left_next, input_mono_next, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
     if (!res) {
         check_passed = false;
     }
@@ -211,9 +215,9 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
     ++ verify_tag;
 
     for (int j = 0; j < k; j ++) {
-        delete[] input_shared_prev[j];
+        delete[] input_left_next[j];
     }
-    delete[] input_shared_prev;
+    delete[] input_left_next;
 
     for (int j = 0; j < cnt; j ++) {
         delete[] mask_ss_next[j];
@@ -381,12 +385,12 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
     memcpy(_rhos, rhos + start, sizeof(ShareType) * sz);
 
     int temp_pointer = 0;
-    uint64_t **input_left, **input_right, **input_shared_next, **input_shared_prev;
+    uint64_t **input_left, **input_right, **input_right_prev, **input_left_next, **input_mono_prev, **input_mono_next;
 
     input_left = new uint64_t*[k];
     input_right = new uint64_t*[k];
-    input_shared_next = new uint64_t*[k];
-    input_shared_prev = new uint64_t*[k];
+    input_right_prev = new uint64_t*[k];
+    input_left_next = new uint64_t*[k];
 
     uint64_t neg_one = Mersenne::PR - 1;
     uint64_t neg_two = Mersenne::PR - 2;
@@ -395,13 +399,13 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
     for (int i = 0; i < k; i ++) {
         input_left[i] = new uint64_t[cols * 4];
         input_right[i] = new uint64_t[cols * 4];
-        input_shared_next[i] = new uint64_t[cols * 4];
-        input_shared_prev[i] = new uint64_t[cols * 4];
+        input_right_prev[i] = new uint64_t[cols * 4];
+        input_left_next[i] = new uint64_t[cols * 4];
     
         // memset(input_left[i], 0, sizeof(uint64_t) * cols * 4);
         // memset(input_right[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_shared_next[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_shared_prev[i], 0, sizeof(uint64_t) * cols * 4);
+        // memset(input_right_prev[i], 0, sizeof(uint64_t) * cols * 4);
+        // memset(input_left_next[i], 0, sizeof(uint64_t) * cols * 4);
         
         for (int j = 0; j < cols; j++) {
 
@@ -412,10 +416,10 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
                 input_left[i][j * 2 + 1] = 0;
                 input_right[i][j * 2] = 0;
                 input_right[i][j * 2 + 1] = 0;
-                input_shared_prev[i][j * 2] = 0;
-                input_shared_prev[i][j * 2 + 1] = 0;
-                input_shared_next[i][j * 2] = 0;
-                input_shared_next[i][j * 2 + 1] = 0;
+                input_left_next[i][j * 2] = 0;
+                input_left_next[i][j * 2 + 1] = 0;
+                input_right_prev[i][j * 2] = 0;
+                input_right_prev[i][j * 2 + 1] = 0;
                 temp_pointer ++;
                 continue;
             }
@@ -427,16 +431,21 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
                 rho = _rhos[temp_pointer];
             }
           
+            // Share with P_{i+1}
             input_left[i][j * 2] = x.first;
-            input_left[i][j * 2 + 1] = x.second;
-            input_right[i][j * 2] = y.first + y.second;
-            input_right[i][j * 2 + 1] = y.first;
+            input_left[i][j * 2 + 1] = y.first;
+            // Share with P_{i-1}
+            input_right[i][j * 2] = y.second;
+            input_right[i][j * 2 + 1] = x.second;
 
-            input_shared_prev[i][j * 2] = x.second;
-            input_shared_prev[i][j * 2 + 1] = x.first;
+            input_left_next[i][j * 2] = x.second;
+            input_left_next[i][j * 2 + 1] = y.second;
 
-            input_shared_next[i][j * 2] = y.first + y.second;
-            input_shared_next[i][j * 2 + 1] = y.second;
+            input_right_prev[i][j * 2] = y.first;
+            input_right_prev[i][j * 2 + 1] = x.first;
+
+            input_mono_prev[i][j * 2] = rho.second;
+            input_mono_next[i][j * 2 + 1] = Mersenne::sub((Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
 
             temp_pointer ++;
         }
@@ -447,8 +456,10 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
 
    // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
     status_queue[node_id % ms] = StatusData(dzkproof,
-                                       input_shared_next, 
-                                       input_shared_prev, 
+                                       input_right_prev, 
+                                       input_left_next, 
+                                       input_mono_prev,
+                                       input_mono_next,
                                        mask_ss_next,
                                        mask_ss_prev,
                                        sz);

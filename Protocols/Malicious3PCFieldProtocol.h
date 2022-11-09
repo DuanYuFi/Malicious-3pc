@@ -2,7 +2,7 @@
 #define PROTOCOLS_MALICIOUS3PCFIELDPROTOCOL_H_
 
 #include "Replicated.h"
-#include "BinaryCheck.h"
+#include "ArithmeticCheck.h"
 #include "Processor/Data_Files.h"
 #include "Math/mersenne.hpp"
 #include "Tools/multi-thread.hpp"
@@ -110,6 +110,7 @@ public:
     vector<array<PRNG, 2> > check_prngs;
 
     PRNG global_prng;
+    uint64_t sid;
 
     Player& P;
 

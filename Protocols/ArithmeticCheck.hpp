@@ -88,8 +88,8 @@ DZKProof Malicious3PCFieldProtocol<_T>::prove(
     uint64_t** input_right, 
     uint64_t batch_size, 
     uint64_t k, 
+    uint64_t** masks,
     uint64_t sid,
-    uint64_t** masks
 ) {
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
@@ -228,16 +228,17 @@ DZKProof Malicious3PCFieldProtocol<_T>::prove(
 }
 
 template <class _T>
-VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
+VerMsg Malicious3PCFieldProtocol<_T>::gen_vermsg(
     DZKProof proof, 
     uint64_t** input,
     uint64_t** input_mono,
     uint64_t batch_size, 
     uint64_t k, 
-    uint64_t sid,
     uint64_t** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID,
+    uint64_t sid,
+
 ) {
    
     uint64_t T = ((batch_size - 1) / k + 1) * k;
@@ -390,7 +391,7 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
 }
 
 template <class _T>
-bool Malicious3PCProtocol<_T>::_verify(
+bool Malicious3PCFieldProtocol<_T>::_verify(
     DZKProof proof, 
     int node_id,
     VerMsg other_vermsg, 
@@ -398,13 +399,14 @@ bool Malicious3PCProtocol<_T>::_verify(
     uint64_t k, 
     uint64_t** masks_ss,
     uint64_t prover_ID,
-    uint64_t party_ID
+    uint64_t party_ID,
+    uint64_t sid,
 ) {
     
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t len = log(2 * T) / log(k) + 1;
     
-    VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID, true);
+    VerMsg self_vermsg = gen_vermsg(proof, node_id, batch_size, k, masks_ss, prover_ID, party_ID, sid);
     
     uint64_t b;
 
