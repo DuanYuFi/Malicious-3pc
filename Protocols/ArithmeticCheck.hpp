@@ -40,7 +40,7 @@ ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
 
     // Transcript
     LocalHash transcript_hash;
-    append_one_msg(transcript_hash, sid);
+    DZKP_UTILS::append_one_msg(transcript_hash, sid);
     uint64_t eta = get_challenge(transcript_hash);
 
     uint64_t eta_power = 1;
@@ -74,7 +74,7 @@ ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
     }
 
     size_t index = 0;
-    uint16_t cnt = 0;
+    uint64_t cnt = 0;
     s *= 2;
     uint64_t s0 = s;
 
@@ -110,7 +110,7 @@ ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
             break;
         }
         
-        append_msges(transcript_hash, ss);
+        DZKP_UTILS::append_msges(transcript_hash, ss);
         uint64_t r = get_challenge(transcript_hash);
 
         DZKP_UTILS::evaluate_bases(k, r, eval_base);
@@ -194,7 +194,7 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
 
     // Transcript
     LocalHash transcript_hash;
-    append_one_msg(transcript_hash, sid);
+    DZKP_UTILS::append_one_msg(transcript_hash, sid);
     uint64_t eta = get_challenge(transcript_hash);
     uint64_t eta_power = 1;
     uint128_t temp_result;
@@ -244,7 +244,7 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
 
     while(true)
     {
-        append_msges(transcript_hash, proof.p_evals_masked[cnt]);
+        DZKP_UTILS::append_msges(transcript_hash, proof.p_evals_masked[cnt]);
 
         if(prev_party) {
             for(uint64_t i = 0; i < 2 * k - 1; i++) { 

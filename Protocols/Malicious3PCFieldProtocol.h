@@ -89,7 +89,7 @@ class Malicious3PCFieldProtocol : public ProtocolBase<T> {
     // const static size_t MAX_STATUS = 100;
     // const static short THREAD_NUM = 4;
 
-    vector<std::thread> check_threads, verify_threads;
+    shared_ptr<vector<std::thread>> check_threads, verify_threads;
 
     array<octetStream, 2> proof_os, vermsg_os;
     size_t verify_index;
@@ -128,7 +128,7 @@ public:
         }
 
         cout << "Destroying threads." << endl;
-        for (auto &each_thread: verify_threads) {
+        for (auto &each_thread: *(verify_threads.get())) {
             each_thread.join();
         }
 

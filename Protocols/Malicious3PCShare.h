@@ -21,6 +21,7 @@ template<class T> class SpecificPrivateOutput;
 
 namespace GC {
     class Malicious3PCSecret;
+    class MaliciousRepSecret;
 }
 
 template <class T>
@@ -189,7 +190,7 @@ public:
     typedef T random_type; 
     typedef This Scalar;
 
-    typedef GC::Malicious3PCSecret bit_type;
+    typedef GC::MaliciousRepSecret bit_type;
 
     typedef T mac_key_type;
 

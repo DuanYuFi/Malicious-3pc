@@ -50,9 +50,12 @@ Malicious3PCFieldProtocol<T>::Malicious3PCFieldProtocol(Player& P) : P(P) {
         prngs[1].SetSeed(shared_prngs[1]);
     }
 
+    check_threads = make_shared<vector<std::thread>>();
+    verify_threads = make_shared<vector<std::thread>>();
+
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-        check_threads.push_back(std::thread(&Malicious3PCFieldProtocol<T>::thread_handler, this, i));
-        verify_threads.push_back(std::thread(&Malicious3PCFieldProtocol<T>::verify_thread_handler, this));
+        check_threads.get()->push_back(std::thread(&Malicious3PCFieldProtocol<T>::thread_handler, this, i));
+        verify_threads.get()->push_back(std::thread(&Malicious3PCFieldProtocol<T>::verify_thread_handler, this));
     }
 
     this->local_counter = 0;
@@ -114,7 +117,7 @@ void Malicious3PCFieldProtocol<T>::finalize_check() {
         cv.push(-1);
     }
     
-    for (auto &each_thread: check_threads) {
+    for (auto &each_thread: *(check_threads.get())) {
         each_thread.join();
     }
 
