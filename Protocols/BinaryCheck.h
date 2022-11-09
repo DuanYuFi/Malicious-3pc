@@ -2,7 +2,7 @@
 #define PROTOCOLS_BINARYCHECK_H_
 
 #include <vector>
-#include "Tools/my-utils.hpp"
+#include "Tools/my-utils.h"
 
 using namespace std;
 
