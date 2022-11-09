@@ -23,7 +23,7 @@ Malicious3PCFieldProtocol<T>::Malicious3PCFieldProtocol(Player& P) : P(P) {
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
 
-    status_queue = new StatusData[OnlineOptions::singleton.max_status];
+    status_queue = new ArithStatusData[OnlineOptions::singleton.max_status];
     
     shared_prngs[0].ReSeed();
 	octetStream os;
@@ -66,12 +66,12 @@ Malicious3PCFieldProtocol<T>::Malicious3PCFieldProtocol(Player& P) : P(P) {
     
     cout << "Using tuple size: " << share_tuple_size << endl;
 
-    input1 = new ShareType[share_tuple_size];
-    input2 = new ShareType[share_tuple_size];
-    rhos = new ShareType[share_tuple_size];
-    results = new ShareType[share_tuple_size];
+    input1 = new ArithShareType[share_tuple_size];
+    input2 = new ArithShareType[share_tuple_size];
+    rhos = new ArithShareType[share_tuple_size];
+    results = new ArithShareType[share_tuple_size];
 
-    vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
+    vermsgs = new ArithVerMsg[OnlineOptions::singleton.max_status];
 
     sid = global_prng.get_word();
 }
@@ -508,8 +508,8 @@ void Malicious3PCFieldProtocol<T>::prepare_mul(const T& x,
 
     // int this_size = (n == -1 ? T::value_type::length() : n);
 
-    input1[idx_input] = ArithShareType(x[0].get(), x[1].get());
-    input2[idx_input] = ArithShareType(y[0].get(), y[1].get());
+    input1[idx_input] = ArithShareType(x[0], x[1]);
+    input2[idx_input] = ArithShareType(y[0], y[1]);
     idx_input ++;
 
     prepare_reshare(add_share, n);
@@ -524,7 +524,7 @@ void Malicious3PCFieldProtocol<T>::prepare_reshare(const typename T::clear& shar
     for (int i = 0; i < 2; i++) 
         tmp[i].randomize(shared_prngs[i], n);
     
-    rhos[idx_rho++] = ArithShareType(tmp[0].get(), tmp[1].get());
+    rhos[idx_rho++] = ArithShareType(tmp[0], tmp[1]);
 
     auto add_share = share + tmp[0] - tmp[1];
     add_share.pack(os[0], n);
@@ -567,7 +567,7 @@ inline T Malicious3PCFieldProtocol<T>::finalize_mul(int n)
     result[1].unpack(os[1], n);
 
     int this_size = 1;
-    results[idx_result] = ArithShareType(result[0].get(), result[1].get());
+    results[idx_result] = ArithShareType(result[0], result[1]);
     idx_result ++;
     
     this->local_counter += this_size;

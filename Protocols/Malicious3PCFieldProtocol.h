@@ -53,12 +53,16 @@ struct ArithStatusData {
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
  */
 
-typedef MyPair<uint64_t, uint64_t> ArithShareType;
+
 
 template<class T>
 class Malicious3PCFieldProtocol : public ProtocolBase<T> {
+    
     typedef Replicated<T> super;
     typedef Malicious3PCFieldProtocol This;
+
+    typedef typename T::clear value_type;
+    typedef MyPair<value_type, value_type> ArithShareType;
 
     ArithShareType *input1, *input2, *results, *rhos;
     size_t idx_input, idx_rho, idx_result;
@@ -103,9 +107,6 @@ class Malicious3PCFieldProtocol : public ProtocolBase<T> {
     // const static int BATCH_SIZE = OnlineOptions::singleton.batch_size;
 
 public:
-
-    typedef typename T::clear value_type;
-    
     static const bool uses_triples = false;
 
     array<PRNG, 2> shared_prngs;
