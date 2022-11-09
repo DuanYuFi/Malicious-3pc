@@ -186,7 +186,7 @@ public:
     typedef MaliciousRepPrepWithBits<Malicious3PCFieldShare> LivePrep;
     typedef MaliciousRepPrep<Malicious3PCFieldShare> TriplePrep;
     typedef Malicious3PCFieldShare prep_type;
-    typedef T random_type;
+    typedef T random_type; 
     typedef This Scalar;
 
     typedef GC::Malicious3PCSecret bit_type;

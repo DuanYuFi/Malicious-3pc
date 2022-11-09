@@ -20,9 +20,9 @@ class WaitQueue
     bool running;
 
     // prevent copying
-    WaitQueue(const WaitQueue& other);
-
+    
 public:
+    WaitQueue(const WaitQueue& other);
     WaitQueue() : running(true)
     {
         pthread_mutex_init(&mutex, 0);

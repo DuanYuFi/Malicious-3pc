@@ -159,10 +159,10 @@ void Malicious3PCFieldProtocol<T>::thread_handler(int tid) {
 template <class T>
 void Malicious3PCFieldProtocol<T>::verify_part1(int prev_number, int my_number) {
     ArithDZKProof proof;
-    verify_lock.lock();
+    pthread_mutex_lock(&verify_lock);
     int i = verify_index ++;
     proof.unpack(proof_os[1]);
-    verify_lock.unlock();
+    pthread_mutex_unlock(&verify_lock);
 
     uint64_t **input_right_prev = status_queue[i].input_right_prev;
     uint64_t **input_mono_prev = status_queue[i].input_mono_prev;
@@ -196,11 +196,11 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
     ArithVerMsg received_vermsg;
     ArithDZKProof proof;
     
-    verify_lock.lock();
+    pthread_mutex_lock(&verify_lock);
     received_vermsg.unpack(vermsg_os[1]);
     proof.unpack(proof_os[1]);
     int i = verify_index ++;
-    verify_lock.unlock();
+    pthread_mutex_unlock(&verify_lock);
 
     uint64_t **input_left_next = status_queue[i].input_left_next;
     uint64_t **input_mono_next = status_queue[i].input_mono_next;
@@ -211,7 +211,7 @@ void Malicious3PCFieldProtocol<T>::verify_part2(int next_number, int my_number) 
 
     int cnt = log(4 * sz) / log(k) + 1;
 
-    bool res = arith_verify(proof, input_left_next, input_mono_next, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    bool res = arith_verify(proof, input_left_next, input_mono_next, received_vermsg, sz, k, mask_ss_next, next_number, my_number, sid);   
     if (!res) {
         check_passed = false;
     }
@@ -296,7 +296,7 @@ void Malicious3PCFieldProtocol<T>::verify() {
     auto cp0 = std::chrono::high_resolution_clock::now();
     
     for (int i = 0; i < size; i ++) {
-        DZKProof proof = status_queue[i].proof;   
+        ArithDZKProof proof = status_queue[i].proof;   
         proof.pack(proof_os[0]);
     }
 
@@ -380,119 +380,111 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
         }
     }
 
-    ShareType *_input1, *_input2, *_results, *_rhos;
-    _input1 = new ShareType[sz];
-    _input2 = new ShareType[sz];
-    _results = new ShareType[sz];
-    _rhos = new ShareType[sz];
+    ArithShareType *_input1, *_input2, *_results, *_rhos;
+    _input1 = new ArithShareType[sz];
+    _input2 = new ArithShareType[sz];
+    _results = new ArithShareType[sz];
+    _rhos = new ArithShareType[sz];
 
-    memcpy(_input1, input1 + start, sizeof(ShareType) * sz);
-    memcpy(_input2, input2 + start, sizeof(ShareType) * sz);
-    memcpy(_results, results + start, sizeof(ShareType) * sz);
-    memcpy(_rhos, rhos + start, sizeof(ShareType) * sz);
+    memcpy(_input1, input1 + start, sizeof(ArithShareType) * sz);
+    memcpy(_input2, input2 + start, sizeof(ArithShareType) * sz);
+    memcpy(_results, results + start, sizeof(ArithShareType) * sz);
+    memcpy(_rhos, rhos + start, sizeof(ArithShareType) * sz);
 
-    int temp_pointer = 0;
-    uint64_t **input_left, **input_right, **input_right_prev, **input_left_next, **input_mono_prev, **input_mono_next;
+    // int temp_pointer = 0;
+    // uint64_t **input_left, **input_right, **input_right_prev, **input_left_next, **input_mono_prev, **input_mono_next;
 
-    input_left = new uint64_t*[k];
-    input_right = new uint64_t*[k];
-    input_right_prev = new uint64_t*[k];
-    input_left_next = new uint64_t*[k];
+    // input_left = new uint64_t*[k];
+    // input_right = new uint64_t*[k];
+    // input_right_prev = new uint64_t*[k];
+    // input_left_next = new uint64_t*[k];
 
-    uint64_t neg_one = Mersenne::PR - 1;
-    uint64_t neg_two = Mersenne::PR - 2;
-    uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
+    // uint64_t neg_one = Mersenne::PR - 1;
+    // uint64_t neg_two = Mersenne::PR - 2;
+    // uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
     
-    for (int i = 0; i < k; i ++) {
-        input_left[i] = new uint64_t[cols * 4];
-        input_right[i] = new uint64_t[cols * 4];
-        input_right_prev[i] = new uint64_t[cols * 4];
-        input_left_next[i] = new uint64_t[cols * 4];
-    
-        // memset(input_left[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_right[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_right_prev[i], 0, sizeof(uint64_t) * cols * 4);
-        // memset(input_left_next[i], 0, sizeof(uint64_t) * cols * 4);
+    // for (int i = 0; i < k; i ++) {
+    //     input_left[i] = new uint64_t[cols * 4];
+    //     input_right[i] = new uint64_t[cols * 4];
+    //     input_right_prev[i] = new uint64_t[cols * 4];
+    //     input_left_next[i] = new uint64_t[cols * 4];
         
-        for (int j = 0; j < cols; j++) {
+    //     for (int j = 0; j < cols; j++) {
 
-            ShareType x, y, z, rho;
+    //         ArithShareType x, y, z, rho;
 
-            if (temp_pointer >= sz) {
-                input_left[i][j * 2] = 0;
-                input_left[i][j * 2 + 1] = 0;
-                input_right[i][j * 2] = 0;
-                input_right[i][j * 2 + 1] = 0;
-                input_left_next[i][j * 2] = 0;
-                input_left_next[i][j * 2 + 1] = 0;
-                input_right_prev[i][j * 2] = 0;
-                input_right_prev[i][j * 2 + 1] = 0;
-                temp_pointer ++;
-                continue;
-            }
+    //         if (temp_pointer >= sz) {
+    //             input_left[i][j * 2] = 0;
+    //             input_left[i][j * 2 + 1] = 0;
+    //             input_right[i][j * 2] = 0;
+    //             input_right[i][j * 2 + 1] = 0;
+    //             input_left_next[i][j * 2] = 0;
+    //             input_left_next[i][j * 2 + 1] = 0;
+    //             input_right_prev[i][j * 2] = 0;
+    //             input_right_prev[i][j * 2 + 1] = 0;
+    //             temp_pointer ++;
+    //             continue;
+    //         }
 
-            else {
-                x = _input1[temp_pointer];
-                y = _input2[temp_pointer];
-                z = _results[temp_pointer];
-                rho = _rhos[temp_pointer];
-            }
+    //         else {
+    //             x = _input1[temp_pointer];
+    //             y = _input2[temp_pointer];
+    //             z = _results[temp_pointer];
+    //             rho = _rhos[temp_pointer];
+    //         }
           
-            // Share with P_{i+1}
-            input_left[i][j * 2] = x.first;
-            input_left[i][j * 2 + 1] = y.first;
-            // Share with P_{i-1}
-            input_right[i][j * 2] = y.second;
-            input_right[i][j * 2 + 1] = x.second;
+    //         // Share with P_{i+1}
+    //         input_left[i][j * 2] = x.first;
+    //         input_left[i][j * 2 + 1] = y.first;
+    //         // Share with P_{i-1}
+    //         input_right[i][j * 2] = y.second;
+    //         input_right[i][j * 2 + 1] = x.second;
 
-            input_left_next[i][j * 2] = x.second;
-            input_left_next[i][j * 2 + 1] = y.second;
+    //         input_left_next[i][j * 2] = x.second;
+    //         input_left_next[i][j * 2 + 1] = y.second;
 
-            input_right_prev[i][j * 2] = y.first;
-            input_right_prev[i][j * 2 + 1] = x.first;
+    //         input_right_prev[i][j * 2] = y.first;
+    //         input_right_prev[i][j * 2 + 1] = x.first;
 
-            input_mono_prev[i][j * 2] = rho.second;
-            input_mono_next[i][j * 2 + 1] = Mersenne::sub(Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
+    //         input_mono_prev[i][j * 2] = rho.second;
+            // input_mono_next[i][j * 2 + 1] = Mersenne::sub(Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
 
-            temp_pointer ++;
-        }
-    }
+    //         temp_pointer ++;
+    //     }
+    // }
 
 
-    ArithDZKProof dzkproof = arith_prove(input_left, input_right, sz, k, masks);
+    // ArithDZKProof dzkproof = arith_prove(input_left, input_right, sz, k, masks, sid);
 
-   // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
-    status_queue[node_id % ms] = ArithStatusData(dzkproof,
-                                       input_right_prev, 
-                                       input_left_next, 
-                                       input_mono_prev,
-                                       input_mono_next,
-                                       mask_ss_next,
-                                       mask_ss_prev,
-                                       sz);
+    // status_queue[node_id % ms] = ArithStatusData(dzkproof,
+    //                                    input_right_prev, 
+    //                                    input_left_next, 
+    //                                    input_mono_prev,
+    //                                    input_mono_next,
+    //                                    mask_ss_next,
+    //                                    mask_ss_prev,
+    //                                    sz);
 
-    // outfile << "in Check_one, ++wait_size" << endl;
-    ++wait_size;
-    // outfile << "in Check_one, after ++wait_size" << endl;
+    // ++wait_size;
 
-    for (int i = 0; i < k; i ++) {
-        delete[] input_left[i];
-        delete[] input_right[i];
-    }
+    // for (int i = 0; i < k; i ++) {
+    //     delete[] input_left[i];
+    //     delete[] input_right[i];
+    // }
 
-    delete[] input_left;
-    delete[] input_right;
+    // delete[] input_left;
+    // delete[] input_right;
 
-    for (int i = 0; i < cnt; i ++) {
-        delete[] masks[i];
-    }
+    // for (int i = 0; i < cnt; i ++) {
+    //     delete[] masks[i];
+    // }
 
-    delete[] masks;
+    // delete[] masks;
 
-    delete[] _input1;
-    delete[] _input2;
-    delete[] _results;
-    delete[] _rhos;
+    // delete[] _input1;
+    // delete[] _input2;
+    // delete[] _results;
+    // delete[] _rhos;
 
     // outfile << "Finish check" << endl;
     

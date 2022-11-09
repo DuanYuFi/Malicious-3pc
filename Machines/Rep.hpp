@@ -12,7 +12,7 @@
 #include "Protocols/MAC_Check_Base.hpp"
 #include "Protocols/Beaver.hpp"
 #include "Protocols/Spdz2kPrep.hpp"
-#include "Protocols/SemiRingProtocol.hpp"
+// #include "Protocols/SemiRingProtocol.hpp"
 
 #include "Math/Z2k.hpp"
 #include "GC/ShareSecret.hpp"

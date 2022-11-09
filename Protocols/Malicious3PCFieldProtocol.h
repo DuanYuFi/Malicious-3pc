@@ -9,6 +9,7 @@
 #include <queue>
 #include <thread>
 #include <fstream>
+#include <pthread.h>
 
 #include <chrono>
 
@@ -76,7 +77,6 @@ class Malicious3PCFieldProtocol : public ProtocolBase<T> {
     PointerVector<typename T::clear> add_shares, uids;
     typename T::clear dotprod_share;
 
-    std::mutex check_lock;
     size_t check_id;
 
     WaitQueue<int> cv;
@@ -93,7 +93,7 @@ class Malicious3PCFieldProtocol : public ProtocolBase<T> {
 
     array<octetStream, 2> proof_os, vermsg_os;
     size_t verify_index;
-    mutex verify_lock;
+    pthread_mutex_t verify_lock;
     ArithVerMsg *vermsgs;
     WaitQueue<u_char> verify_queue;
     WaitSize verify_tag;

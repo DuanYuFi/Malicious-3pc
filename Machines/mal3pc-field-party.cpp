@@ -5,9 +5,8 @@
 
 #include "Protocols/Malicious3PCShare.h"
 #include "Processor/FieldMachine.hpp"
-// #include "Machines/Rep.hpp"
+#include "Machines/Rep.hpp"
 #include "Machines/MalRep.hpp"
-#include "Processor/Machine.hpp"
 #include "Tools/my-utils.hpp"
 #include "Math/gfp.hpp"
 
