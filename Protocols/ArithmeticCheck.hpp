@@ -47,14 +47,14 @@ ArithDZKProof Malicious3PCFieldProtocol<_T>::arith_prove(
     uint128_t temp_result = 0;
 
     // Linear combination using randomness eta
-    for(uint64_t i = 0; i < k; i++) {
-        for(uint64_t j = 0; j < s; j++) {
-            input[i][2 * j] = Mersenne::mul(input_left[i][2 * j], eta_power);
-            input[i][2 * j + 1] = Mersenne::mul(input_left[i][2 * j + 1], eta_power);
-            temp_result += Mersenne::mul(input_mono[i][j], eta_power);
-            eta_power = Mersenne::mul(eta_power, eta);
-        }
-    }
+    // for(uint64_t i = 0; i < k; i++) {
+    //     for(uint64_t j = 0; j < s; j++) {
+    //         input[i][2 * j] = Mersenne::mul(input_left[i][2 * j], eta_power);
+    //         input[i][2 * j + 1] = Mersenne::mul(input_left[i][2 * j + 1], eta_power);
+    //         temp_result += Mersenne::mul(input_mono[i][j], eta_power);
+    //         eta_power = Mersenne::mul(eta_power, eta);
+    //     }
+    // }
 
     // Vectors of masked evaluations of polynomial p(X)
     vector<vector<uint64_t>> p_evals_masked;
@@ -196,8 +196,8 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
     LocalHash transcript_hash;
     DZKP_UTILS::append_one_msg(transcript_hash, sid);
     uint64_t eta = get_challenge(transcript_hash);
-    uint64_t eta_power = 1;
-    uint128_t temp_result;
+    uint64_t eta_power = 1, cnt = 0;
+    uint128_t temp_result = 0;
 
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
@@ -224,23 +224,13 @@ ArithVerMsg Malicious3PCFieldProtocol<_T>::arith_gen_vermsg(
         }
     }
     
+    
     uint64_t* eval_base = new uint64_t[k];
     uint64_t* eval_base_2k = new uint64_t[2 * k - 1];
 
-    DZKP_UTILS::evaluate_bases(2 * k - 1, r, eval_base_2k);
-    temp_result = 0;
-    for(uint64_t i = 0; i < 2 * k - 1; i++) {
-        temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
-    }
-    out_ss = Mersenne::modp_128(temp_result);
-
-    DZKP_UTILS::evaluate_bases(k, r, eval_base);
-
     size_t index = 0;
-    uint16_t cnt = 0;
     s *= 2;
-    uint64_t s0 = s;
-    uint64_t r;
+    uint64_t s0 = s, r;
 
     while(true)
     {

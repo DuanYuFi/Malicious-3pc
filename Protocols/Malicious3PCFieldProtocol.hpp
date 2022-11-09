@@ -139,7 +139,6 @@ void Malicious3PCFieldProtocol<T>::thread_handler(int tid) {
     // ofstream outfile;
     // outfile.open("logs/Thread_P" + to_string(P.my_real_num()) + "_" + to_string(tid));
 
-    
     int _ = -1;
     while (true) { 
         if (!cv.pop_dont_stop(_)) {
@@ -394,100 +393,96 @@ void Malicious3PCFieldProtocol<T>::Check_one(int node_id, int size) {
     memcpy(_results, results + start, sizeof(ArithShareType) * sz);
     memcpy(_rhos, rhos + start, sizeof(ArithShareType) * sz);
 
-    // int temp_pointer = 0;
-    // uint64_t **input_left, **input_right, **input_right_prev, **input_left_next, **input_mono_prev, **input_mono_next;
+    int temp_pointer = 0;
+    uint64_t **input_left, **input_right, **input_right_prev, **input_left_next, **input_mono_prev, **input_mono_next;
 
-    // input_left = new uint64_t*[k];
-    // input_right = new uint64_t*[k];
-    // input_right_prev = new uint64_t*[k];
-    // input_left_next = new uint64_t*[k];
-
-    // uint64_t neg_one = Mersenne::PR - 1;
-    // uint64_t neg_two = Mersenne::PR - 2;
-    // uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
+    input_left = new uint64_t*[k];
+    input_right = new uint64_t*[k];
+    input_right_prev = new uint64_t*[k];
+    input_left_next = new uint64_t*[k];
     
-    // for (int i = 0; i < k; i ++) {
-    //     input_left[i] = new uint64_t[cols * 4];
-    //     input_right[i] = new uint64_t[cols * 4];
-    //     input_right_prev[i] = new uint64_t[cols * 4];
-    //     input_left_next[i] = new uint64_t[cols * 4];
+    for (int i = 0; i < k; i ++) {
+        input_left[i] = new uint64_t[cols * 4];
+        input_right[i] = new uint64_t[cols * 4];
+        input_right_prev[i] = new uint64_t[cols * 4];
+        input_left_next[i] = new uint64_t[cols * 4];
         
-    //     for (int j = 0; j < cols; j++) {
+        for (int j = 0; j < cols; j++) {
 
-    //         ArithShareType x, y, z, rho;
+            ArithShareType x, y, z, rho;
 
-    //         if (temp_pointer >= sz) {
-    //             input_left[i][j * 2] = 0;
-    //             input_left[i][j * 2 + 1] = 0;
-    //             input_right[i][j * 2] = 0;
-    //             input_right[i][j * 2 + 1] = 0;
-    //             input_left_next[i][j * 2] = 0;
-    //             input_left_next[i][j * 2 + 1] = 0;
-    //             input_right_prev[i][j * 2] = 0;
-    //             input_right_prev[i][j * 2 + 1] = 0;
-    //             temp_pointer ++;
-    //             continue;
-    //         }
+            if (temp_pointer >= sz) {
+                input_left[i][j * 2] = 0;
+                input_left[i][j * 2 + 1] = 0;
+                input_right[i][j * 2] = 0;
+                input_right[i][j * 2 + 1] = 0;
+                input_left_next[i][j * 2] = 0;
+                input_left_next[i][j * 2 + 1] = 0;
+                input_right_prev[i][j * 2] = 0;
+                input_right_prev[i][j * 2 + 1] = 0;
+                temp_pointer ++;
+                continue;
+            }
 
-    //         else {
-    //             x = _input1[temp_pointer];
-    //             y = _input2[temp_pointer];
-    //             z = _results[temp_pointer];
-    //             rho = _rhos[temp_pointer];
-    //         }
+            else {
+                x = _input1[temp_pointer];
+                y = _input2[temp_pointer];
+                z = _results[temp_pointer];
+                rho = _rhos[temp_pointer];
+            }
           
-    //         // Share with P_{i+1}
-    //         input_left[i][j * 2] = x.first;
-    //         input_left[i][j * 2 + 1] = y.first;
-    //         // Share with P_{i-1}
-    //         input_right[i][j * 2] = y.second;
-    //         input_right[i][j * 2 + 1] = x.second;
+            // Share with P_{i+1}
+            input_left[i][j * 2] = x.first;
+            input_left[i][j * 2 + 1] = y.first;
+            // Share with P_{i-1}
+            input_right[i][j * 2] = y.second;
+            input_right[i][j * 2 + 1] = x.second;
 
-    //         input_left_next[i][j * 2] = x.second;
-    //         input_left_next[i][j * 2 + 1] = y.second;
+            input_left_next[i][j * 2] = x.second;
+            input_left_next[i][j * 2 + 1] = y.second;
 
-    //         input_right_prev[i][j * 2] = y.first;
-    //         input_right_prev[i][j * 2 + 1] = x.first;
+            input_right_prev[i][j * 2] = y.first;
+            input_right_prev[i][j * 2 + 1] = x.first;
 
-    //         input_mono_prev[i][j * 2] = rho.second;
-            // input_mono_next[i][j * 2 + 1] = Mersenne::sub(Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
+            input_mono_prev[i][j * 2] = rho.second;
+            input_mono_next[i][j * 2 + 1] = Mersenne::sub(Mersenne::sub(z.first, Mersenne::mul(x.first, y.first)), rho.first);
 
-    //         temp_pointer ++;
-    //     }
-    // }
+            temp_pointer ++;
+        }
+    }
 
 
-    // ArithDZKProof dzkproof = arith_prove(input_left, input_right, sz, k, masks, sid);
+    ArithDZKProof dzkproof = arith_prove(input_left, input_right, sz, k, masks, sid);
 
-    // status_queue[node_id % ms] = ArithStatusData(dzkproof,
-    //                                    input_right_prev, 
-    //                                    input_left_next, 
-    //                                    input_mono_prev,
-    //                                    input_mono_next,
-    //                                    mask_ss_next,
-    //                                    mask_ss_prev,
-    //                                    sz);
+    status_queue[node_id % ms] = ArithStatusData(dzkproof,
+                                       input_right_prev, 
+                                       input_left_next, 
+                                       input_mono_prev,
+                                       input_mono_next,
+                                       mask_ss_next,
+                                       mask_ss_prev,
+                                       sz);
 
-    // ++wait_size;
+    ++wait_size;
 
-    // for (int i = 0; i < k; i ++) {
-    //     delete[] input_left[i];
-    //     delete[] input_right[i];
-    // }
+    for (int i = 0; i < k; i ++) {
+        delete[] input_left[i];
+        delete[] input_right[i];
+    }
 
-    // delete[] input_left;
-    // delete[] input_right;
+    delete[] input_left;
+    delete[] input_right;
 
-    // for (int i = 0; i < cnt; i ++) {
-    //     delete[] masks[i];
-    // }
+    for (int i = 0; i < cnt; i ++) {
+        delete[] masks[i];
+    }
 
-    // delete[] masks;
+    delete[] masks;
 
-    // delete[] _input1;
-    // delete[] _input2;
-    // delete[] _results;
-    // delete[] _rhos;
+    delete[] _input1;
+    delete[] _input2;
+    delete[] _results;
+    delete[] _rhos;
 
     // outfile << "Finish check" << endl;
     
