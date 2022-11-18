@@ -1,6 +1,3 @@
-#ifndef PROTOCOLS_ARITHMETICCHECK_H_
-#define PROTOCOLS_ARITHMETICCHECK_H_
-
 #include <vector>
 
 #include "../Tools/Hash.h"
@@ -105,5 +102,3 @@ inline void Langrange::evaluate_bases(uint64_t n, gfp r, gfp* result) {
         }
     }
 }
-
-#endif

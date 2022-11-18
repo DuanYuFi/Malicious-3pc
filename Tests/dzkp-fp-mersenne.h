@@ -1,6 +1,3 @@
-#ifndef PROTOCOLS_ARITHMETICCHECK_H_
-#define PROTOCOLS_ARITHMETICCHECK_H_
-
 #include <vector>
 
 #include "../Tools/Hash.h"
@@ -124,6 +121,3 @@ struct ArithVerMsg {
         this->final_result_ss = final_result_ss;
     }
 };
-
-
-#endif
