@@ -121,3 +121,4 @@ _build/
 # environment
 .env
 core
+Tests/initialize.sh

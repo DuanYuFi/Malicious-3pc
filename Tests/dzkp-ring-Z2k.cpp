@@ -7,14 +7,30 @@
 #include <chrono>
 #include <iostream>
 #include <vector>
+#include <queue>
 
 using namespace std;
 
-typedef int128 R;
+typedef unsigned __int128 uint128_t;
+typedef uint64_t MulRing;
+typedef uint128_t VerifyRing;
+
 const int N = 64;
 const int KAPPA = 40;
-// const int128 MASK = (1 << (N + KAPPA)) - 1;
-// const int128 MOD = 1 << (N + KAPPA);
+const int EBITS = 64;
+const size_t BATCH_SIZE = 10000;
+const int K = 8;
+
+#define DEBUG
+
+void print_uint128(uint128_t x) {
+    if (x < 0) {
+        putchar('-');
+        x = -x;
+    }
+    if (x > 9) print_uint128(x / 10);
+    putchar(x % 10 + '0');
+}
 
 class LocalHash {
     octetStream buffer;
@@ -58,32 +74,32 @@ public:
     }
 };
 
-class ArithDZKProof {
-    vector<int128> X, Y;
-    int128 Z;
+// class ArithDZKProof {
+//     vector<int128> X, Y;
+//     int128 Z;
 
-    ArithDZKProof() {}
-    ArithDZKProof(vector<int128> X, vector<int128> Y, int128 Z) {
-        this->X = X;
-        this->Y = Y;
-        this->Z = Z;
-    }
-};
+//     ArithDZKProof() {}
+//     ArithDZKProof(vector<int128> X, vector<int128> Y, int128 Z) {
+//         this->X = X;
+//         this->Y = Y;
+//         this->Z = Z;
+//     }
+// };
 
-typedef pair<R, R> RSShare;
+typedef array<MulRing, 2> RSShare;
 struct MultiShare {
     RSShare x, y;
-    R z;
+    MulRing z;
     RSShare rho;
 
     MultiShare() {
-        x = make_pair(0, 0);
-        y = make_pair(0, 0);
+        x = {0, 0};
+        y = {0, 0};
         z = 0;
-        rho = make_pair(0, 0);
+        rho = {0, 0};
     }
     
-    MultiShare(RSShare x, RSShare y, R z, RSShare rho) {
+    MultiShare(RSShare x, RSShare y, MulRing z, RSShare rho) {
         this->x = x;
         this->y = y;
         this->z = z;
@@ -91,18 +107,84 @@ struct MultiShare {
     }
 };
 
-R getRand64Bits() {
-    R a = 0;
+MulRing getRand64Bits() {
+    MulRing a = 0;
     a = rand();
     a = (a << 32) | rand();
     return a;
 }
 
+template <typename T>
+T inner_product(T* v1, T* v2, size_t length) {
+    T res = 0;
+    for (int i = 0; i < length; i ++) {
+        res += v1[i] * v2[i];
+    }
+
+    return res;
+}
+
+class MyPRNG {
+    const static int LENGTH = 10;
+    int status[LENGTH];
+    int coefs[LENGTH];
+    int buffer;
+    int buffer_size;
+public:
+    MyPRNG(): buffer(0), buffer_size(0) {}
+    MyPRNG(int seed): MyPRNG() {
+        SetSeed(seed);
+    }
+
+    void SetSeed(int seed) {
+        srand(seed);
+        for (int i = 0; i < LENGTH; i ++) {
+            status[i] = rand();
+        }
+        for (int i = 0; i < LENGTH; i ++) {
+            coefs[i] = rand();
+        }
+    }
+
+    void ReSeed() {
+        SetSeed(rand());
+    }
+
+    unsigned int get_uint() {
+        unsigned int ret = status[0] * coefs[0];
+        for (int i = 1; i < LENGTH; i ++) {
+            ret += status[i] * coefs[i];
+            status[i-1] = status[i];
+        }
+        status[LENGTH - 1] = ret;
+        return ret;
+    }
+
+    bool get_bit() {
+        if (buffer_size == 0) {
+            buffer = get_uint();
+            buffer_size = 32;
+        }
+        bool ret = buffer & 1;
+        buffer_size -= 1;
+        buffer >>= 1;
+        return ret;
+    }
+
+    uint128_t getDoubleWord() {
+        uint128_t res = get_uint();
+        res = (res << 32) | get_uint();
+        res = (res << 32) | get_uint();
+        res = (res << 32) | get_uint();
+        return res;
+    }
+};
+
 typedef array<MultiShare, 3> RSShares;
-typedef array<R, 3> MulTriple;
+typedef array<VerifyRing, 3> MulTriple;
 
 RSShares get_share() {
-    R x0, x1, x2, y0, y1, y2, x, y, rho0, rho1, rho2;
+    MulRing x0, x1, x2, y0, y1, y2, x, y, rho0, rho1, rho2;
     x = getRand64Bits();
     y = getRand64Bits();
     
@@ -118,143 +200,239 @@ RSShares get_share() {
     rho2 = -(rho0 + rho1);
 
     MultiShare shares0 = {
-        make_pair(x0, x1),
-        make_pair(y0, y1),
+        {x0, x1}, 
+        {y0, y1},
         x0 * y1 + x1 * y0 + x1 * y1 + rho1 - rho0,
-        make_pair(rho0, rho1)
+        {rho0, rho1}
     };
 
     MultiShare shares1 = {
-        make_pair(x1, x2),
-        make_pair(y1, y2),
+        {x1, x2},
+        {y1, y2},
         x1 * y2 + x2 * y1 + x2 * y2 + rho2 - rho1,
-        make_pair(rho1, rho2)
+        {rho1, rho2}
     };
 
     MultiShare shares2 = {
-        make_pair(x2, x0),
-        make_pair(y2, y0),
+        {x2, x0},
+        {y2, y0},
         x2 * y0 + x0 * y2 + x0 * y0 + rho0 - rho2,
-        make_pair(rho2, rho0)
+        {rho2, rho0}
     };
 
     return {shares0, shares1, shares2};
 }
 
-// This function just uses in debug.
-void receive_coef(array<int128, k>& coefs, PRNG &prng, int length) {
-    for (int i = 0; i < length; i ++) {
-        coefs[i] = prng.get_doubleword() & MASK;
-    }
-}
-
-int128 inner_product(int128* v1, int128* v2, size_t length) {
-    int128 res = 0;
-    for (int i = 0; i < length; i ++) {
-        res += v1[i] * v2[i];
-    }
-
+uint128_t getDoubleWord(PRNG& g) {
+    uint128_t res = g.get_uint();
+    res = (res << 32) | g.get_uint();
+    res = (res << 32) | g.get_uint();
+    res = (res << 32) | g.get_uint();
     return res;
 }
 
-R prove(
+// This function just uses in debug.
+void receive_coef(VerifyRing coefs[], MyPRNG &prng, int length) {
+    for (int i = 0; i < length; i ++) {
+        coefs[i] = prng.getDoubleWord();
+    }
+}
+
+struct InnerProducts {
+    VerifyRing _inner_products[K][K];
+
+    InnerProducts() {}
+};
+
+queue<InnerProducts> inner_product_right;
+
+// bool global_rand_bits[KAPPA][BATCH_SIZE];
+// bool left_rand_bits[KAPPA][EBITS];
+
+void prove(
     MultiShare* shares,
-    octet* seed,
-    octet* seed_left,
-    int m,
+    int seed,
+    int seed_left,
     int batch_size,
     int k,
-    bool **share_right,
-    octet* verify_seed = NULL
+    bool share_right[KAPPA][EBITS],     // with size KAPPA * EBITS
+    int verify_seed = 0
 ) {
+
+    cout << "\tUnpacking datas" << endl;
+
     vector<MulTriple> triples;
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
-        triples.push_back({share.x[1], share.y[0], share.z[1] - share.x[1] * share.y[1] - share.rho[1]});
-        triples.push_back({share.x[0], share.y[1], share.rho[0]});
+        triples.push_back({(uint128_t) share.x[1], (uint128_t) share.y[0], (uint128_t) share.z - (uint128_t) share.x[1] * (uint128_t) share.y[1] - (uint128_t) share.rho[1] + (uint128_t) share.rho[0]});
+        triples.push_back({(uint128_t) share.x[0], (uint128_t) share.y[1], 0});
     }
 
-    int new_batch_size = batch_size * 2;
+    size_t new_batch_size = batch_size * 2;
 
-    PRNG prng, prng_left;
+    MyPRNG prng, prng_left;
+    // SeededPRNG local_prng;
+
     prng.SetSeed(seed);
     prng_left.SetSeed(seed_left);
 
-    int128 Z = 0;
-    int128 *X, *Y;
-    X = new int128[new_batch_size + KAPPA + k];
-    Y = new int128[new_batch_size + KAPPA + k];
-    memset(X, 0, sizeof(X));
-    memset(Y, 0, sizeof(Y));
+    VerifyRing *X, *Y, Z = 0;
+    X = new VerifyRing[new_batch_size + EBITS * KAPPA + k];
+    Y = new VerifyRing[new_batch_size + EBITS * KAPPA + k];
+    memset(X, 0, sizeof(VerifyRing) * (new_batch_size + EBITS * KAPPA + k));
+    memset(Y, 0, sizeof(VerifyRing) * (new_batch_size + EBITS * KAPPA + k));
 
     // int128 **share_right = new int128*[KAPPA];
 
+    cout << "\tPreparing Polynomials" << endl;
+    VerifyRing LHS = 0, RHS;
 
-    bool *choices = new bool[new_batch_size];
+    bool *choices = new bool[batch_size];
+    int *counter = new int[batch_size];
+
+    memset(counter, 0, sizeof(int) * batch_size);
+
     for (int _ = 0; _ < KAPPA; _ ++) {
-        // share_right[i] = new int128[KAPPA];
-        for (int i = 0; i < new_batch_size; i ++) {
+
+        cout << "\t\tRound: " << _ << endl;
+
+        for (int i = 0; i < batch_size; i ++) {
             choices[i] = prng.get_bit();
         }
 
-        int128 e = 0;
-        for (int i = 0; i < new_batch_size; i ++) {
-            if (choices[i])  {
-                e += (triples[i][2] - triples[i][0] * triples[i][1]);
-            }
-        }
+        VerifyRing e;
 
-        e >>= 64;
-        
-        for (int i = 0; i < new_batch_size; i ++) {
+        LHS = 0;
+        RHS = 0;
+        for (int i = 0; i < batch_size; i ++) {
             if (choices[i]) {
-                X[i] += triples[i][0];
-                Y[i] += triples[i][1];
+                LHS += triples[i * 2][0] * triples[i * 2][1];
+                LHS += triples[i * 2 + 1][0] * triples[i * 2 + 1][1];
+                RHS += triples[i * 2][2];
+            }   
+        }
 
-                Z += triples[i][2];
+        e = (LHS - RHS) >> 64;
+
+        assert (LHS == RHS + (e << 64));
+
+
+        for (int i = 0; i < batch_size; i ++) {
+            if (choices[i]) {
+                counter[i] ++;
+
+                Z += triples[i * 2][2];
             }
         }
 
-        for (int i = 0; i < KAPPA; i ++) {
-            bool share_left = prng_left.get_bit();
-            share_right[_][i] = ((e >> i) & 1) ^ share_left
-            X[new_batch_size + i] += (1 << (65 + i)) * share_left;
-            Y[new_batch_size + i] += (1 << (65 + i)) * share_right[_][i];
-            Z += (1 << (64 + i)) * share_left;
-            Z += (1 << (64 + i)) * share_right[_][i];
+        LHS = RHS = 0;
+        for (int i = 0; i < batch_size; i ++) {
+            if (choices[i]) {
+                LHS += triples[i * 2][0] * triples[i * 2][1];
+                LHS += triples[i * 2 + 1][0] * triples[i * 2 + 1][1];
+                RHS += triples[i * 2][2];
+            }
         }
+
+        assert (LHS == RHS + (e << 64));
+
+        for (int i = 0; i < EBITS; i ++) {
+            bool share_left = prng_left.get_bit();
+            share_right[_][i] = ((e >> i) & 1) ^ share_left;
+            X[new_batch_size + i + _ * EBITS] = ((uint128_t) share_left << (65 + i));
+            Y[new_batch_size + i + _ * EBITS] = (uint128_t) share_right[_][i];
+            Z += ((uint128_t) share_left << (64 + i));
+            Z += ((uint128_t) share_right[_][i] << (64 + i));
+        }
+
+        LHS = 0;
+        for (int i = 0; i < batch_size; i ++) {
+            if (counter[i]) {
+                LHS += counter[i] * triples[i * 2][0] * triples[i * 2][1];
+                LHS += counter[i] * triples[i * 2 + 1][0] * triples[i * 2 + 1][1];
+            }
+        }
+        for (int i = 0; i < KAPPA * EBITS; i ++) {
+            LHS += X[new_batch_size + i] * Y[new_batch_size + i];
+        }
+
+        print_uint128(LHS);
+        puts("");
+        print_uint128(Z);
+        puts("");
+
     }
 
-    int s = new_batch_size + KAPPA;
+    for (int i = 0; i < batch_size; i ++) {
+
+        X[i * 2] = triples[i * 2][0] * counter[i];
+        Y[i * 2] = triples[i * 2][1];
+
+        X[i * 2 + 1] = triples[i * 2 + 1][0] * counter[i];
+        Y[i * 2 + 1] = triples[i * 2 + 1][1];
+    }
+
+    LHS = 0;
+    for (int i = 0; i < new_batch_size + EBITS * KAPPA; i ++) {
+        LHS += X[i] * Y[i];
+    }
+
+    puts("\t\tFinal Round: ");
+    print_uint128(LHS);
+    puts("");
+    print_uint128(Z);
+    puts("");
+
+    return ;
+
+    int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
-    array<int128, k> coeffsX, coeffsY;
-
-    int128 **inner_products;
-    inner_products = new int128*[k];
-
-    for (int i = 0; i < k; i ++) {
-        inner_products[i] = new int128[k];
-    }
+    VerifyRing coeffsX[k], coeffsY[k];
     
     // the verify_prng should not known by prover, this is just for debug.
-    PRNG verify_prng;
-    verify_prng.ReSeed(verify_seed);
+    MyPRNG verify_prng;
+    verify_prng.SetSeed(verify_seed);
 
     // int128 *newX, *newY;
     // newX = new int128[new_batch_size + KAPPA + k];
     // newY = new int128[new_batch_size + KAPPA + k];
 
+    cout << "\tChoping" << endl;
+
     while (true) {
 
-        if (vector_length == 1) {
+        cout << "\t\tnext vector length = " << vector_length << endl;
+        cout << "\t\tnow vector length = " << s << endl << endl;
 
+        if (vector_length == 1) {
+            InnerProducts local_right;
+
+            for (int i = 0; i < k; i ++) {
+                for (int j = 0; j < k; j ++) {
+                    if (i == 0 && j == 0) {
+                        continue;
+                    }
+                    VerifyRing r = prng_left.getDoubleWord();
+                    local_right._inner_products[i][j] = inner_product(X + i * vector_length, Y + j * vector_length, vector_length) - r;
+                }
+            }
+
+            inner_product_right.push(local_right);
+            break;
         }
-        
+        InnerProducts local_right;
+
         for (int i = 0; i < k; i ++) {
             for (int j = 0; j < k; j ++) {
-                inner_products[i][j] = inner_product(X + i * vector_length, Y + j * vector_length, vector_length);
+                if (i == 0 && j == 0) {
+                    continue;
+                }
+                VerifyRing r = prng_left.getDoubleWord();
+                local_right._inner_products[i][j] = inner_product(X + i * vector_length, Y + j * vector_length, vector_length) - r;
             }
         }
+
+        inner_product_right.push(local_right);
 
         receive_coef(coeffsX, verify_prng, k);
         receive_coef(coeffsY, verify_prng, k);
@@ -274,42 +452,445 @@ R prove(
         vector_length = (s - 1) / k + 1;
     }
 
-
 }
 
-void verify_left(
-    RSShares* shares,
-    octet* seed,
-    octet* seed_left,
-    octet* seed_verify,
-    int m,
-    int batch_size
+pair<VerifyRing, VerifyRing> verify_left(
+    MultiShare* shares,
+    int seed,
+    int seed_left,
+    int seed_verify,
+    int batch_size,
+    int k
 ) {
 
-    vector<R> origin;
+    vector<VerifyRing> origin_left, origin_right;
+
+    MyPRNG prng, prng_left;
+    prng.SetSeed(seed);
+    prng_left.SetSeed(seed_left);
+
+    cout << "\tUnpacking datas" << endl;
+
     for (int i = 0; i < batch_size; i ++) {
-        origin.push_back(shares[i].x[1]);
-        origin.push_back(shares[j].y[1]);
+        auto share = shares[i];
+        origin_left.push_back(share.x[1]);
+        origin_left.push_back(share.y[1]);
+        origin_right.push_back(share.z - share.x[1] * share.y[1] - share.rho[1]);
     }
 
+    VerifyRing *X, Z = 0;
+    X = new VerifyRing[batch_size * 2 + EBITS * KAPPA + k];
+    memset(X, 0, sizeof(VerifyRing) * (batch_size * 2 + EBITS * KAPPA + k));
+
+    int new_batch_size = batch_size * 2;
+
+    cout << "\tPreparing Polynomials" << endl;
+
+    bool *choices = new bool[batch_size];
+    int *counter = new int[batch_size];
+    memset(counter, 0, sizeof(int) * batch_size);
+
+    for (int _ = 0; _ < KAPPA; _ ++) {
+        // share_right[i] = new int128[KAPPA];
+        for (int i = 0; i < batch_size; i ++) {
+            choices[i] = prng.get_bit();
+        }
+        
+        for (int i = 0; i < batch_size; i ++) {
+            if (choices[i]) {
+                counter[i] ++;
+                Z += origin_right[i];
+            }
+        }
+
+        for (int i = 0; i < EBITS; i ++) {
+            bool share_left = prng_left.get_bit();
+            if (share_left) {
+                X[new_batch_size + i + _ * EBITS] = ((uint128_t) 1 << (65 + i));
+                Z += ((uint128_t) 1 << 64);
+            }
+        }
+    }
+
+    for (int i = 0; i < batch_size; i ++) {
+        X[i * 2] = origin_left[i * 2] * counter[i];
+        X[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
+    }
+    
+    int s = new_batch_size + EBITS * KAPPA;
+    int vector_length = (s - 1) / k + 1;
+    VerifyRing coeffsX[k], coeffsY[k];
+
+    MyPRNG verify_prng;
+    verify_prng.SetSeed(seed_verify);
+
+    InnerProducts local_left;
+    VerifyRing *res = new VerifyRing[k];
+
+    cout << "\tChoping" << endl;
+
+    while (true) {
+
+        cout << "\t\tnext vector length = " << vector_length << endl;
+        cout << "\t\tnow vector length = " << s << endl << endl;
+
+        if (vector_length == 1) {
+            for (int i = 0; i < k; i ++) {
+                for (int j = 0; j < k; j ++) {
+                    if (i == 0 && j == 0) {
+                        continue;
+                    }
+                    VerifyRing r = prng_left.getDoubleWord();
+                    local_left._inner_products[i][j] = r;
+                }
+            }
+
+            local_left._inner_products[0][0] = Z;
+            for (int i = 1; i < k; i ++) {
+                local_left._inner_products[0][0] -= local_left._inner_products[i][i];
+            }
+
+            receive_coef(coeffsX, verify_prng, k);
+            receive_coef(coeffsY, verify_prng, k);
+
+            for (int j = 0; j < vector_length; j ++) {
+                X[j] *= coeffsX[0];
+            }
+            for (int i = 1; i < k; i ++) {
+                for (int j = 0; j < vector_length; j ++) {
+                    X[j] += X[j + i * vector_length] * coeffsX[i];
+                }
+            }
+            
+            for (int i = 0; i < k; i ++) {
+                res[i] = 0;
+                for (int j = 0; j < k; j ++) {
+                    res[i] += coeffsX[j] * local_left._inner_products[j][i];
+                }
+            }
+
+            Z = 0;
+            for (int i = 0; i < k; i ++) {
+                Z += res[i] * coeffsY[i];
+            }
+            
+            return make_pair(X[0], Z);
+        }   
+        
+
+        for (int i = 0; i < k; i ++) {
+            for (int j = 0; j < k; j ++) {
+                if (i == 0 && j == 0) {
+                    continue;
+                }
+                VerifyRing r = prng_left.getDoubleWord();
+                local_left._inner_products[i][j] = r;
+            }
+        }
+
+        local_left._inner_products[0][0] = Z;
+        for (int i = 1; i < k; i ++) {
+            local_left._inner_products[0][0] -= local_left._inner_products[i][i];
+        }
+
+        receive_coef(coeffsX, verify_prng, k);
+        receive_coef(coeffsY, verify_prng, k);
+
+        for (int j = 0; j < vector_length; j ++) {
+            X[j] *= coeffsX[0];
+        }
+        for (int i = 1; i < k; i ++) {
+            for (int j = 0; j < vector_length; j ++) {
+                X[j] += X[j + i * vector_length] * coeffsX[i];
+            }
+        }
+        
+        for (int i = 0; i < k; i ++) {
+            res[i] = 0;
+            for (int j = 0; j < k; j ++) {
+                res[i] += coeffsX[j] * local_left._inner_products[j][i];
+            }
+        }
+
+        Z = 0;
+        for (int i = 0; i < k; i ++) {
+            Z += res[i] * coeffsY[i];
+        }
+
+        s = vector_length;
+        vector_length = (s - 1) / k + 1;
+    }
 
 }
 
-void verify_right(
-    RSShares* shares,
-    octet* seed,
-    int128** share_right,
-    octet* seed_verify,
-    int m,
-    int batch_size
+pair<VerifyRing, VerifyRing> verify_right(
+    MultiShare* shares,
+    int seed,
+    bool share_right[KAPPA][EBITS],
+    int seed_verify,
+    int batch_size,
+    int k
 ) {
 
+    vector<VerifyRing> origin_left, origin_right;
+
+    MyPRNG prng;
+    prng.SetSeed(seed);
+
+    cout << "\tUnpacking datas" << endl;
+
+    for (int i = 0; i < batch_size; i ++) {
+        auto share = shares[i];
+        origin_left.push_back(share.y[0]);
+        origin_left.push_back(share.x[0]);
+        origin_right.push_back(share.rho[0]);
+    }
+
+    VerifyRing *Y, Z = 0;
+    Y = new VerifyRing[batch_size * 2 + EBITS * KAPPA + k];
+    memset(Y, 0, sizeof(VerifyRing) * (batch_size * 2 + EBITS * KAPPA + k));
+
+    int new_batch_size = batch_size * 2;
+
+    cout << "\tPreparing Polynomials" << endl;
+
+    bool *choices = new bool[batch_size];
+    int *counter = new int[batch_size];
+
+    for (int _ = 0; _ < KAPPA; _ ++) {
+        // share_right[i] = new int128[KAPPA];
+        for (int i = 0; i < batch_size; i ++) {
+            choices[i] = prng.get_bit();
+        }
+        
+        for (int i = 0; i < batch_size; i ++) {
+            if (choices[i]) {
+                counter[i] = 1;
+                Z += origin_right[i];
+            }
+        }
+
+        for (int i = 0; i < EBITS; i ++) {
+            if (share_right[_][i]) {
+                Y[new_batch_size + i + _ * EBITS] = 1;
+                Z += ((uint128_t) 1 << 64);
+            }
+        }
+    }
+
+    for (int i = 0; i < batch_size; i ++) {
+        Y[i * 2] = origin_left[i * 2] * counter[i];
+        Y[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
+    }
+    
+    int s = new_batch_size + EBITS * KAPPA;
+    int vector_length = (s - 1) / k + 1;
+    VerifyRing coeffsX[k], coeffsY[k];
+
+    MyPRNG verify_prng;
+    verify_prng.SetSeed(seed_verify);
+
+    InnerProducts local_right;
+    VerifyRing *res = new VerifyRing[k];
+
+    cout << "\tChoping" << endl;
+
+    while (true) {
+
+        cout << "\t\tnext vector length = " << vector_length << endl;
+        cout << "\t\tnow vector length = " << s << endl << endl;
+
+        if (vector_length == 1) {
+            local_right = inner_product_right.front();
+            inner_product_right.pop();
+
+            local_right._inner_products[0][0] = Z;
+            for (int i = 1; i < k; i ++) {
+                local_right._inner_products[0][0] -= local_right._inner_products[i][i];
+            }
+
+            receive_coef(coeffsX, verify_prng, k);
+            receive_coef(coeffsY, verify_prng, k);
+
+            for (int j = 0; j < vector_length; j ++) {
+                Y[j] *= coeffsY[0];
+            }
+            for (int i = 1; i < k; i ++) {
+                for (int j = 0; j < vector_length; j ++) {
+                    Y[j] += Y[j + i * vector_length] * coeffsY[i];
+                }
+            }
+            
+            for (int i = 0; i < k; i ++) {
+                res[i] = 0;
+                for (int j = 0; j < k; j ++) {
+                    res[i] += coeffsX[j] * local_right._inner_products[j][i];
+                }
+            }
+
+            Z = 0;
+            for (int i = 0; i < k; i ++) {
+                Z += res[i] * coeffsY[i];
+            }
+            return make_pair(Y[0], Z);
+        }
+        
+        local_right = inner_product_right.front();
+        inner_product_right.pop();
+
+        local_right._inner_products[0][0] = Z;
+        for (int i = 1; i < k; i ++) {
+            local_right._inner_products[0][0] -= local_right._inner_products[i][i];
+        }
+
+        receive_coef(coeffsX, verify_prng, k);
+        receive_coef(coeffsY, verify_prng, k);
+
+        for (int j = 0; j < vector_length; j ++) {
+            Y[j] *= coeffsY[0];
+        }
+        for (int i = 1; i < k; i ++) {
+            for (int j = 0; j < vector_length; j ++) {
+                Y[j] += Y[j + i * vector_length] * coeffsY[i];
+            }
+        }
+        
+        for (int i = 0; i < k; i ++) {
+            res[i] = 0;
+            for (int j = 0; j < k; j ++) {
+                res[i] += coeffsX[j] * local_right._inner_products[j][i];
+            }
+        }
+
+        Z = 0;
+        for (int i = 0; i < k; i ++) {
+            Z += res[i] * coeffsY[i];
+        }
+
+        s = vector_length;
+        vector_length = (s - 1) / k + 1;
+    }
 }
 
+int _main() {
 
+    RSShares rss_share;
+    MultiShare *party0, *party1, *party2;
 
+    party0 = new MultiShare[BATCH_SIZE];
+    party1 = new MultiShare[BATCH_SIZE];
+    party2 = new MultiShare[BATCH_SIZE];
+
+    bool share_right[KAPPA][EBITS];
+
+    cout << "Generating triples" << endl;
+
+    for (int i = 0; i < BATCH_SIZE; i ++) {
+        rss_share = get_share();
+        party0[i] = rss_share[0];
+        party1[i] = rss_share[1];
+        party2[i] = rss_share[2];
+
+        // MulRing x = rss_share[0].x[0] + rss_share[1].x[0] + rss_share[1].x[1];
+        // MulRing y = rss_share[0].y[0] + rss_share[1].y[0] + rss_share[1].y[1];
+        // MulRing z = rss_share[0].z + rss_share[1].z + rss_share[2].z;
+        // assert(x * y == z);
+    }
+
+    cout << "Generating seeds" << endl;
+
+    MyPRNG seed_prng;
+    seed_prng.ReSeed();
+
+    int global_seed = rand();
+    int seed_left = rand();
+    int verify_seed = rand();
+
+    // cout << "Generating random bits" << endl;
+
+    // unsigned int buffer = 0, buffer_bits = 0;
+    // for (int i = 0; i < KAPPA; i ++) {
+    //     for (int j = 0; j < batch_size; j ++) {
+    //         global_rand_bits[i][j] = seed_prng.get_bit();
+    //     }
+    // }
+
+    // for (int i = 0; i < KAPPA; i ++) {
+    //     for (int j = 0; j < EBITS; j ++) {
+    //         left_rand_bits[i][j] = seed_prng.get_bit();
+    //     }
+    // }
+    
+    cout << "Proving" << endl;
+
+    prove(party1, global_seed, seed_left, BATCH_SIZE, K, share_right, verify_seed);
+
+    cout << "verify_left" << endl;
+
+    auto response1 = verify_left(party0, global_seed, seed_left, verify_seed, BATCH_SIZE, K);
+
+    cout << "verify_right" << endl;
+
+    auto response2 = verify_right(party2, global_seed, share_right, verify_seed, BATCH_SIZE, K);
+
+    print_uint128(response1.first);
+    cout << " * ";
+    print_uint128(response2.first);
+    cout << " should be equal to ";
+    print_uint128(response1.second + response2.second);
+    cout << endl;
+    // cout << int128(response1.first) << " * " << int128(response2.first) << " should be equal to " << int128(response1.second + response2.second) << endl;
+    cout << (response1.first * response2.first == (response1.second + response2.second)) << endl;
+
+    return 0;
+}
+
+int _debug() {
+    RSShares rss_share;
+    MultiShare *party0, *party1, *party2;
+
+    party0 = new MultiShare[BATCH_SIZE];
+    party1 = new MultiShare[BATCH_SIZE];
+    party2 = new MultiShare[BATCH_SIZE];
+
+    bool share_right[KAPPA][EBITS];
+
+    cout << "Generating triples" << endl;
+
+    for (int i = 0; i < BATCH_SIZE; i ++) {
+        rss_share = get_share();
+        party0[i] = rss_share[0];
+        party1[i] = rss_share[1];
+        party2[i] = rss_share[2];
+
+        // MulRing x = rss_share[0].x[0] + rss_share[1].x[0] + rss_share[1].x[1];
+        // MulRing y = rss_share[0].y[0] + rss_share[1].y[0] + rss_share[1].y[1];
+        // MulRing z = rss_share[0].z + rss_share[1].z + rss_share[2].z;
+        // assert(x * y == z);
+    }
+
+    cout << "Generating seeds" << endl;
+
+    MyPRNG seed_prng;
+    seed_prng.ReSeed();
+
+    int global_seed = rand();
+    int seed_left = rand();
+    int verify_seed = rand();
+    
+
+    prove(party1, global_seed, seed_left, BATCH_SIZE, K, share_right, verify_seed);
+
+    return 0;
+}
 
 int main() {
 
-    return 0;
+    srand(0xdeadbeef);
+#ifdef DEBUG
+    return _debug();
+#else
+    return _main();
+#endif
+
 }
