@@ -18,7 +18,7 @@ typedef uint128_t VerifyRing;
 const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
-const size_t BATCH_SIZE = 1000000;
+const size_t BATCH_SIZE = 10000000;
 const int K = 8;
 
 void print_uint128(uint128_t x) {
@@ -255,8 +255,6 @@ struct InnerProducts {
 
 queue<InnerProducts> inner_product_right;
 
-// bool global_rand_bits[KAPPA][BATCH_SIZE];
-// bool left_rand_bits[KAPPA][EBITS];
 
 void prove(
     MultiShare* shares,
@@ -268,7 +266,7 @@ void prove(
     int verify_seed = 0
 ) {
 
-    cout << "\tUnpacking datas" << endl;
+    // cout << "\tUnpacking datas" << endl;
     auto p1 = std::chrono::high_resolution_clock::now();
 
     vector<MulTriple> triples;
@@ -280,25 +278,22 @@ void prove(
     }
 
     auto p2 = std::chrono::high_resolution_clock::now();
-    cout << "\tUnpacking datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
+    cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
 
     size_t new_batch_size = batch_size * 2;
 
     MyPRNG prng, prng_left;
-    // SeededPRNG local_prng;
 
     prng.SetSeed(seed);
     prng_left.SetSeed(seed_left);
 
-    VerifyRing *X, *Y, Z = 0;
+    VerifyRing *X, *Y;
     X = new VerifyRing[new_batch_size + EBITS * KAPPA + k];
     Y = new VerifyRing[new_batch_size + EBITS * KAPPA + k];
     memset(X, 0, sizeof(VerifyRing) * (new_batch_size + EBITS * KAPPA + k));
     memset(Y, 0, sizeof(VerifyRing) * (new_batch_size + EBITS * KAPPA + k));
 
-    // int128 **share_right = new int128*[KAPPA];
-
-    cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
+    // cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
     auto p3 = std::chrono::high_resolution_clock::now();
 
     VerifyRing LHS = 0, RHS = 0;
@@ -309,8 +304,6 @@ void prove(
     memset(counter, 0, sizeof(int) * batch_size);
 
     for (int _ = 0; _ < KAPPA; _ ++) {
-
-        // cout << "\t\tRound: " << _ << endl;
 
         for (int i = 0; i < batch_size; i ++) {
             choices[i] = prng.get_bit();
@@ -329,28 +322,18 @@ void prove(
         }
 
         e = (LHS - RHS) >> 64;
-        // assert ((uint64_t) (LHS - RHS) == 0);
-
 
         for (int i = 0; i < batch_size; i ++) {
             if (choices[i]) {
                 counter[i] ++;
-                Z += triples[i * 2][2];
             }
         }
-        // RHS += (e << 64);
-
-        // assert (LHS == RHS + (e << 64));
-
-        // VerifyRing e_bits = 0;
 
         for (int i = 0; i < EBITS; i ++) {
             bool share_left = prng_left.get_bit();
             share_right[_][i] = ((e >> i) & 1) ^ share_left;
             X[new_batch_size + i + _ * EBITS] = 2 * ((uint128_t) share_left << i) << 64;
             Y[new_batch_size + i + _ * EBITS] = (uint128_t) share_right[_][i];
-            Z += ((uint128_t) share_left << i) << 64;
-            Z += ((uint128_t) share_right[_][i] << i) << 64;
         }
     }
 
@@ -364,29 +347,19 @@ void prove(
     }
 
     auto p4 = std::chrono::high_resolution_clock::now();
-    cout << "\tPreparing (length batch_size + e_bits^2) Polynomial costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
+    cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
 
     int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
-    VerifyRing coeffsX[k], coeffsY[k], Z2 = 0;
+    VerifyRing coeffsX[k], coeffsY[k];
     
-    // the verify_prng should not known by prover, this is just for debug.
     MyPRNG verify_prng;
     verify_prng.SetSeed(verify_seed);
 
-    // int128 *newX, *newY;
-    // newX = new int128[new_batch_size + KAPPA + k];
-    // newY = new int128[new_batch_size + KAPPA + k];
-
-    cout << "\tChoping" << endl;
+    // cout << "\tChoping" << endl;
     auto p5 = std::chrono::high_resolution_clock::now();
 
-    VerifyRing *res = new VerifyRing[k];
-
     while (true) {
-
-        // cout << "\t\tnext vector length = " << vector_length << endl;
-        // cout << "\t\tnow vector length = " << s << endl << endl;
 
         InnerProducts local_right;
 
@@ -400,31 +373,10 @@ void prove(
             }
         }
 
-        // cout << "<X0, Y0> = ";
-        // print_uint128(inner_product(X, Y, vector_length));
-        // puts("");
-
         inner_product_right.push(local_right);
 
         receive_coef(coeffsX, verify_prng, k);
         receive_coef(coeffsY, verify_prng, k);
-
-        // Debug code start
-
-        for (int i = 0; i < k; i ++) {
-            res[i] = 0;
-            for (int j = 0; j < k; j ++) {
-                res[i] += coeffsY[j] * inner_product(X + i * vector_length, Y + j * vector_length, vector_length);
-                // Z += coeffsX[i] * coeffsY[j] * inner_product(X + i * vector_length, Y + j * vector_length, vector_length);
-            }
-        }
-
-        Z = 0;
-        for (int i = 0; i < k; i ++) {
-            Z += res[i] * coeffsX[i];
-        }
-
-        // Debug code end
 
         for (int j = 0; j < vector_length; j ++) {
             X[j] *= coeffsX[0];
@@ -440,11 +392,7 @@ void prove(
             }
         }
         
-        assert (inner_product(X, Y, vector_length) == Z);
-
         if (vector_length == 1) {
-            assert (X[0] * Y[0] == Z);
-            // show_uint128(Z);
             auto p6 = std::chrono::high_resolution_clock::now();
             cout << "\tChop costs: " << (p6 - p5).count() / 1e6 << " ms" << endl;
             break;
@@ -471,7 +419,8 @@ pair<VerifyRing, VerifyRing> verify_left(
     prng.SetSeed(seed);
     prng_left.SetSeed(seed_left);
 
-    cout << "\tUnpacking datas" << endl;
+    // cout << "\tUnpacking datas" << endl;
+    auto p1 = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
@@ -480,13 +429,17 @@ pair<VerifyRing, VerifyRing> verify_left(
         origin_right.push_back(share.z[1] + share.rho[1]);
     }
 
+    auto p2 = std::chrono::high_resolution_clock::now();
+    cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
+
     VerifyRing *X, Z = 0;
     X = new VerifyRing[batch_size * 2 + EBITS * KAPPA + k];
     memset(X, 0, sizeof(VerifyRing) * (batch_size * 2 + EBITS * KAPPA + k));
 
     int new_batch_size = batch_size * 2;
 
-    cout << "\tPreparing Polynomials" << endl;
+    // cout << "\tPreparing Polynomials" << endl;
+    auto p3 = std::chrono::high_resolution_clock::now();
 
     bool *choices = new bool[batch_size];
     int *counter = new int[batch_size];
@@ -519,8 +472,9 @@ pair<VerifyRing, VerifyRing> verify_left(
         X[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
     }
     
-    // show_uint128(Z);
-    // show_uint128(X[0]);
+    auto p4 = std::chrono::high_resolution_clock::now();
+    cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
+
 
     int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
@@ -532,7 +486,8 @@ pair<VerifyRing, VerifyRing> verify_left(
     InnerProducts local_left;
     VerifyRing *res = new VerifyRing[k];
 
-    cout << "\tChoping" << endl;
+    // cout << "\tChoping" << endl;
+    auto p5 = std::chrono::high_resolution_clock::now();
 
     while (true) {
 
@@ -553,10 +508,6 @@ pair<VerifyRing, VerifyRing> verify_left(
         for (int i = 1; i < k; i ++) {
             local_left._inner_products[0][0] -= local_left._inner_products[i][i];
         }
-
-        // cout << "[<X0, Y0>] = ";
-        // print_uint128(local_left._inner_products[0][0]);
-        // puts("");
 
         receive_coef(coeffsX, verify_prng, k);
         receive_coef(coeffsY, verify_prng, k);
@@ -584,6 +535,8 @@ pair<VerifyRing, VerifyRing> verify_left(
         }
 
         if (vector_length == 1) {
+            auto p6 = std::chrono::high_resolution_clock::now();
+            cout << "\tChop costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
             return make_pair(X[0], Z);
         }
 
@@ -607,7 +560,8 @@ pair<VerifyRing, VerifyRing> verify_right(
     MyPRNG prng;
     prng.SetSeed(seed);
 
-    cout << "\tUnpacking datas" << endl;
+    // cout << "\tUnpacking datas" << endl;
+    auto p1 = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
@@ -616,13 +570,17 @@ pair<VerifyRing, VerifyRing> verify_right(
         origin_right.push_back(-share.x[0] * share.y[0] - share.rho[0]);
     }
 
+    auto p2 = std::chrono::high_resolution_clock::now();
+    cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
+
     VerifyRing *Y, Z = 0;
     Y = new VerifyRing[batch_size * 2 + EBITS * KAPPA + k];
     memset(Y, 0, sizeof(VerifyRing) * (batch_size * 2 + EBITS * KAPPA + k));
 
     int new_batch_size = batch_size * 2;
 
-    cout << "\tPreparing Polynomials" << endl;
+    // cout << "\tPreparing Polynomials" << endl;
+    auto p3 = std::chrono::high_resolution_clock::now();
 
     bool *choices = new bool[batch_size];
     int *counter = new int[batch_size];
@@ -653,8 +611,8 @@ pair<VerifyRing, VerifyRing> verify_right(
         Y[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
     }
 
-    // show_uint128(Z);
-    // show_uint128(Y[0]);
+    auto p4 = std::chrono::high_resolution_clock::now();
+    cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
     
     int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
@@ -666,12 +624,10 @@ pair<VerifyRing, VerifyRing> verify_right(
     InnerProducts local_right;
     VerifyRing *res = new VerifyRing[k];
 
-    cout << "\tChoping" << endl;
+    // cout << "\tChoping" << endl;
+    auto p5 = std::chrono::high_resolution_clock::now();
 
     while (true) {
-
-        // cout << "\t\tnext vector length = " << vector_length << endl;
-        // cout << "\t\tnow vector length = " << s << endl << endl;
         
         local_right = inner_product_right.front();
         inner_product_right.pop();
@@ -680,10 +636,6 @@ pair<VerifyRing, VerifyRing> verify_right(
         for (int i = 1; i < k; i ++) {
             local_right._inner_products[0][0] -= local_right._inner_products[i][i];
         }
-
-        // cout << "[<X0, Y0>] = ";
-        // print_uint128(local_right._inner_products[0][0]);
-        // puts("");
 
         receive_coef(coeffsX, verify_prng, k);
         receive_coef(coeffsY, verify_prng, k);
@@ -711,6 +663,8 @@ pair<VerifyRing, VerifyRing> verify_right(
         }
 
         if (vector_length == 1) {
+            auto p6 = std::chrono::high_resolution_clock::now();
+            cout << "\tChop costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
             return make_pair(Y[0], Z);
         }
 
@@ -739,10 +693,14 @@ int main() {
 
     cout << "Generating triples. Prove " << BATCH_SIZE << " in one verify. " << endl;
     cout << "Parameter settings: " << endl;
+    cout << "\tProver: P1. Verifiers: P0, P2" << endl;
     cout << "\tBATCH_SIZE = " << BATCH_SIZE << endl;
     cout << "\tK = " << K << endl;
     cout << "\tKAPPA = " << KAPPA << endl;
     cout << "\tbit_length of e = " << EBITS << endl;
+    cout << "\tOrigin multiply ring: " << "Z2^64" << endl;
+    cout << "\tVerify Ring: " << "Z2^128" << endl;
+
 
     for (int i = 0; i < BATCH_SIZE; i ++) {
         rss_share = get_share();
@@ -756,7 +714,7 @@ int main() {
         // assert(x * y == z);
     }
 
-    cout << "Generating seeds" << endl;
+    // cout << "Generating seeds" << endl;
 
     MyPRNG seed_prng;
     seed_prng.ReSeed();
@@ -779,18 +737,34 @@ int main() {
     //         left_rand_bits[i][j] = seed_prng.get_bit();
     //     }
     // }
+
+    puts("= = = = = = = = = = = = = = = = = = = = = = = = = = = =");
     
-    cout << "Proving" << endl;
+    cout << "Prove part: " << endl;
 
+    auto p1 = std::chrono::high_resolution_clock::now();
     prove(party1, global_seed, seed_left, BATCH_SIZE, K, share_right, verify_seed);
+    auto p2 = std::chrono::high_resolution_clock::now();
+    
+    cout << "Prove part costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
+    puts("= = = = = = = = = = = = = = = = = = = = = = = = = = = =");
 
-    cout << "verify_left" << endl;
+    cout << "verify_left part: " << endl;
 
+    auto p3 = std::chrono::high_resolution_clock::now();
     auto response1 = verify_left(party0, global_seed, seed_left, verify_seed, BATCH_SIZE, K);
+    auto p4 = std::chrono::high_resolution_clock::now();
 
-    cout << "verify_right" << endl;
+    cout << "verify_left part costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
+    puts("= = = = = = = = = = = = = = = = = = = = = = = = = = = =");
 
+    cout << "verify_right part: " << endl;
+
+    auto p5 = std::chrono::high_resolution_clock::now();
     auto response2 = verify_right(party2, global_seed, share_right, verify_seed, BATCH_SIZE, K);
+    auto p6 = std::chrono::high_resolution_clock::now();
+
+    cout << "verify_right part costs: " << (p6 - p5).count() / 1e6 << " ms" << endl;
 
     print_uint128(response1.first);
     cout << " * ";
