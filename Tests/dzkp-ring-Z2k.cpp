@@ -18,10 +18,8 @@ typedef uint128_t VerifyRing;
 const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
-const size_t BATCH_SIZE = 10000;
+const size_t BATCH_SIZE = 1000000;
 const int K = 8;
-
-// #define DEBUG
 
 void print_uint128(uint128_t x) {
     if (x < 0) {
@@ -31,6 +29,11 @@ void print_uint128(uint128_t x) {
     if (x > 9) print_uint128(x / 10);
     putchar(x % 10 + '0');
 }
+
+#define show_uint128(value) \
+    cout << #value << " = "; \
+    print_uint128(value); \
+    cout << endl;
 
 class LocalHash {
     octetStream buffer;
@@ -89,17 +92,17 @@ public:
 typedef array<MulRing, 2> RSShare;
 struct MultiShare {
     RSShare x, y;
-    MulRing z;
+    RSShare z;
     RSShare rho;
 
     MultiShare() {
         x = {0, 0};
         y = {0, 0};
-        z = 0;
+        z = {0, 0};
         rho = {0, 0};
     }
     
-    MultiShare(RSShare x, RSShare y, MulRing z, RSShare rho) {
+    MultiShare(RSShare x, RSShare y, RSShare z, RSShare rho) {
         this->x = x;
         this->y = y;
         this->z = z;
@@ -184,7 +187,7 @@ typedef array<MultiShare, 3> RSShares;
 typedef array<VerifyRing, 3> MulTriple;
 
 RSShares get_share() {
-    MulRing x0, x1, x2, y0, y1, y2, x, y, rho0, rho1, rho2;
+    MulRing x0, x1, x2, y0, y1, y2, x, y, rho0, rho1, rho2, z0, z1, z2;
     x = getRand64Bits();
     y = getRand64Bits();
     
@@ -199,24 +202,30 @@ RSShares get_share() {
     rho1 = getRand64Bits();
     rho2 = -(rho0 + rho1);
 
+    z0 = x0 * y1 + x1 * y0 + x1 * y1 + rho1 - rho0;
+    z1 = x1 * y2 + x2 * y1 + x2 * y2 + rho2 - rho1;
+    z2 = x2 * y0 + x0 * y2 + x0 * y0 + rho0 - rho2;
+
+    assert (z0 + z1 + z2 == x * y);
+
     MultiShare shares0 = {
         {x0, x1}, 
         {y0, y1},
-        x0 * y1 + x1 * y0 + x1 * y1 + rho1 - rho0,
+        {z0, z1},
         {rho0, rho1}
     };
 
     MultiShare shares1 = {
         {x1, x2},
         {y1, y2},
-        x1 * y2 + x2 * y1 + x2 * y2 + rho2 - rho1,
+        {z1, z2},
         {rho1, rho2}
     };
 
     MultiShare shares2 = {
         {x2, x0},
         {y2, y0},
-        x2 * y0 + x0 * y2 + x0 * y0 + rho0 - rho2,
+        {z2, z0},
         {rho2, rho0}
     };
 
@@ -255,18 +264,23 @@ void prove(
     int seed_left,
     int batch_size,
     int k,
-    bool share_right[KAPPA][EBITS],     // with size KAPPA * EBITS
+    bool **share_right,     // with size KAPPA * EBITS
     int verify_seed = 0
 ) {
 
     cout << "\tUnpacking datas" << endl;
+    auto p1 = std::chrono::high_resolution_clock::now();
 
     vector<MulTriple> triples;
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
-        triples.push_back({(uint128_t) share.x[1], (uint128_t) share.y[0], (uint128_t) (share.z - share.x[1] * share.y[1] - share.rho[1] + share.rho[0])});
+        VerifyRing z1 = share.z[0] + share.rho[0], z2 = - share.x[1] * share.y[1] - share.rho[1];
+        triples.push_back({(uint128_t) share.y[0], (uint128_t) share.x[1], z1 + z2});
         triples.push_back({(uint128_t) share.x[0], (uint128_t) share.y[1], 0});
     }
+
+    auto p2 = std::chrono::high_resolution_clock::now();
+    cout << "\tUnpacking datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
 
     size_t new_batch_size = batch_size * 2;
 
@@ -284,7 +298,9 @@ void prove(
 
     // int128 **share_right = new int128*[KAPPA];
 
-    cout << "\tPreparing Polynomials" << endl;
+    cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
+    auto p3 = std::chrono::high_resolution_clock::now();
+
     VerifyRing LHS = 0, RHS = 0;
 
     bool *choices = new bool[batch_size];
@@ -347,24 +363,8 @@ void prove(
         Y[i * 2 + 1] = triples[i * 2 + 1][1];
     }
 
-    // LHS = 0;
-    // RHS = 0;
-    // for (int i = 0; i < new_batch_size + KAPPA * EBITS; i ++) {
-    //     LHS += X[i] * Y[i];
-    // }
-    // for (int i = 0; i < batch_size; i ++) {
-    //     RHS += counter[i] * triples[i * 2][2];
-    // }
-
-    // puts("\t\tFinal Round: ");
-    // print_uint128(LHS);
-    // // cout << (uint64_t) LHS;
-    // puts("");
-    // print_uint128(Z);
-    // // cout << (uint64_t) RHS;
-    // puts("");
-
-    // return ;
+    auto p4 = std::chrono::high_resolution_clock::now();
+    cout << "\tPreparing (length batch_size + e_bits^2) Polynomial costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
 
     int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
@@ -379,6 +379,7 @@ void prove(
     // newY = new int128[new_batch_size + KAPPA + k];
 
     cout << "\tChoping" << endl;
+    auto p5 = std::chrono::high_resolution_clock::now();
 
     VerifyRing *res = new VerifyRing[k];
 
@@ -399,9 +400,9 @@ void prove(
             }
         }
 
-        cout << "<X0, Y0> = ";
-        print_uint128(inner_product(X, Y, vector_length));
-        puts("");
+        // cout << "<X0, Y0> = ";
+        // print_uint128(inner_product(X, Y, vector_length));
+        // puts("");
 
         inner_product_right.push(local_right);
 
@@ -443,9 +444,9 @@ void prove(
 
         if (vector_length == 1) {
             assert (X[0] * Y[0] == Z);
-            cout << "Z = ";
-            print_uint128(Z);
-            puts("");
+            // show_uint128(Z);
+            auto p6 = std::chrono::high_resolution_clock::now();
+            cout << "\tChop costs: " << (p6 - p5).count() / 1e6 << " ms" << endl;
             break;
         }
 
@@ -474,9 +475,9 @@ pair<VerifyRing, VerifyRing> verify_left(
 
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
-        origin_left.push_back(share.x[1]);
         origin_left.push_back(share.y[1]);
-        origin_right.push_back(share.z - share.x[1] * share.y[1] - share.rho[1]);
+        origin_left.push_back(share.x[1]);
+        origin_right.push_back(share.z[1] + share.rho[1]);
     }
 
     VerifyRing *X, Z = 0;
@@ -518,6 +519,9 @@ pair<VerifyRing, VerifyRing> verify_left(
         X[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
     }
     
+    // show_uint128(Z);
+    // show_uint128(X[0]);
+
     int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
     VerifyRing coeffsX[k], coeffsY[k];
@@ -550,9 +554,9 @@ pair<VerifyRing, VerifyRing> verify_left(
             local_left._inner_products[0][0] -= local_left._inner_products[i][i];
         }
 
-        cout << "[<X0, Y0>] = ";
-        print_uint128(local_left._inner_products[0][0]);
-        puts("");
+        // cout << "[<X0, Y0>] = ";
+        // print_uint128(local_left._inner_products[0][0]);
+        // puts("");
 
         receive_coef(coeffsX, verify_prng, k);
         receive_coef(coeffsY, verify_prng, k);
@@ -592,7 +596,7 @@ pair<VerifyRing, VerifyRing> verify_left(
 pair<VerifyRing, VerifyRing> verify_right(
     MultiShare* shares,
     int seed,
-    bool share_right[KAPPA][EBITS],
+    bool **share_right,
     int seed_verify,
     int batch_size,
     int k
@@ -607,9 +611,9 @@ pair<VerifyRing, VerifyRing> verify_right(
 
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
-        origin_left.push_back(share.y[0]);
         origin_left.push_back(share.x[0]);
-        origin_right.push_back(share.rho[0]);
+        origin_left.push_back(share.y[0]);
+        origin_right.push_back(-share.x[0] * share.y[0] - share.rho[0]);
     }
 
     VerifyRing *Y, Z = 0;
@@ -648,6 +652,9 @@ pair<VerifyRing, VerifyRing> verify_right(
         Y[i * 2] = origin_left[i * 2] * counter[i];
         Y[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
     }
+
+    // show_uint128(Z);
+    // show_uint128(Y[0]);
     
     int s = new_batch_size + EBITS * KAPPA;
     int vector_length = (s - 1) / k + 1;
@@ -674,9 +681,9 @@ pair<VerifyRing, VerifyRing> verify_right(
             local_right._inner_products[0][0] -= local_right._inner_products[i][i];
         }
 
-        cout << "[<X0, Y0>] = ";
-        print_uint128(local_right._inner_products[0][0]);
-        puts("");
+        // cout << "[<X0, Y0>] = ";
+        // print_uint128(local_right._inner_products[0][0]);
+        // puts("");
 
         receive_coef(coeffsX, verify_prng, k);
         receive_coef(coeffsY, verify_prng, k);
@@ -712,7 +719,9 @@ pair<VerifyRing, VerifyRing> verify_right(
     }
 }
 
-int _main() {
+int main() {
+
+    srand(time(0));
 
     RSShares rss_share;
     MultiShare *party0, *party1, *party2;
@@ -721,9 +730,19 @@ int _main() {
     party1 = new MultiShare[BATCH_SIZE];
     party2 = new MultiShare[BATCH_SIZE];
 
-    bool share_right[KAPPA][EBITS];
+    bool **share_right;
 
-    cout << "Generating triples" << endl;
+    share_right = new bool*[KAPPA];
+    for (int i = 0; i < KAPPA; i ++) {
+        share_right[i] = new bool[EBITS];
+    }
+
+    cout << "Generating triples. Prove " << BATCH_SIZE << " in one verify. " << endl;
+    cout << "Parameter settings: " << endl;
+    cout << "\tBATCH_SIZE = " << BATCH_SIZE << endl;
+    cout << "\tK = " << K << endl;
+    cout << "\tKAPPA = " << KAPPA << endl;
+    cout << "\tbit_length of e = " << EBITS << endl;
 
     for (int i = 0; i < BATCH_SIZE; i ++) {
         rss_share = get_share();
@@ -783,54 +802,4 @@ int _main() {
     cout << (response1.first * response2.first == (response1.second + response2.second)) << endl;
 
     return 0;
-}
-
-int _debug() {
-    RSShares rss_share;
-    MultiShare *party0, *party1, *party2;
-
-    party0 = new MultiShare[BATCH_SIZE];
-    party1 = new MultiShare[BATCH_SIZE];
-    party2 = new MultiShare[BATCH_SIZE];
-
-    bool share_right[KAPPA][EBITS];
-
-    cout << "Generating triples" << endl;
-
-    for (int i = 0; i < BATCH_SIZE; i ++) {
-        rss_share = get_share();
-        party0[i] = rss_share[0];
-        party1[i] = rss_share[1];
-        party2[i] = rss_share[2];
-
-        // MulRing x = rss_share[0].x[0] + rss_share[1].x[0] + rss_share[1].x[1];
-        // MulRing y = rss_share[0].y[0] + rss_share[1].y[0] + rss_share[1].y[1];
-        // MulRing z = rss_share[0].z + rss_share[1].z + rss_share[2].z;
-        // assert(x * y == z);
-    }
-
-    cout << "Generating seeds" << endl;
-
-    MyPRNG seed_prng;
-    seed_prng.ReSeed();
-
-    int global_seed = rand();
-    int seed_left = rand();
-    int verify_seed = rand();
-    
-
-    prove(party1, global_seed, seed_left, BATCH_SIZE, K, share_right, verify_seed);
-
-    return 0;
-}
-
-int main() {
-
-    // srand(0xdeadbeef);
-#ifdef DEBUG
-    return _debug();
-#else
-    return _main();
-#endif
-
 }
