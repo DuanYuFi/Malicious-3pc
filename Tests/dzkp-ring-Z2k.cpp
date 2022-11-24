@@ -18,7 +18,7 @@ typedef uint128_t VerifyRing;
 const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
-const size_t BATCH_SIZE = 10000000;
+const size_t BATCH_SIZE = 1000000;
 const int K = 8;
 
 void print_uint128(uint128_t x) {
@@ -181,6 +181,21 @@ public:
         res = (res << 32) | get_uint();
         return res;
     }
+
+    void get_bits(bool *bits, size_t length) {
+        for (int i = 0; i < length / 32; i ++) {
+            unsigned int tmp = get_uint();
+            for (int j = 0; j < 32; j ++) {
+                bits[i * 32 + j] = tmp & 1;
+                tmp >>= 1;
+            }
+        }
+        unsigned int tmp = get_uint();
+        for (int i = 0; i < length % 32; i ++) {
+            bits[length - 1 - i] = tmp & 1;
+            tmp >>= 1;
+        }
+    }
 };
 
 typedef array<MultiShare, 3> RSShares;
@@ -296,7 +311,7 @@ void prove(
     // cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
     auto p3 = std::chrono::high_resolution_clock::now();
 
-    VerifyRing LHS = 0, RHS = 0, Z = 0;
+    VerifyRing Z = 0;
 
     VerifyRing *E;
     E = new VerifyRing[batch_size];
@@ -318,9 +333,11 @@ void prove(
 
     for (int _ = 0; _ < KAPPA; _ ++) {
 
-        for (int i = 0; i < batch_size; i ++) {
-            choices[_][i] = prng.get_bit();
-        }
+        // for (int i = 0; i < batch_size; i ++) {
+        //     choices[_][i] = prng.get_bit();
+        // }
+
+        prng.get_bits(choices[_], batch_size);
 
         VerifyRing e = 0;
 
@@ -336,6 +353,9 @@ void prove(
         VerifyRing share_left = prng_left.getDoubleWord();
         share_right[_] = e - share_left;
     }
+
+    // auto p35 = std::chrono::high_resolution_clock::now();
+    // cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
 
     for (int i = 0; i < KAPPA; i ++) {
         for (int j = 0; j < batch_size; j ++) {
@@ -456,9 +476,11 @@ pair<VerifyRing, VerifyRing> verify_left(
 
     for (int _ = 0; _ < KAPPA; _ ++) {
         // share_right[i] = new int128[KAPPA];
-        for (int i = 0; i < batch_size; i ++) {
-            choices[i] = prng.get_bit();
-        }
+        // for (int i = 0; i < batch_size; i ++) {
+        //     choices[i] = prng.get_bit();
+        // }
+
+        prng.get_bits(choices, batch_size);
         
         for (int i = 0; i < batch_size; i ++) {
             if (choices[i]) {
@@ -544,7 +566,7 @@ pair<VerifyRing, VerifyRing> verify_left(
 
         if (vector_length == 1) {
             auto p6 = std::chrono::high_resolution_clock::now();
-            cout << "\tChop costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
+            cout << "\tChop costs: " << (p6 - p5).count() / 1e6 << " ms" << endl;
             return make_pair(X[0], Z);
         }
 
@@ -595,9 +617,11 @@ pair<VerifyRing, VerifyRing> verify_right(
 
     for (int _ = 0; _ < KAPPA; _ ++) {
         // share_right[i] = new int128[KAPPA];
-        for (int i = 0; i < batch_size; i ++) {
-            choices[i] = prng.get_bit();
-        }
+        // for (int i = 0; i < batch_size; i ++) {
+        //     choices[i] = prng.get_bit();
+        // }
+
+        prng.get_bits(choices, batch_size);
         
         for (int i = 0; i < batch_size; i ++) {
             if (choices[i]) {
@@ -670,7 +694,7 @@ pair<VerifyRing, VerifyRing> verify_right(
 
         if (vector_length == 1) {
             auto p6 = std::chrono::high_resolution_clock::now();
-            cout << "\tChop costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
+            cout << "\tChop costs: " << (p6 - p5).count() / 1e6 << " ms" << endl;
             return make_pair(Y[0], Z);
         }
 

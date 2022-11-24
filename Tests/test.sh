@@ -1,1 +1,3 @@
-echo $0
+if [ "$1" == "" ]; then
+    echo "Hello"
+fi
