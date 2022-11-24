@@ -1,6 +1,9 @@
 MY_CFLAGS += -I./local/include
-MY_LDLIBS += -Wl,-rpath -Wl,/path/to/mpspdz/local/lib -L/path/to/mpspdz/local/lib
+MY_LDLIBS += -Wl,-rpath -Wl,./local/lib -L./local/lib
 MY_CFLAGS += -I./local/include
-MY_LDLIBS += -Wl,-rpath -Wl,/path/to/mpspdz/local/lib -L/path/to/mpspdz/local/lib
+MY_LDLIBS += -Wl,-rpath -Wl,./local/lib -L./local/lib
 MY_CFLAGS += -Wno-error=unused-parameter
 MY_CFLAGS += -Wno-error=unused-variable
+MY_CFLAGS += -Wno-error=class-memaccess
+MY_CFLAGS += -I./local/include
+MY_LDLIBS += -Wl,-rpath -Wl,/home/duanyufi/Malicious-3pc/local/lib -L/home/duanyufi/Malicious-3pc/local/lib
