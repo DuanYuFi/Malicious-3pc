@@ -9,9 +9,11 @@ make tldr
 
 then the environment will automatically prepared. And you can build other protocols.
 
-## Malicious
+## Arithmetic Verify
 
-Our protocol with SpdzWise is in Protocols/Malicious3PCProtocol.h, Protocols/Malicious3PCProtocol.hpp. The VM file is Machines/mal3pc-ring-party.cpp. If you want to compile this protocol, please DO NOT FORGET to uncomment GC/ShareThread.hpp: line 88 `protocol->finalize_check();` and comment line 89 `protocol->check();`. The test running script is in Scripts/mal3pc-ring.sh .
+Test files are in folder "Test/". In the Test folder, there are some c++ source codes named like "dzkp-xxx-yyy.cpp". The 'xxx' means the ring or field that the basic protocol (mul, add, sub, etc) is based on. The 'yyy' means the ring or field that the verification protocol is used. For example, "dzkp-fp-mersenne.cpp" means the protocol is based on GFp and verify on mersenne prime field.
+
+Before run the file, you have to setup the MP-SPDZ environment (use dockerfile or command line, etc). After you got the "libSPDZ.so", you can run the script "run_test.sh" to compile and run the test file. The script will automatically compile the test file and run it. The result will be shown in the terminal.
 
 ## About mpir:
 
