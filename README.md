@@ -1,6 +1,10 @@
 # Malicious-3PC
 
-**Note: The real protocol was in the branch 'static_bincheck'**
+**Note: The binary protocol is in the branch 'static_bincheck'**
+
+**The arithmetic protocol is in the branch 'full_version'**
+
+**After all the stuffs finish, they will merged into branch main**
 
 Usage: After pull the repository, run:
 ```
