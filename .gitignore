@@ -122,3 +122,4 @@ _build/
 .env
 core
 Tests/initialize.sh
+CONFIG.mine
