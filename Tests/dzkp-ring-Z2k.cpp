@@ -314,7 +314,7 @@ void prove(
     // cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
     auto p3 = std::chrono::high_resolution_clock::now();
 
-    VerifyRing Z = 0;
+    VerifyRing Z = 0, *_Z = new VerifyRing[KAPPA];
 
     VerifyRing *E;
     E = new VerifyRing[batch_size];
@@ -333,7 +333,8 @@ void prove(
         choices[i] = new bool[batch_size];
     }
 
-    int *counter = new int[batch_size];
+    VerifyRing *counter = new VerifyRing[batch_size];
+    VerifyRing *random_coef = new VerifyRing[KAPPA];
 
     memset(counter, 0, sizeof(int) * batch_size);
 
@@ -350,7 +351,7 @@ void prove(
         for (int i = 0; i < batch_size; i ++) {
             if (choices[_][i]) {
                 e += E[i];
-                Z += triples[i * 2][2];
+                _Z[_] += triples[i * 2][2];
             }   
         }
 
@@ -364,9 +365,14 @@ void prove(
     cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
 
     for (int i = 0; i < KAPPA; i ++) {
+        random_coef[i] = prng.getDoubleWord();
+    }
+
+    for (int i = 0; i < KAPPA; i ++) {
         for (int j = 0; j < batch_size; j ++) {
-            counter[j] += choices[i][j];
+            counter[j] += choices[i][j] * random_coef[i];
         }
+        Z += _Z[i] * random_coef[i];
     }
     
 
@@ -467,7 +473,7 @@ pair<VerifyRing, VerifyRing> verify_left(
     auto p2 = std::chrono::high_resolution_clock::now();
     cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
 
-    VerifyRing *X, Z = 0;
+    VerifyRing *X, Z = 0, *_Z = new VerifyRing[KAPPA];
     X = new VerifyRing[batch_size * 2 + k];
     memset(X, 0, sizeof(VerifyRing) * (batch_size * 2 + k));
 
@@ -476,9 +482,13 @@ pair<VerifyRing, VerifyRing> verify_left(
     // cout << "\tPreparing Polynomials" << endl;
     auto p3 = std::chrono::high_resolution_clock::now();
 
-    bool *choices = new bool[batch_size];
-    int *counter = new int[batch_size];
-    memset(counter, 0, sizeof(int) * batch_size);
+    bool **choices = new bool*[KAPPA];
+    for (int i = 0; i < KAPPA; i ++) {
+        choices[i] = new bool[batch_size];
+    }
+
+    VerifyRing *counter = new VerifyRing[batch_size];
+    VerifyRing *random_coef = new VerifyRing[KAPPA];
 
     for (int _ = 0; _ < KAPPA; _ ++) {
         // share_right[i] = new int128[KAPPA];
@@ -486,18 +496,28 @@ pair<VerifyRing, VerifyRing> verify_left(
         //     choices[i] = prng.get_bit();
         // }
 
-        prng.get_bits(choices, batch_size);
+        prng.get_bits(choices[_], batch_size);
         
         for (int i = 0; i < batch_size; i ++) {
-            if (choices[i]) {
-                counter[i] ++;
-                Z += origin_right[i];
+            if (choices[_][i]) {
+                _Z[_] += origin_right[i];
             }
         }
 
         VerifyRing share_left = prng_left.getDoubleWord();
-        Z += share_left << 64;
+        _Z[_]+= share_left << 64;
 
+    }
+
+    for (int i = 0; i < KAPPA; i ++) {
+        random_coef[i] = prng.getDoubleWord();
+    }
+
+    for (int i = 0; i < KAPPA; i ++) {
+        for (int j = 0; j < batch_size; j ++) {
+            counter[j] += choices[i][j] * random_coef[i];
+        }
+        Z += _Z[i] * random_coef[i];
     }
 
     for (int i = 0; i < batch_size; i ++) {
@@ -609,7 +629,7 @@ pair<VerifyRing, VerifyRing> verify_right(
     auto p2 = std::chrono::high_resolution_clock::now();
     cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
 
-    VerifyRing *Y, Z = 0;
+    VerifyRing *Y, Z = 0, *_Z = new VerifyRing[KAPPA];
     Y = new VerifyRing[batch_size * 2 + k];
     memset(Y, 0, sizeof(VerifyRing) * (batch_size * 2 + k));
 
@@ -618,8 +638,13 @@ pair<VerifyRing, VerifyRing> verify_right(
     // cout << "\tPreparing Polynomials" << endl;
     auto p3 = std::chrono::high_resolution_clock::now();
 
-    bool *choices = new bool[batch_size];
-    int *counter = new int[batch_size];
+    bool **choices = new bool*[KAPPA];
+    for (int i = 0; i < KAPPA; i ++) {
+        choices[i] = new bool[batch_size];
+    }
+
+    VerifyRing *counter = new VerifyRing[batch_size];
+    VerifyRing *random_coef = new VerifyRing[KAPPA];
 
     for (int _ = 0; _ < KAPPA; _ ++) {
         // share_right[i] = new int128[KAPPA];
@@ -627,21 +652,31 @@ pair<VerifyRing, VerifyRing> verify_right(
         //     choices[i] = prng.get_bit();
         // }
 
-        prng.get_bits(choices, batch_size);
+        prng.get_bits(choices[_], batch_size);
         
         for (int i = 0; i < batch_size; i ++) {
-            if (choices[i]) {
-                counter[i] = 1;
-                Z += origin_right[i];
+            if (choices[_][i]) {
+                _Z[_] += origin_right[i];
             }
         }
 
-        Z += share_right[_] << 64;
+        _Z[_] += share_right[_] << 64;
+    }
+
+    for (int i = 0; i < KAPPA; i ++) {
+        random_coef[i] = prng.getDoubleWord();
+    }
+
+    for (int i = 0; i < KAPPA; i ++) {
+        for (int j = 0; j < batch_size; j ++) {
+            counter[j] += choices[i][j];
+        }
+        Z += _Z[i] * random_coef[i];
     }
 
     for (int i = 0; i < batch_size; i ++) {
-        Y[i * 2] = origin_left[i * 2] * counter[i];
-        Y[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
+        Y[i * 2] = origin_left[i * 2] * (bool) counter[i];
+        Y[i * 2 + 1] = origin_left[i * 2 + 1] * (bool) counter[i];
     }
 
     auto p4 = std::chrono::high_resolution_clock::now();
