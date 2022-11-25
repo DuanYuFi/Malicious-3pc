@@ -88,15 +88,21 @@ const size_t batch_size = 1000000;
 const int KAPPA = 40;
 
 int main() {
-    bool *delta = new bool[batch_size];
+    bool **delta = new bool*[KAPPA];
+    for (int i = 0; i < KAPPA; i ++) {
+        delta[i] = new bool[batch_size];
+    }
     
     MyPRNG prng;
     prng.ReSeed();
+    uint128_t tmp;
 
     auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < KAPPA; i ++) {
-        prng.get_bits(delta, batch_size);
+        for (int j = 0; j < batch_size; j ++) {
+            delta[i][j] = 1;
+        }
     }
 
     auto end = std::chrono::high_resolution_clock::now();

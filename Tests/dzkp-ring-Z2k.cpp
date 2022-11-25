@@ -1,6 +1,6 @@
-#include "../Math/gfp.h"
-#include "../Tools/Hash.h"
-#include "../Tools/random.h"
+// #include "../Math/gfp.h"
+// #include "../Tools/Hash.h"
+// #include "../Tools/random.h"
 
 #include <cstdlib>
 #include <ctime>
@@ -8,6 +8,9 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <cstring>
+#include <array>
+#include <cassert>
 
 using namespace std;
 
@@ -35,47 +38,47 @@ void print_uint128(uint128_t x) {
     print_uint128(value); \
     cout << endl;
 
-class LocalHash {
-    octetStream buffer;
-public:
+// class LocalHash {
+//     octetStream buffer;
+// public:
 
-    void update(int128 data) {
-        buffer.store(data.get_lower());
-        buffer.store(data.get_upper());
-    }
+//     void update(int128 data) {
+//         buffer.store(data.get_lower());
+//         buffer.store(data.get_upper());
+//     }
 
-    template <typename T>
-    void update(T data) {
-        buffer.store(data);
-    }
+//     template <typename T>
+//     void update(T data) {
+//         buffer.store(data);
+//     }
 
-    int128 final() {
-        Hash hash;
-        hash.reset();
-        hash.update(buffer);
-        word lower, upper;
-        octetStream byte_result = hash.final();
-        byte_result.get(lower);
-        byte_result.get(upper);
-        int128 result(upper, lower);
-        return result;
-    }
+//     int128 final() {
+//         Hash hash;
+//         hash.reset();
+//         hash.update(buffer);
+//         word lower, upper;
+//         octetStream byte_result = hash.final();
+//         byte_result.get(lower);
+//         byte_result.get(upper);
+//         int128 result(upper, lower);
+//         return result;
+//     }
 
-    void append_one_msg(int128 msg) {
-        update(msg);
-    }
+//     void append_one_msg(int128 msg) {
+//         update(msg);
+//     }
 
-    void append_msges(vector<int128> msges) {
-        for(int128 msg: msges) {
-            update(msg);
-        }
-    }
+//     void append_msges(vector<int128> msges) {
+//         for(int128 msg: msges) {
+//             update(msg);
+//         }
+//     }
 
-    int128 get_challenge() {
-        int128 r = final();
-        return r;
-    }
-};
+//     int128 get_challenge() {
+//         int128 r = final();
+//         return r;
+//     }
+// };
 
 // class ArithDZKProof {
 //     vector<int128> X, Y;
@@ -247,13 +250,13 @@ RSShares get_share() {
     return {shares0, shares1, shares2};
 }
 
-uint128_t getDoubleWord(PRNG& g) {
-    uint128_t res = g.get_uint();
-    res = (res << 32) | g.get_uint();
-    res = (res << 32) | g.get_uint();
-    res = (res << 32) | g.get_uint();
-    return res;
-}
+// uint128_t getDoubleWord(PRNG& g) {
+//     uint128_t res = g.get_uint();
+//     res = (res << 32) | g.get_uint();
+//     res = (res << 32) | g.get_uint();
+//     res = (res << 32) | g.get_uint();
+//     return res;
+// }
 
 // This function just uses in debug.
 void receive_coef(VerifyRing coefs[], MyPRNG &prng, int length) {
@@ -322,6 +325,9 @@ void prove(
         E[i] -= triples[i * 2][2];
     }
 
+    // auto p35 = std::chrono::high_resolution_clock::now();
+    // cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
+
     bool **choices = new bool*[KAPPA];
     for (int i = 0; i < KAPPA; i ++) {
         choices[i] = new bool[batch_size];
@@ -354,8 +360,8 @@ void prove(
         share_right[_] = e - share_left;
     }
 
-    // auto p35 = std::chrono::high_resolution_clock::now();
-    // cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
+    auto p35 = std::chrono::high_resolution_clock::now();
+    cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
 
     for (int i = 0; i < KAPPA; i ++) {
         for (int j = 0; j < batch_size; j ++) {
