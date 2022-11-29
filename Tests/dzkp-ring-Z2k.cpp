@@ -21,7 +21,7 @@ typedef uint128_t VerifyRing;
 const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
-const size_t BATCH_SIZE = 1000000;
+const size_t BATCH_SIZE = (1 << 24);
 const int K = 8;
 
 void print_uint128(uint128_t x) {
@@ -38,59 +38,6 @@ void print_uint128(uint128_t x) {
     print_uint128(value); \
     cout << endl;
 
-// class LocalHash {
-//     octetStream buffer;
-// public:
-
-//     void update(int128 data) {
-//         buffer.store(data.get_lower());
-//         buffer.store(data.get_upper());
-//     }
-
-//     template <typename T>
-//     void update(T data) {
-//         buffer.store(data);
-//     }
-
-//     int128 final() {
-//         Hash hash;
-//         hash.reset();
-//         hash.update(buffer);
-//         word lower, upper;
-//         octetStream byte_result = hash.final();
-//         byte_result.get(lower);
-//         byte_result.get(upper);
-//         int128 result(upper, lower);
-//         return result;
-//     }
-
-//     void append_one_msg(int128 msg) {
-//         update(msg);
-//     }
-
-//     void append_msges(vector<int128> msges) {
-//         for(int128 msg: msges) {
-//             update(msg);
-//         }
-//     }
-
-//     int128 get_challenge() {
-//         int128 r = final();
-//         return r;
-//     }
-// };
-
-// class ArithDZKProof {
-//     vector<int128> X, Y;
-//     int128 Z;
-
-//     ArithDZKProof() {}
-//     ArithDZKProof(vector<int128> X, vector<int128> Y, int128 Z) {
-//         this->X = X;
-//         this->Y = Y;
-//         this->Z = Z;
-//     }
-// };
 
 typedef array<MulRing, 2> RSShare;
 struct MultiShare {
@@ -287,32 +234,12 @@ void prove(
     // cout << "\tUnpacking datas" << endl;
     auto p1 = std::chrono::high_resolution_clock::now();
 
-    MulTriple *triples = new MulTriple[batch_size * 2];
-    for (int i = 0; i < batch_size; i ++) {
-        auto share = shares[i];
-        VerifyRing z1 = share.z[0] + share.rho[0], z2 = - share.x[1] * share.y[1] - share.rho[1];
-        triples[i * 2] = {(uint128_t) share.y[0], (uint128_t) share.x[1], z1 + z2};
-        triples[i * 2 + 1] = {(uint128_t) share.x[0], (uint128_t) share.y[1], 0};
-    }
-
-    auto p2 = std::chrono::high_resolution_clock::now();
-    cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
-
     size_t new_batch_size = batch_size * 2;
 
-    MyPRNG prng, prng_left;
-
-    prng.SetSeed(seed);
-    prng_left.SetSeed(seed_left);
 
     VerifyRing *X, *Y;
     X = new VerifyRing[new_batch_size + k];
     Y = new VerifyRing[new_batch_size + k];
-    memset(X, 0, sizeof(VerifyRing) * (new_batch_size + k));
-    memset(Y, 0, sizeof(VerifyRing) * (new_batch_size + k));
-
-    // cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
-    auto p3 = std::chrono::high_resolution_clock::now();
 
     VerifyRing Z = 0, *_Z = new VerifyRing[KAPPA];
 
@@ -320,13 +247,29 @@ void prove(
     E = new VerifyRing[batch_size];
 
     for (int i = 0; i < batch_size; i ++) {
-        E[i] = triples[i * 2][0] * triples[i * 2][1];
-        E[i] += triples[i * 2 + 1][0] * triples[i * 2 + 1][1];
-        E[i] -= triples[i * 2][2];
+
+        auto share = shares[i];
+        VerifyRing z1 = share.z[0] + share.rho[0], z2 = - share.x[1] * share.y[1] - share.rho[1];
+        X[i * 2] = (uint128_t) share.y[0];
+        X[i * 2 + 1] = (uint128_t) share.x[0];
+        Y[i * 2] = (uint128_t) share.x[1];
+        Y[i * 2 + 1] = (uint128_t) share.y[1];
+
+        E[i] = X[i * 2] * Y[i * 2];
+        E[i] += X[i * 2 + 1] * Y[i * 2 + 1];
+        E[i] -= (z1 + z2);
     }
 
-    // auto p35 = std::chrono::high_resolution_clock::now();
-    // cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
+    auto p2 = std::chrono::high_resolution_clock::now();
+    cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
+
+    MyPRNG prng, prng_left;
+
+    prng.SetSeed(seed);
+    prng_left.SetSeed(seed_left);
+
+    // cout << "\tPreparing (length batch_size + e_bits^2) Polynomial" << endl;
+    auto p3 = std::chrono::high_resolution_clock::now();
 
     bool **choices = new bool*[KAPPA];
     for (int i = 0; i < KAPPA; i ++) {
@@ -340,25 +283,24 @@ void prove(
 
     for (int _ = 0; _ < KAPPA; _ ++) {
 
-        // for (int i = 0; i < batch_size; i ++) {
-        //     choices[_][i] = prng.get_bit();
-        // }
-
         prng.get_bits(choices[_], batch_size);
 
         VerifyRing e = 0;
 
         for (int i = 0; i < batch_size; i ++) {
-            if (choices[_][i]) {
-                e += E[i];
-                _Z[_] += triples[i * 2][2];
-            }   
+            auto share = shares[i];
+            VerifyRing z1 = share.z[0] + share.rho[0], z2 = - share.x[1] * share.y[1] - share.rho[1];
+            _Z[_] += (z1 + z2) * choices[_][i];
+
+            e += E[i] * choices[_][i];
         }
 
         e = e >> 64;
         
         VerifyRing share_left = prng_left.getDoubleWord();
         share_right[_] = e - share_left;
+
+        _Z[_] += e << 64;
     }
 
     auto p35 = std::chrono::high_resolution_clock::now();
@@ -377,13 +319,19 @@ void prove(
     
 
     for (int i = 0; i < batch_size; i ++) {
-
-        X[i * 2] = triples[i * 2][0] * counter[i];
-        Y[i * 2] = triples[i * 2][1];
-
-        X[i * 2 + 1] = triples[i * 2 + 1][0] * counter[i];
-        Y[i * 2 + 1] = triples[i * 2 + 1][1];
+        X[i * 2] *= counter[i];
+        X[i * 2 + 1] *= counter[i];
     }
+
+    show_uint128(Z);
+
+    Z = 0;
+    for (int i = 0; i < batch_size * 2; i ++) {
+        Z += X[i] * Y[i];
+    }
+
+    show_uint128(Z);
+
 
     auto p4 = std::chrono::high_resolution_clock::now();
     cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
@@ -454,7 +402,9 @@ pair<VerifyRing, VerifyRing> verify_left(
     int k
 ) {
 
-    VerifyRing *origin_left = new VerifyRing[batch_size * 2], *origin_right = new VerifyRing[batch_size];
+    VerifyRing *origin_right = new VerifyRing[batch_size];
+    VerifyRing *X, Z = 0, *_Z = new VerifyRing[KAPPA];
+    X = new VerifyRing[batch_size * 2 + k];
 
     MyPRNG prng, prng_left;
     prng.SetSeed(seed);
@@ -465,17 +415,13 @@ pair<VerifyRing, VerifyRing> verify_left(
 
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
-        origin_left[i * 2] = share.y[1];
-        origin_left[i * 2 + 1] = share.x[1];
+        X[i * 2] = share.y[1];
+        X[i * 2 + 1] = share.x[1];
         origin_right[i] = share.z[1] + share.rho[1];
     }
 
     auto p2 = std::chrono::high_resolution_clock::now();
     cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
-
-    VerifyRing *X, Z = 0, *_Z = new VerifyRing[KAPPA];
-    X = new VerifyRing[batch_size * 2 + k];
-    memset(X, 0, sizeof(VerifyRing) * (batch_size * 2 + k));
 
     int new_batch_size = batch_size * 2;
 
@@ -499,9 +445,7 @@ pair<VerifyRing, VerifyRing> verify_left(
         prng.get_bits(choices[_], batch_size);
         
         for (int i = 0; i < batch_size; i ++) {
-            if (choices[_][i]) {
-                _Z[_] += origin_right[i];
-            }
+            _Z[_] += origin_right[i] * choices[_][i];
         }
 
         VerifyRing share_left = prng_left.getDoubleWord();
@@ -521,9 +465,11 @@ pair<VerifyRing, VerifyRing> verify_left(
     }
 
     for (int i = 0; i < batch_size; i ++) {
-        X[i * 2] = origin_left[i * 2] * counter[i];
-        X[i * 2 + 1] = origin_left[i * 2 + 1] * counter[i];
+        X[i * 2] *= counter[i];
+        X[i * 2 + 1] *= counter[i];
     }
+
+    show_uint128(Z);
     
     auto p4 = std::chrono::high_resolution_clock::now();
     cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
@@ -612,6 +558,8 @@ pair<VerifyRing, VerifyRing> verify_right(
 ) {
 
     VerifyRing *origin_left = new VerifyRing[batch_size * 2], *origin_right = new VerifyRing[batch_size];
+    VerifyRing *Y, Z = 0, *_Z = new VerifyRing[KAPPA];
+    Y = new VerifyRing[batch_size * 2 + k];
 
     MyPRNG prng;
     prng.SetSeed(seed);
@@ -621,43 +569,28 @@ pair<VerifyRing, VerifyRing> verify_right(
 
     for (int i = 0; i < batch_size; i ++) {
         auto share = shares[i];
-        origin_left[i * 2] = share.x[0];
-        origin_left[i * 2 + 1] = share.y[0];
+        Y[i * 2] = share.x[0];
+        Y[i * 2 + 1] = share.y[0];
         origin_right[i] = -share.x[0] * share.y[0] - share.rho[0];
     }
 
     auto p2 = std::chrono::high_resolution_clock::now();
     cout << "\tUnpack datas costs: " << (p2 - p1).count() / 1e6 << " ms" << endl;
 
-    VerifyRing *Y, Z = 0, *_Z = new VerifyRing[KAPPA];
-    Y = new VerifyRing[batch_size * 2 + k];
-    memset(Y, 0, sizeof(VerifyRing) * (batch_size * 2 + k));
-
     int new_batch_size = batch_size * 2;
 
     // cout << "\tPreparing Polynomials" << endl;
     auto p3 = std::chrono::high_resolution_clock::now();
 
-    bool **choices = new bool*[KAPPA];
-    for (int i = 0; i < KAPPA; i ++) {
-        choices[i] = new bool[batch_size];
-    }
+    bool *choices = new bool[batch_size];
 
-    VerifyRing *counter = new VerifyRing[batch_size];
     VerifyRing *random_coef = new VerifyRing[KAPPA];
 
     for (int _ = 0; _ < KAPPA; _ ++) {
-        // share_right[i] = new int128[KAPPA];
-        // for (int i = 0; i < batch_size; i ++) {
-        //     choices[i] = prng.get_bit();
-        // }
-
-        prng.get_bits(choices[_], batch_size);
+        prng.get_bits(choices, batch_size);
         
         for (int i = 0; i < batch_size; i ++) {
-            if (choices[_][i]) {
-                _Z[_] += origin_right[i];
-            }
+            _Z[_] += origin_right[i] * choices[i];
         }
 
         _Z[_] += share_right[_] << 64;
@@ -668,16 +601,10 @@ pair<VerifyRing, VerifyRing> verify_right(
     }
 
     for (int i = 0; i < KAPPA; i ++) {
-        for (int j = 0; j < batch_size; j ++) {
-            counter[j] += choices[i][j];
-        }
         Z += _Z[i] * random_coef[i];
     }
 
-    for (int i = 0; i < batch_size; i ++) {
-        Y[i * 2] = origin_left[i * 2] * (bool) counter[i];
-        Y[i * 2 + 1] = origin_left[i * 2 + 1] * (bool) counter[i];
-    }
+    show_uint128(Z);
 
     auto p4 = std::chrono::high_resolution_clock::now();
     cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
@@ -746,7 +673,7 @@ pair<VerifyRing, VerifyRing> verify_right(
 
 int main() {
 
-    srand(time(0));
+    // srand(time(0));
 
     RSShares rss_share;
     MultiShare *party0, *party1, *party2;
