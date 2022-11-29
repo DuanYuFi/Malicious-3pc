@@ -609,7 +609,7 @@ pair<VerifyRing, VerifyRing> verify_right(
     for (int i = 0; i < KAPPA; i ++) {
         Z += _Z[i] * random_coef[i];
     }
-
+  
     show_uint128(Z);
 
     auto p4 = std::chrono::high_resolution_clock::now();
