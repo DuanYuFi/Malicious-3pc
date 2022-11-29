@@ -284,8 +284,14 @@ void prove(
     for (int _ = 0; _ < KAPPA; _ ++) {
 
         prng.get_bits(choices[_], batch_size);
+    }
 
-        VerifyRing e = 0;
+    auto p355 = std::chrono::high_resolution_clock::now();
+    cout << "\tTransform part 2: " << (p355 - p3).count() / 1e6 << " ms" << endl;
+
+    for (int _ = 0; _ < KAPPA; _ ++) {
+
+        uint64_t e = 0;
 
         for (int i = 0; i < batch_size; i ++) {
             auto share = shares[i];
@@ -295,7 +301,7 @@ void prove(
             e += E[i] * choices[_][i];
         }
 
-        e = e >> 64;
+        ///e = e >> 64;
         
         VerifyRing share_left = prng_left.getDoubleWord();
         share_right[_] = e - share_left;
@@ -303,8 +309,8 @@ void prove(
         _Z[_] += e << 64;
     }
 
-    auto p35 = std::chrono::high_resolution_clock::now();
-    cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
+    auto p36 = std::chrono::high_resolution_clock::now();
+    cout << "\tTransform part 3: " << (p36 - p355).count() / 1e6 << " ms" << endl;
 
     for (int i = 0; i < KAPPA; i ++) {
         random_coef[i] = prng.getDoubleWord();
@@ -314,9 +320,9 @@ void prove(
         for (int j = 0; j < batch_size; j ++) {
             counter[j] += choices[i][j] * random_coef[i];
         }
-        Z += _Z[i] * random_coef[i];
     }
-    
+    auto p365 = std::chrono::high_resolution_clock::now();
+    cout << "\tTransform part 3: " << (p365 - p36).count() / 1e6 << " ms" << endl;
 
     for (int i = 0; i < batch_size; i ++) {
         X[i * 2] *= counter[i];
@@ -334,7 +340,7 @@ void prove(
 
 
     auto p4 = std::chrono::high_resolution_clock::now();
-    cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
+    cout << "\tTransform to one inner-product costs: " << (p4 - p365).count() / 1e6 << " ms" << endl;
 
     int s = new_batch_size;
     int vector_length = (s - 1) / k + 1;
@@ -376,7 +382,7 @@ void prove(
             }
         }
 
-        for (int i = 0; i < vector_length; i ++) {
+        for (int i = 0; i < k; i ++) {
             X[vector_length + i] = 0;
             Y[vector_length + i] = 0;
         }
