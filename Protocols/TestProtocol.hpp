@@ -88,7 +88,7 @@ void TestProtocol<T>::verify() {
         os[0].store((uint64_t)(random_coef_right[i] & 0xFFFFFFFFFFFFFFFF));
     }
 
-    cout << "passing around random coef and choices" << endl;
+    // cout << "passing around random coef and choices" << endl;
     P.pass_around(os[0], os[1], -1);
 
     uint64_t tmp = 0;
@@ -167,7 +167,7 @@ void TestProtocol<T>::verify() {
     }
 
 
-    cout << "passing around shares" << endl;
+    // cout << "passing around shares" << endl;
     P.pass_around(os[0], os[1], 1);
 
     for (int _ = 0; _ < KAPPA; _ ++) {
@@ -196,7 +196,7 @@ void TestProtocol<T>::verify() {
         os[0].store((uint64_t)(counter_prover[i] & 0xFFFFFFFFFFFFFFFF));
     }
 
-    cout << "passing around counter" << endl;
+    // cout << "passing around counter" << endl;
     P.pass_around(os[0], os[1], -1);
 
     for (int i = 0; i < batch_size; i ++) {
@@ -259,7 +259,7 @@ void TestProtocol<T>::verify() {
     VerifyRing coeffsX_right[k], coeffsY_right[k];
     VerifyRing res_left[k], res_right[k];
 
-    cout << "start chop" << endl;
+    // cout << "start chop" << endl;
 
     while (true) {
 
@@ -378,7 +378,29 @@ void TestProtocol<T>::verify() {
         vector_length = (s - 1) / k + 1;
     }
 
+    for (auto &o : os)
+        o.reset_write_head();
 
+    os[0].store((uint64_t)(Y_right[0] >> 64));
+    os[0].store((uint64_t)(Y_right[0] & 0xFFFFFFFFFFFFFFFF));
+    os[0].store((uint64_t)(Z_right >> 64));
+    os[0].store((uint64_t)(Z_right & 0xFFFFFFFFFFFFFFFF));
+
+    P.pass_around(os[0], os[1], 1);
+
+    VerifyRing y = 0, z = 0, x = X_left[0];
+    os[1].consume(tmp);
+    y = (uint128_t) tmp << 64;
+    os[1].consume(tmp);
+    y |= tmp;
+    os[1].consume(tmp);
+    z = (uint128_t) tmp << 64;
+    os[1].consume(tmp);
+    z |= tmp;
+
+    z += Z_left;
+
+    cout << (x * y == z) << endl;
 
 }
 
@@ -400,6 +422,8 @@ void TestProtocol<T>::prepare_mul(const T& x, const T& y, int n) {
     verify_shares[pointer].y[1] = y[1].debug();
     verify_shares[pointer].rho[0] = tmp[0].debug();
     verify_shares[pointer].rho[1] = tmp[1].debug();
+
+    pointer ++;
 
 }
 
