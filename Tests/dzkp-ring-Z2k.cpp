@@ -21,7 +21,7 @@ typedef uint128_t VerifyRing;
 const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
-const size_t BATCH_SIZE = (1<<24);
+const size_t BATCH_SIZE = (1<<25);
 const int K = 8;
 
 void print_uint128(uint128_t x) {
@@ -241,7 +241,7 @@ void prove(
     X = new VerifyRing[new_batch_size + k];
     Y = new VerifyRing[new_batch_size + k];
 
-    VerifyRing Z = 0;
+    // VerifyRing Z = 0;
 
     MulRing *E;
     E = new MulRing[batch_size];
@@ -255,7 +255,7 @@ void prove(
         Y[i * 2] = share.x[1];
         Y[i * 2 + 1] = share.y[1];
 
-        E[i] = ( X[i * 2] * Y[i * 2] + X[i * 2 + 1] * Y[i * 2 + 1] - (z1 + z2) ) >> 64;
+        E[i] = (X[i * 2] * Y[i * 2] + X[i * 2 + 1] * Y[i * 2 + 1] - (z1 + z2) ) >> 64;
     }
 
     auto p2 = std::chrono::high_resolution_clock::now();
@@ -329,14 +329,14 @@ void prove(
         Y[new_batch_size + i] = 0;
     }
 
-    show_uint128(Z);
+    // show_uint128(Z);
 
-    Z = 0;
-    for (int i = 0; i < batch_size * 2; i ++) {
-        Z += X[i] * Y[i];
-    }
+    // Z = 0;
+    // for (int i = 0; i < batch_size * 2; i ++) {
+    //     Z += X[i] * Y[i];
+    // }
 
-    show_uint128(Z);
+    // show_uint128(Z);
 
 
     auto p4 = std::chrono::high_resolution_clock::now();
@@ -477,7 +477,7 @@ pair<VerifyRing, VerifyRing> verify_left(
         Z += counter[i] * origin_right[i];
     }
 
-    show_uint128(Z);
+    // show_uint128(Z);
     
     auto p4 = std::chrono::high_resolution_clock::now();
     cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;
@@ -635,7 +635,7 @@ pair<VerifyRing, VerifyRing> verify_right(
         Z += _Z[i] * random_coef[i];
     }
     */
-    show_uint128(Z);
+    // show_uint128(Z);
 
     auto p4 = std::chrono::high_resolution_clock::now();
     cout << "\tTransform to one inner-product costs: " << (p4 - p3).count() / 1e6 << " ms" << endl;

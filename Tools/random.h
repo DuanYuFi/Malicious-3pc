@@ -107,6 +107,7 @@ class PRNG
        return le64toh(a);
      }
    __m128i get_doubleword();
+   unsigned __int128 getDoubleWord();
    void get_octetStream(octetStream& ans,int len);
    void get_octets(octet* ans, int len);
    template <int L>
@@ -174,6 +175,15 @@ inline __m128i PRNG::get_doubleword()
     if (cnt > RAND_SIZE - 16)
         next();
     __m128i ans = _mm_loadu_si128((__m128i*)&random[cnt]);
+    cnt += 16;
+    return ans;
+}
+
+inline unsigned __int128 PRNG::getDoubleWord()
+{
+    if (cnt > RAND_SIZE - 16)
+        next();
+    unsigned __int128 ans = *(unsigned __int128*)&random[cnt];
     cnt += 16;
     return ans;
 }

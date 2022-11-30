@@ -148,6 +148,8 @@ class gf2n_long : public gf2n_<int128>
 
   static gf2n_long cut(int128 x) { return x; }
 
+  uint64_t debug() const { return a.get_lower(); }
+
   gf2n_long()              { assign_zero(); }
   gf2n_long(const super& g) : super(g) {}
   gf2n_long(const int128& g) : super(g) {}

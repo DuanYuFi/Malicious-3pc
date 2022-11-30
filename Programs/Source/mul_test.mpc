@@ -1,9 +1,11 @@
+from Compiler.types import *
+
 a = sint(3)
 b = sint(4)
 
-TIMES = 100000
+TIMES = 640000
 
-for _ in range(3):
+for _ in range(50):
     for i in range(TIMES - 1):
         a * b
 
@@ -13,11 +15,6 @@ for _ in range(3):
         b * c
 
     a = b * c
-
-    for i in range(TIMES - 1):
-        a * c
-
-    b = a * c
 
 # print_ln("%s", e.reveal())
 # print_ln("%s", f.reveal())

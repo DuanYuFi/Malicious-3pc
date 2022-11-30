@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef PROTOCOLS_SEMIRINGPROTOCOL_H_
-#define PROTOCOLS_SEMIRINGPROTOCOL_H_
+#ifndef PROTOCOLS_TESTPROTOCOL_H_
+#define PROTOCOLS_TESTPROTOCOL_H_
 
 #define USE_MY_MULTIPLICATION
 
@@ -20,9 +20,37 @@
 
 #include "Tools/SafeQueue.h"
 
-// multiplication protocol
+typedef unsigned __int128 uint128_t;
+typedef uint64_t MulRing;
+typedef uint128_t VerifyRing;
+
+const int N = 64;
+const int KAPPA = 40;
+const int EBITS = 64;
+
+typedef array<uint64_t, 2> RSShare;
+struct MultiShare {
+    RSShare x, y;
+    RSShare z;
+    RSShare rho;
+
+    MultiShare() {
+        x = {0, 0};
+        y = {0, 0};
+        z = {0, 0};
+        rho = {0, 0};
+    }
+    
+    MultiShare(RSShare x, RSShare y, RSShare z, RSShare rho) {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+        this->rho = rho;
+    }
+};
+
 template<class T>
-class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
+class TestProtocol : public ProtocolBase<T>, public ReplicatedBase
 {
 
     typedef ReplicatedBase super;
@@ -30,24 +58,12 @@ class SemiRingProtocol : public ProtocolBase<T>, public ReplicatedBase
     array<octetStream, 2> os;
     PointerVector<typename T::clear> add_shares;
     typename T::clear dotprod_share;
-    PointerVector<typename T::clear> tmp_shares;
-    int n_bits;
-    int total_recv;
-    int dealed;
-    volatile bool waiting;
+
+    MultiShare *verify_shares;
+    size_t pointer, pointer_answer;
+
+    PRNG global_prng, prng_left, prng_verify;
     
-
-    std::thread recv_thread;
-    volatile bool recv_running;
-    std::mutex mtk;
-    condition_variable cv;
-    int n_times;
-
-    std::mutex mtk2;
-    condition_variable cv2;
-    int count2;
-
-    // pthread_mutex_t queue_lock;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -58,25 +74,28 @@ public:
     
     static const bool uses_triples = false;
 
-    SemiRingProtocol() {}
-    SemiRingProtocol(Player& P);
-    SemiRingProtocol(const ReplicatedBase &other) : 
+    TestProtocol() {}
+    TestProtocol(Player& P);
+    TestProtocol(const ReplicatedBase &other) : 
         ReplicatedBase(other)
     {
     }
 
     // Init the protocol
-    SemiRingProtocol(const SemiRingProtocol<T> &other) : super(other)
+    TestProtocol(const TestProtocol<T> &other) : super(other)
     {
         
     }
 
-    ~SemiRingProtocol() {
-        if (this->recv_thread.joinable()) {
-            this->recv_running = false;
-            signal();
-            this->recv_thread.join();
+    ~TestProtocol() {
+        while (pointer >= 640000) {
+            verify();
+            verify();
+            pointer -= 640000;
+            pointer_answer -= 640000;
         }
+        
+        // cout << typeid(typename T::clear).name() << endl;
     }
 
 
@@ -99,16 +118,6 @@ public:
 
     // execute protocol
     void exchange();
-    void exchange1();
-    void exchange2();
-
-#ifndef USE_MY_MULTIPLICATION
-
-    void prepare_reshare(const typename T::clear& share, int n = -1);
-    void start_exchange();
-    void stop_exchange();
-
-#endif
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc);
@@ -126,34 +135,16 @@ public:
 
     T get_random();
 
-    void thread_handler();
+    void verify();
 
-    inline void wait() {
-        std::unique_lock<std::mutex> lk(this->mtk);
-        if (--this->n_times < 0 and this->recv_running) {
-            cv.wait(lk);
+    template <typename U>
+    U inner_product(U* v1, U* v2, size_t length) {
+        U res = 0;
+        for (size_t i = 0; i < length; i ++) {
+            res += v1[i] * v2[i];
         }
-    }
 
-    inline void signal() {
-        std::unique_lock<std::mutex> lk(this->mtk);
-        if (++this->n_times <= 0) {
-            cv.notify_one();
-        }
-    }
-
-    inline void wait2() {
-        std::unique_lock<std::mutex> lk(this->mtk2);
-        if (--this->count2 < 0) {
-            cv2.wait(lk);
-        }
-    }
-
-    inline void signal2() {
-        std::unique_lock<std::mutex> lk(this->mtk2);
-        if (++this->count2 <= 0) {
-            cv2.notify_one();
-        }
+        return res;
     }
 
 };

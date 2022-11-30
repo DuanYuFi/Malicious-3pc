@@ -127,7 +127,7 @@ public:
         return ret;
     }
 
-    uint128_t getDoubleWord() {
+    uint128_t get_doubleword() {
         uint128_t res = get_uint();
         res = (res << 32) | get_uint();
         res = (res << 32) | get_uint();
@@ -200,7 +200,7 @@ RSShares get_share() {
     return {shares0, shares1, shares2};
 }
 
-// uint128_t getDoubleWord(PRNG& g) {
+// uint128_t get_doubleword(PRNG& g) {
 //     uint128_t res = g.get_uint();
 //     res = (res << 32) | g.get_uint();
 //     res = (res << 32) | g.get_uint();
@@ -211,7 +211,7 @@ RSShares get_share() {
 // This function just uses in debug.
 void receive_coef(VerifyRing coefs[], MyPRNG &prng, int length) {
     for (int i = 0; i < length; i ++) {
-        coefs[i] = prng.getDoubleWord();
+        coefs[i] = prng.get_doubleword();
     }
 }
 
@@ -300,7 +300,7 @@ void prove(
 
         e = e >> 64;
         
-        VerifyRing share_left = prng_left.getDoubleWord();
+        VerifyRing share_left = prng_left.get_doubleword();
         share_right[_] = e - share_left;
     }
 
@@ -308,7 +308,7 @@ void prove(
     cout << "\tTransform part 1: " << (p35 - p3).count() / 1e6 << " ms" << endl;
 
     for (int i = 0; i < KAPPA; i ++) {
-        random_coef[i] = prng.getDoubleWord();
+        random_coef[i] = prng.get_doubleword();
     }
 
     for (int i = 0; i < KAPPA; i ++) {
@@ -356,7 +356,7 @@ void prove(
                 if (i == 0 && j == 0) {
                     continue;
                 }
-                VerifyRing r = prng_left.getDoubleWord();
+                VerifyRing r = prng_left.get_doubleword();
                 local_right._inner_products[i][j] = inner_product(X + i * vector_length, Y + j * vector_length, vector_length) - r;
             }
         }
@@ -449,13 +449,13 @@ pair<VerifyRing, VerifyRing> verify_left(
             _Z[_] += origin_right[i] * choices[_][i];
         }
 
-        VerifyRing share_left = prng_left.getDoubleWord();
+        VerifyRing share_left = prng_left.get_doubleword();
         _Z[_] += share_left << 64;
 
     }
 
     for (int i = 0; i < KAPPA; i ++) {
-        random_coef[i] = prng.getDoubleWord();
+        random_coef[i] = prng.get_doubleword();
     }
 
     for (int i = 0; i < KAPPA; i ++) {
@@ -499,7 +499,7 @@ pair<VerifyRing, VerifyRing> verify_left(
                 if (i == 0 && j == 0) {
                     continue;
                 }
-                VerifyRing r = prng_left.getDoubleWord();
+                VerifyRing r = prng_left.get_doubleword();
                 local_left._inner_products[i][j] = r;
             }
         }
@@ -598,7 +598,7 @@ pair<VerifyRing, VerifyRing> verify_right(
     }
 
     for (int i = 0; i < KAPPA; i ++) {
-        random_coef[i] = prng.getDoubleWord();
+        random_coef[i] = prng.get_doubleword();
     }
 
     for (int i = 0; i < KAPPA; i ++) {

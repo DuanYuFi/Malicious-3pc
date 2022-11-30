@@ -77,6 +77,8 @@ public:
 	typedef Z2 next;
 	typedef Z2 Scalar;
 
+	uint64_t debug() const { return a[0]; }
+
 	/**
 	 * Initialize to zero.
 	 */
