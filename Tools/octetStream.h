@@ -212,6 +212,19 @@ class octetStream
   /// Read string
   void get(string& str);
 
+  /// store unsigned __int128
+  void store(const unsigned __int128& x) {
+    store((uint64_t)(x >> 64));
+    store((uint64_t)(x & 0xFFFFFFFFFFFFFFFFULL));
+  }
+  /// get unsigned __int128
+  void get(unsigned __int128& x) {
+    uint64_t a, b;
+    get(a);
+    get(b);
+    x = ((unsigned __int128) a << 64) | b;
+  }
+
   /// Send on ``socket_num``
   template<class T>
   void Send(T socket_num) const;

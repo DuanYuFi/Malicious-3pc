@@ -53,7 +53,9 @@ void TestProtocol<T>::init_mul() {
 
 template <class T>
 void TestProtocol<T>::verify() {
-    // int id = P.my_real_num();
+    
+    // Initialize
+
     int k = OnlineOptions::singleton.k_size;
     int batch_size = OnlineOptions::singleton.batch_size;
 
@@ -77,29 +79,43 @@ void TestProtocol<T>::verify() {
         choices_prover[i] = new bool[batch_size];
     }
 
-    for (int i = 0; i < KAPPA; i++) {
-        shared_prngs[0].get_octets((octet*)choices_right[i], batch_size);
-        shared_prngs[1].get_octets((octet*)choices_left[i], batch_size);
-        os[0].append((octet*)choices_right[i], batch_size);
+    octet seed_left[SEED_SIZE], seed_right[SEED_SIZE], seed_prover[SEED_SIZE];
 
-        random_coef_left[i] = shared_prngs[1].getDoubleWord();
-        random_coef_right[i] = shared_prngs[0].getDoubleWord();
-        os[0].store((uint64_t)(random_coef_right[i] >> 64));
-        os[0].store((uint64_t)(random_coef_right[i] & 0xFFFFFFFFFFFFFFFF));
+    // Prepare for the random seed and send to prover, which will be used to generate the random choices.
+    // The random seed is sent from the left verifier. The right verifier will generate the same random seed.
+    // Note: shared_prngs[1] is shared with the previous party. shared_prngs[0] is shared with the next party.
+    //       The index is not the offset of the party.
+
+    shared_prngs[1].get_octets(seed_left, SEED_SIZE);       // as Verifier left
+    shared_prngs[0].get_octets(seed_right, SEED_SIZE);      // as Verifier right
+
+    for (auto& o : os)
+        o.reset_write_head();
+    
+    os[0].append(seed_left, SEED_SIZE);                     // send to Prover from Verifier left
+    P.pass_around(os[0], os[1], 1);                         // offset is 1. At the same time, 'I' also plays the role of Prover to get 
+                                                            // the random seed from Verifier left.
+
+    os[1].consume(seed_prover, SEED_SIZE);
+
+    PRNG choices_prng_left, choices_prng_right, choices_prng_prover;
+    choices_prng_left.SetSeed(seed_left);
+    choices_prng_right.SetSeed(seed_right);
+    choices_prng_prover.SetSeed(seed_prover);
+
+    for (int i = 0; i < KAPPA; i++) {
+        for (int j = 0; j < batch_size; j ++) {
+            choices_left[i][j] = choices_prng_left.get_bit();           // low efficiency
+            choices_right[i][j] = choices_prng_right.get_bit();
+            choices_prover[i][j] = choices_prng_prover.get_bit();
+        }
+
+        random_coef_left[i] = choices_prng_left.getDoubleWord();        // These should not be here. But the first thing to do 
+                                                                        // is to make it work.
+        random_coef_right[i] = choices_prng_right.getDoubleWord();
+        random_coef_prover[i] = choices_prng_prover.getDoubleWord();
     }
 
-    // cout << "passing around random coef and choices" << endl;
-    P.pass_around(os[0], os[1], -1);
-
-    uint64_t tmp = 0;
-
-    for (int i = 0; i < KAPPA; i++) {
-        os[1].consume((octet*)choices_prover[i], batch_size);
-        os[1].consume(tmp);
-        random_coef_prover[i] = ((VerifyRing) tmp) << 64;
-        os[1].consume(tmp);
-        random_coef_prover[i] |= tmp;
-    }
 
     for (auto &o : os)
         o.reset_write_head();
@@ -115,32 +131,33 @@ void TestProtocol<T>::verify() {
     _Z_left = new VerifyRing[new_batch_size + k];
     _Z_right = new VerifyRing[new_batch_size + k];
     _Z = new VerifyRing[KAPPA];
-
+    
     VerifyRing *E;
     E = new VerifyRing[batch_size];
 
+    // Unpack the data
     for (int i = 0; i < batch_size; i ++) {
 
         auto share = verify_shares[i];
-        VerifyRing z1 = share.z[0] + share.rho[0], z2 = - share.x[1] * share.y[1] - share.rho[1];
-        X_prover[i * 2] = (uint128_t) share.y[0];
-        X_prover[i * 2 + 1] = (uint128_t) share.x[0];
-        Y_prover[i * 2] = (uint128_t) share.x[1];
-        Y_prover[i * 2 + 1] = (uint128_t) share.y[1];
+        VerifyRing z1 = share.z[0] - share.rho[0], z2 = - share.x[0] * share.y[0] + share.rho[1];   // Play a role as Prover
+        X_prover[i * 2] = (uint128_t) share.y[1];
+        X_prover[i * 2 + 1] = (uint128_t) share.x[1];
+        Y_prover[i * 2] = (uint128_t) share.x[0];
+        Y_prover[i * 2 + 1] = (uint128_t) share.y[0];
 
         E[i] = X_prover[i * 2] * Y_prover[i * 2];
         E[i] += X_prover[i * 2 + 1] * Y_prover[i * 2 + 1];
         E[i] -= (z1 + z2);
 
-        Y_right[i * 2] = share.x[0];
-        Y_right[i * 2 + 1] = share.y[0];
-        _Z_right[i] = -share.x[0] * share.y[0] - share.rho[0];
+        Y_right[i * 2] = share.x[1];                            // Play a role as Verifier right
+        Y_right[i * 2 + 1] = share.y[1];
+        _Z_right[i] = share.z[1] - share.x[1] * share.y[1] - share.rho[1];
 
-        X_left[i * 2] = share.y[1];
-        X_left[i * 2 + 1] = share.x[1];
-        _Z_left[i] = share.z[1] + share.rho[1];
+        X_left[i * 2] = share.y[0];                             // Play a role as Verifier left
+        X_left[i * 2 + 1] = share.x[0];
+        _Z_left[i] = share.rho[0];
     }
-
+   
     VerifyRing *counter_prover = new VerifyRing[batch_size];
     VerifyRing *counter_left = new VerifyRing[batch_size];
     VerifyRing *counter_right = new VerifyRing[batch_size];
@@ -149,6 +166,7 @@ void TestProtocol<T>::verify() {
     memset(counter_left, 0, sizeof(int) * batch_size);
     memset(counter_right, 0, sizeof(int) * batch_size);
 
+    // Prover compute e's share, communications only happen with verifier_right. 
     for (int _ = 0; _ < KAPPA; _ ++) {
 
         VerifyRing e = 0;
@@ -162,62 +180,27 @@ void TestProtocol<T>::verify() {
         VerifyRing share_left = shared_prngs[1].getDoubleWord();
         share_right_prover[_] = e - share_left;
 
-        os[0].store((uint64_t)(share_right_prover[_] >> 64));
-        os[0].store((uint64_t)(share_right_prover[_] & 0xFFFFFFFFFFFFFFFF));
+        os[0].store(share_right_prover[_]);
     }
-
-
-    // cout << "passing around shares" << endl;
+ 
     P.pass_around(os[0], os[1], 1);
 
     for (int _ = 0; _ < KAPPA; _ ++) {
-        os[1].consume(tmp);
-        share_right_verifier[_] = ((VerifyRing) tmp) << 64;
-        os[1].consume(tmp);
-        share_right_verifier[_] |= tmp;
+        os[1].get(share_right_verifier[_]);
     }
 
-    for (auto &o : os)
-        o.reset_write_head();
-
+    // Compute the real coefficient, in three roles played.
     for (int i = 0; i < KAPPA; i ++) {
         for (int j = 0; j < batch_size; j ++) {
             counter_prover[j] += choices_prover[i][j] * random_coef_prover[i];
+            counter_left[j] += choices_left[i][j] * random_coef_left[i];
+            counter_right[j] += choices_right[i][j] * random_coef_right[i];
         }
-    }
-
-    for (int i = 0; i < batch_size; i ++) {
-        X_prover[i * 2] *= counter_prover[i];
-        X_prover[i * 2 + 1] *= counter_prover[i];
-    }
-
-    for (int i = 0; i < batch_size; i ++) {
-        os[0].store((uint64_t)(counter_prover[i] >> 64));
-        os[0].store((uint64_t)(counter_prover[i] & 0xFFFFFFFFFFFFFFFF));
-    }
-
-    // cout << "passing around counter" << endl;
-    P.pass_around(os[0], os[1], -1);
-
-    for (int i = 0; i < batch_size; i ++) {
-        os[1].consume(tmp);
-        counter_left[i] = ((VerifyRing) tmp) << 64;
-        os[1].consume(tmp);
-        counter_left[i] |= tmp;
-    }
-
-    os[1].reset_write_head();
-    P.pass_around(os[0], os[1], 1);
-
-    for (int i = 0; i < batch_size; i ++) {
-        os[1].consume(tmp);
-        counter_right[i] = ((VerifyRing) tmp) << 64;
-        os[1].consume(tmp);
-        counter_right[i] |= tmp;
     }
 
     memset(_Z, 0, sizeof(VerifyRing) * KAPPA);
 
+    // Compute the RHS of poly in verifier left.
     for (int _ = 0; _ < KAPPA; _ ++) {
         
         for (int i = 0; i < batch_size; i ++) {
@@ -233,13 +216,18 @@ void TestProtocol<T>::verify() {
         Z_left += _Z[i] * random_coef_left[i];
     }
 
+    // Compute the real items of the merged poly. We multiply the coefs into left. 
     for (int i = 0; i < batch_size; i ++) {
+        X_prover[i * 2] *= counter_prover[i];
+        X_prover[i * 2 + 1] *= counter_prover[i];
+    
         X_left[i * 2] *= counter_left[i];
         X_left[i * 2 + 1] *= counter_left[i];
     }
 
     memset(_Z, 0, sizeof(VerifyRing) * KAPPA);
 
+    // Compute the RHS of poly in verifier right.
     for (int _ = 0; _ < KAPPA; _ ++) {        
         for (int i = 0; i < batch_size; i ++) {
             _Z[_] += _Z_right[i] * choices_right[_][i];
@@ -252,6 +240,10 @@ void TestProtocol<T>::verify() {
         Z_right += _Z[i] * random_coef_right[i];
     }
 
+    // show_uint128(Z_left);
+    // show_uint128(Z_right);
+
+    // preparation before chop
     int s = new_batch_size;
     int vector_length = (s - 1) / k + 1;
     VerifyRing coeffsX_prover[k], coeffsY_prover[k];
@@ -259,8 +251,7 @@ void TestProtocol<T>::verify() {
     VerifyRing coeffsX_right[k], coeffsY_right[k];
     VerifyRing res_left[k], res_right[k];
 
-    // cout << "start chop" << endl;
-
+    // chop
     while (true) {
 
         VerifyRing local_right[k][k], local_left[k][k], local_prover;
@@ -276,8 +267,7 @@ void TestProtocol<T>::verify() {
                 VerifyRing r = shared_prngs[1].getDoubleWord();
                 local_left[i][j] = shared_prngs[0].getDoubleWord();
                 local_prover = inner_product(X_prover + i * vector_length, Y_prover + j * vector_length, vector_length) - r;
-                os[0].store((uint64_t)(local_prover >> 64));
-                os[0].store((uint64_t)(local_prover & 0xFFFFFFFFFFFFFFFF));
+                os[0].store(local_prover);
             }
         }
 
@@ -287,10 +277,7 @@ void TestProtocol<T>::verify() {
                 if (i == 0 && j == 0) {
                     continue;
                 }
-                os[1].consume(tmp);
-                local_right[i][j] = (uint128_t) tmp << 64;
-                os[1].consume(tmp);
-                local_right[i][j] |= tmp;
+                os[1].get(local_right[i][j]);
             }
         }
 
@@ -311,23 +298,15 @@ void TestProtocol<T>::verify() {
             coeffsX_right[i] = shared_prngs[0].getDoubleWord();
             coeffsY_right[i] = shared_prngs[0].getDoubleWord();
 
-            os[0].store((uint64_t)(coeffsX_left[i] >> 64));
-            os[0].store((uint64_t)(coeffsX_left[i] & 0xFFFFFFFFFFFFFFFF));
-            os[0].store((uint64_t)(coeffsY_left[i] >> 64));
-            os[0].store((uint64_t)(coeffsY_left[i] & 0xFFFFFFFFFFFFFFFF));
+            os[0].store(coeffsX_left[i]);
+            os[0].store(coeffsY_left[i]);
         }
 
         P.pass_around(os[0], os[1], 1);
 
         for (int i = 0; i < k; i ++) {
-            os[1].consume(tmp);
-            coeffsX_prover[i] = (uint128_t) tmp << 64;
-            os[1].consume(tmp);
-            coeffsX_prover[i] |= tmp;
-            os[1].consume(tmp);
-            coeffsY_prover[i] = (uint128_t) tmp << 64;
-            os[1].consume(tmp);
-            coeffsY_prover[i] |= tmp;
+            os[1].get(coeffsX_prover[i]);
+            os[1].get(coeffsY_prover[i]);
         }
 
         for (int j = 0; j < vector_length; j ++) {
@@ -381,26 +360,20 @@ void TestProtocol<T>::verify() {
     for (auto &o : os)
         o.reset_write_head();
 
-    os[0].store((uint64_t)(Y_right[0] >> 64));
-    os[0].store((uint64_t)(Y_right[0] & 0xFFFFFFFFFFFFFFFF));
-    os[0].store((uint64_t)(Z_right >> 64));
-    os[0].store((uint64_t)(Z_right & 0xFFFFFFFFFFFFFFFF));
+    os[0].store(Y_right[0]);
+    os[0].store(Z_right);
 
     P.pass_around(os[0], os[1], 1);
 
     VerifyRing y = 0, z = 0, x = X_left[0];
-    os[1].consume(tmp);
-    y = (uint128_t) tmp << 64;
-    os[1].consume(tmp);
-    y |= tmp;
-    os[1].consume(tmp);
-    z = (uint128_t) tmp << 64;
-    os[1].consume(tmp);
-    z |= tmp;
+    os[1].get(y);
+    os[1].get(z);
 
     z += Z_left;
 
-    cout << (x * y == z) << endl;
+    if (x * y != z) {
+        throw mac_fail("ZKP check failed");
+    }
 
 }
 
@@ -446,7 +419,9 @@ inline T TestProtocol<T>::finalize_mul(int n) {
     this->bit_counter += (n == -1 ? T::clear::length() : n);
     T result;
     result[0] = add_shares.next();
-    result[1].unpack(os[1], n);
+    result[1].unpack(os[1], n);             // received from player i-1 and set it in index 1
+                                            // so index 1 is shared with previous and index 0 is shared with next
+                                            // which is the same as shared_prngs
 
     verify_shares[pointer_answer].z[0] = result[0].debug();
     verify_shares[pointer_answer].z[1] = result[1].debug();

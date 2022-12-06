@@ -28,6 +28,16 @@ const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
 
+void print_uint128(uint128_t x) {
+    if (x > 9) print_uint128(x / 10);
+    putchar(x % 10 + '0');
+}
+
+#define show_uint128(value) \
+    cout << #value << " = "; \
+    print_uint128(value); \
+    cout << endl;
+
 typedef array<uint64_t, 2> RSShare;
 struct MultiShare {
     RSShare x, y;
