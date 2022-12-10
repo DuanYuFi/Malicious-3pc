@@ -268,7 +268,7 @@ void TestProtocol<T>::verify_thread_handler() {
     MyPair<int, int> data;
 
     while (true) { 
-        if (!cv.pop(data)) {
+        if (!cv.pop_dont_stop(data)) {
             continue;
         }
 

@@ -153,6 +153,64 @@ public:
                 thread->join();
             }
         }
+
+        delete[] X_prover;
+        delete[] Y_prover;
+        delete[] Y_right;
+        delete[] X_left;
+        delete[] _Z_left;
+        delete[] _Z_right;
+        delete[] E;
+
+        delete[] X_prover_bak;
+        delete[] Y_prover_bak;
+        delete[] Y_right_bak;
+        delete[] X_left_bak;
+        delete[] _Z_left_bak;
+        delete[] _Z_right_bak;
+        delete[] E_bak;
+
+        delete[] thread_buffer;
+
+        for (int i = 0; i < KAPPA; i++) {
+            delete[] choices_left[i];
+            delete[] choices_right[i];
+            delete[] choices_prover[i];
+        }
+
+        delete[] choices_left;
+        delete[] choices_right;
+        delete[] choices_prover;
+
+        delete[] random_coef_left;
+        delete[] random_coef_right;
+        delete[] random_coef_prover;
+
+        delete[] counter_prover;
+        delete[] counter_left;
+        delete[] counter_right;
+
+        delete[] Z_left;
+        delete[] Z_right;
+
+        delete[] coeffsX_prover;
+        delete[] coeffsY_prover;
+        delete[] coeffsX_left  ;
+        delete[] coeffsY_left  ;
+        delete[] coeffsX_right ;
+        delete[] coeffsY_right ;
+
+        for (int i = 0; i < ms; i ++) {
+            for (int j = 0; j < k; j ++) {
+                delete[] local_left[i][j];
+                delete[] local_right[i][j];
+            }
+            delete[] local_left[i];
+            delete[] local_right[i];
+        }
+
+        delete[] local_left;
+        delete[] local_right;
     }
 
 
