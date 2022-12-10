@@ -21,7 +21,7 @@ typedef uint128_t VerifyRing;
 const int N = 64;
 const int KAPPA = 40;
 const int EBITS = 64;
-const size_t BATCH_SIZE = (1<<25);
+const size_t BATCH_SIZE = 640000;
 const int K = 8;
 
 void print_uint128(uint128_t x) {
@@ -238,8 +238,8 @@ void prove(
 
 
     VerifyRing *X, *Y;
-    X = new VerifyRing[new_batch_size + k];
-    Y = new VerifyRing[new_batch_size + k];
+    X = new VerifyRing[new_batch_size];
+    Y = new VerifyRing[new_batch_size];
 
     // VerifyRing Z = 0;
 
@@ -324,10 +324,10 @@ void prove(
         X[i * 2 + 1] *= counter[i];
     }
 
-    for(int i = 0; i < k; i++) {
-        X[new_batch_size + i] = 0;
-        Y[new_batch_size + i] = 0;
-    }
+    // for(int i = 0; i < k; i++) {
+    //     X[new_batch_size + i] = 0;
+    //     Y[new_batch_size + i] = 0;
+    // }
 
     // show_uint128(Z);
 

@@ -1,5 +1,9 @@
 a = sint(3)
 b = sint(4)
 
-for i in range(640000):
+c = a * b
+a = b * c
+b = c * a
+
+for i in range(640000 - 3):
     a * b

@@ -19,6 +19,7 @@
 #include <condition_variable>
 
 #include "Tools/SafeQueue.h"
+#include "Tools/my-utils.hpp"
 
 typedef unsigned __int128 uint128_t;
 typedef uint64_t MulRing;
@@ -70,10 +71,31 @@ class TestProtocol : public ProtocolBase<T>, public ReplicatedBase
     typename T::clear dotprod_share;
 
     MultiShare *verify_shares;
-    size_t pointer, pointer_answer;
+    int pointer, pointer_answer;
 
-    PRNG global_prng, prng_left, prng_verify;
-    
+    PRNG global_prng;
+
+    int batch_size, ms, k, new_batch_size;
+    VerifyRing *X_prover, *Y_prover, *Y_right, *X_left, *_Z_left, *_Z_right, *E;
+    VerifyRing *X_prover_bak, *Y_prover_bak, *Y_right_bak, *X_left_bak, *_Z_left_bak, *_Z_right_bak, *E_bak;
+
+    bool **choices_left, **choices_right, **choices_prover;
+    VerifyRing *random_coef_left, *random_coef_right, *random_coef_prover;
+    VerifyRing *counter_prover, *counter_left, *counter_right;
+    VerifyRing *thread_buffer;
+    VerifyRing *Z_left, *Z_right;
+
+    VerifyRing *coeffsX_prover, *coeffsY_prover;
+    VerifyRing *coeffsX_left, *coeffsY_left;
+    VerifyRing *coeffsX_right, *coeffsY_right;
+
+    VerifyRing ***local_right, ***local_left;
+
+    int s, vector_length;
+
+    WaitSize ws;
+    WaitQueue<MyPair<int, int> > cv;
+    vector<shared_ptr<std::thread>> verify_threads;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -98,14 +120,39 @@ public:
     }
 
     ~TestProtocol() {
-        while (pointer >= 640000) {
-            verify();
-            verify();
-            pointer -= 640000;
-            pointer_answer -= 640000;
+        if (pointer > 0) {
+            if (batch_size && pointer % batch_size != 0) {
+                int padding = batch_size - pointer % batch_size;
+                cout << pointer << ", " << padding << endl;
+
+                memset(X_prover + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(Y_prover + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(Y_right + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(X_left + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(_Z_left + pointer, 0, sizeof(VerifyRing) * padding);
+                memset(_Z_right + pointer, 0, sizeof(VerifyRing) * padding);
+                memset(E + pointer, 0, sizeof(VerifyRing) * padding);
+
+                memset(X_prover_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(Y_prover_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(Y_right_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(X_left_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
+                memset(_Z_left_bak + pointer, 0, sizeof(VerifyRing) * padding);
+                memset(_Z_right_bak + pointer, 0, sizeof(VerifyRing) * padding);
+                memset(E_bak + pointer, 0, sizeof(VerifyRing) * padding);
+            }
+            verify_api();
         }
-        
-        // cout << typeid(typename T::clear).name() << endl;
+
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+            cv.push(MyPair<int, int>(0, 0));
+        }
+
+        for (auto &thread: verify_threads) {
+            if (thread->joinable()) {
+                thread->join();
+            }
+        }
     }
 
 
@@ -155,6 +202,29 @@ public:
         }
 
         return res;
+    }
+
+    void verify_thread_handler();
+    void verify_part1(int batch_id);
+    void verify_part2(int batch_id);
+    void verify_part3(int batch_id);
+    void verify_part4(int batch_id);
+    void verify_part5(int batch_id);
+
+    void verify_api() {
+        if (pointer_answer >= batch_size * ms && pointer_answer > 0) {
+            verify();
+            memcpy(X_prover, X_prover_bak, sizeof(VerifyRing) * new_batch_size * ms);
+            memcpy(Y_prover, Y_prover_bak, sizeof(VerifyRing) * new_batch_size * ms);
+            memcpy(Y_right, Y_right_bak, sizeof(VerifyRing) * new_batch_size * ms);
+            memcpy(X_left, X_left_bak, sizeof(VerifyRing) * new_batch_size * ms);
+            memcpy(_Z_left, _Z_left_bak, sizeof(VerifyRing) * batch_size * ms);
+            memcpy(_Z_right, _Z_right_bak, sizeof(VerifyRing) * batch_size * ms);
+            memcpy(E, E_bak, sizeof(VerifyRing) * batch_size * ms);
+            verify();
+            pointer -= batch_size * ms;
+            pointer_answer -= batch_size * ms;
+        }
     }
 
 };

@@ -104,10 +104,31 @@ public:
     }
 };
 
-// void get_bases(uint64_t n, uint64_t** result);
-// void evaluate_bases(uint64_t n, uint64_t r, uint64_t* result);
-// void append_one_msg(LocalHash &hash, uint64_t msg);
-// void append_msges(LocalHash &hash, vector<uint64_t> msges);
+template <typename T>
+class Queue {
+public:
+  T pop() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    T item = queue_.front();
+    queue_.pop();
+    return item;
+  }
+
+  void push(const T& item) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    queue_.push(item);
+  }
+
+  bool empty() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return queue_.empty();
+  }
+
+private:
+  std::queue<T> queue_;
+  std::mutex mutex_;
+};
+
 
 class DZKP_UTILS {
 

@@ -1,0 +1,12 @@
+from Compiler.types import *
+
+a = sint(3)
+b = sint(4)
+
+TIMES = 6400000
+
+for i in range(TIMES):
+    a * b
+
+# print_ln("%s", e.reveal())
+# print_ln("%s", f.reveal())
