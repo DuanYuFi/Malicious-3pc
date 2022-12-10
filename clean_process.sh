@@ -1,0 +1,1 @@
+ps -ef | grep test-ring-party | awk '{print $2}' | xargs kill -9
