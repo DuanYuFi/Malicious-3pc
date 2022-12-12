@@ -144,15 +144,22 @@ public:
             verify_api();
         }
 
-        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+        cout << "Pushing" << endl;
+
+        for (int i = 0; i < (int) verify_threads.size(); i ++) {
             cv.push(MyPair<int, int>(0, 0));
         }
+
+        cout << "Joining" << endl;
 
         for (auto &thread: verify_threads) {
             if (thread->joinable()) {
                 thread->join();
+                cout << "Joined" << endl;
             }
         }
+
+        cout << "Cleaning" << endl;
 
         delete[] X_prover;
         delete[] Y_prover;

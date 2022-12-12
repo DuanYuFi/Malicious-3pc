@@ -25,13 +25,13 @@ TestProtocol<T>::TestProtocol(Player &P) : ReplicatedBase(P)
     k = OnlineOptions::singleton.k_size;
     new_batch_size = batch_size * 2;
 
-    X_prover = new VerifyRing[new_batch_size * ms];
+    X_prover = new VerifyRing[new_batch_size * ms];     // only works when batch_size % k == 0, otherwise it need to be (new_batch_size + k) * ms
     Y_prover = new VerifyRing[new_batch_size * ms];
     Y_right = new VerifyRing[new_batch_size * ms];
     X_left = new VerifyRing[new_batch_size * ms];
     _Z_left = new VerifyRing[batch_size * ms];
     _Z_right = new VerifyRing[batch_size * ms];
-    E = new VerifyRing[batch_size * ms];
+    E = new VerifyRing[batch_size * ms];                // uint64_t also works
 
     X_prover_bak = new VerifyRing[new_batch_size * ms];
     Y_prover_bak = new VerifyRing[new_batch_size * ms];
@@ -83,11 +83,15 @@ TestProtocol<T>::TestProtocol(Player &P) : ReplicatedBase(P)
         }
     }
 
+    cout << "Adding threads" << endl;
+
     // chatGPT taught me to do this. Brilliant
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i++) {
         std::shared_ptr<std::thread> _thread(new std::thread(&TestProtocol<T>::verify_thread_handler, this));
         verify_threads.push_back(_thread);
     }
+
+    cout << "Thread size: " << verify_threads.size() << endl;
 
     octetStream os;
 
@@ -139,7 +143,7 @@ void TestProtocol<T>::verify_part2(int batch_id) {
     memset(_Z, 0, sizeof(VerifyRing) * KAPPA);
 
     for (int _ = 0; _ < KAPPA; _ ++) {        
-        for (int i = 0; i < batch_size; i ++) {
+        for (int i = 0; i < batch_size; i ++) {                                     // slow
             _Z[_] += _Z_right[batch_id * batch_size + i] * choices_right[_][i];
         }
 
@@ -162,7 +166,7 @@ void TestProtocol<T>::verify_part3(int batch_id) {
     // Compute the RHS of poly in verifier left.
     for (int _ = 0; _ < KAPPA; _ ++) {
         
-        for (int i = 0; i < batch_size; i ++) {
+        for (int i = 0; i < batch_size; i ++) {                                     // slow
             _Z[_] += _Z_left[batch_id * batch_size + i] * choices_left[_][i];
         }
 
@@ -236,7 +240,7 @@ void TestProtocol<T>::verify_part5(int batch_id) {
         }
     }
 
-    for (int i = 0; i < vector_length; i ++) {
+    for (int i = 0; i < k; i ++) {
         X_prover[offset + vector_length + i] = 0;
         Y_prover[offset + vector_length + i] = 0;
         X_left[offset + vector_length + i] = 0;
@@ -357,7 +361,8 @@ void TestProtocol<T>::verify() {
     // seed for the random coefs.
     shared_prngs[1].get_octets(seed_left, SEED_SIZE);       // as Verifier left
     shared_prngs[0].get_octets(seed_right, SEED_SIZE);      // as Verifier right
-    os[0].append(seed_left, SEED_SIZE);
+    
+    os[0].append(seed_left, SEED_SIZE); // should store the seed after passing around share of `e`
 
     // generate share_left because we cannot call random function in multi-thread.
     for (int batch = 0; batch < Nbatches; batch ++) {
@@ -480,6 +485,7 @@ void TestProtocol<T>::verify() {
             }
         }
 
+        // should store the seed after passing around share of inner products. 
         for (int i = 0; i < k; i ++) {
             coeffsX_left[i] = shared_prngs[1].getDoubleWord();
             coeffsY_left[i] = shared_prngs[1].getDoubleWord();
@@ -528,6 +534,8 @@ void TestProtocol<T>::verify() {
         os[0].store(Y_right[new_batch_size * batch]);
         os[0].store(Z_right[batch]);
     }
+
+    // cout << shared_prngs[0]
     
 
     P.pass_around(os[0], os[1], 1);
