@@ -71,14 +71,14 @@ class TestProtocol : public ProtocolBase<T>, public ReplicatedBase
     typename T::clear dotprod_share;
 
     MultiShare *verify_shares;
-    int pointer, pointer_answer;
+    int pointer, pointer_answer, iter, Nbatches;
+    int offset_data_xy, offset_data_z, offset_Z, offset_share;
 
     PRNG global_prng;
 
     int batch_size, ms, k, new_batch_size;
     VerifyRing *X_prover, *Y_prover, *Y_right, *X_left, *_Z_left, *_Z_right, *E;
-    VerifyRing *X_prover_bak, *Y_prover_bak, *Y_right_bak, *X_left_bak, *_Z_left_bak, *_Z_right_bak, *E_bak;
-
+    
     bool **choices_left, **choices_right, **choices_prover;
     VerifyRing *random_coef_left, *random_coef_right, *random_coef_prover;
     VerifyRing *counter_prover, *counter_left, *counter_right;
@@ -125,21 +125,13 @@ public:
                 int padding = batch_size - pointer % batch_size;
                 cout << pointer << ", " << padding << endl;
 
-                memset(X_prover + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(Y_prover + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(Y_right + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(X_left + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(_Z_left + pointer, 0, sizeof(VerifyRing) * padding);
-                memset(_Z_right + pointer, 0, sizeof(VerifyRing) * padding);
-                memset(E + pointer, 0, sizeof(VerifyRing) * padding);
-
-                memset(X_prover_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(Y_prover_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(Y_right_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(X_left_bak + pointer * 2, 0, sizeof(VerifyRing) * padding * 2);
-                memset(_Z_left_bak + pointer, 0, sizeof(VerifyRing) * padding);
-                memset(_Z_right_bak + pointer, 0, sizeof(VerifyRing) * padding);
-                memset(E_bak + pointer, 0, sizeof(VerifyRing) * padding);
+                memset(X_prover + pointer * 2, 0, sizeof(VerifyRing) * padding * 2 * 2);
+                memset(Y_prover + pointer * 2, 0, sizeof(VerifyRing) * padding * 2 * 2);
+                memset(Y_right + pointer * 2, 0, sizeof(VerifyRing) * padding * 2 * 2);
+                memset(X_left + pointer * 2, 0, sizeof(VerifyRing) * padding * 2 * 2);
+                memset(_Z_left + pointer, 0, sizeof(VerifyRing) * padding * 2);
+                memset(_Z_right + pointer, 0, sizeof(VerifyRing) * padding * 2);
+                memset(E + pointer, 0, sizeof(VerifyRing) * padding * 2);
             }
             verify_api();
         }
@@ -169,25 +161,21 @@ public:
         delete[] _Z_right;
         delete[] E;
 
-        delete[] X_prover_bak;
-        delete[] Y_prover_bak;
-        delete[] Y_right_bak;
-        delete[] X_left_bak;
-        delete[] _Z_left_bak;
-        delete[] _Z_right_bak;
-        delete[] E_bak;
-
         delete[] thread_buffer;
 
-        for (int i = 0; i < KAPPA; i++) {
-            delete[] choices_left[i];
-            delete[] choices_right[i];
-            delete[] choices_prover[i];
+        if (choices_left) {
+            for (int i = 0; i < KAPPA; i++) {
+                delete[] choices_left[i];
+                delete[] choices_right[i];
+                delete[] choices_prover[i];
+            }
+
+            delete[] choices_left;
+            delete[] choices_right;
+            delete[] choices_prover;
         }
 
-        delete[] choices_left;
-        delete[] choices_right;
-        delete[] choices_prover;
+
 
         delete[] random_coef_left;
         delete[] random_coef_right;
@@ -278,14 +266,6 @@ public:
 
     void verify_api() {
         if (pointer_answer >= batch_size * ms && pointer_answer > 0) {
-            verify();
-            memcpy(X_prover, X_prover_bak, sizeof(VerifyRing) * new_batch_size * ms);
-            memcpy(Y_prover, Y_prover_bak, sizeof(VerifyRing) * new_batch_size * ms);
-            memcpy(Y_right, Y_right_bak, sizeof(VerifyRing) * new_batch_size * ms);
-            memcpy(X_left, X_left_bak, sizeof(VerifyRing) * new_batch_size * ms);
-            memcpy(_Z_left, _Z_left_bak, sizeof(VerifyRing) * batch_size * ms);
-            memcpy(_Z_right, _Z_right_bak, sizeof(VerifyRing) * batch_size * ms);
-            memcpy(E, E_bak, sizeof(VerifyRing) * batch_size * ms);
             verify();
             pointer -= batch_size * ms;
             pointer_answer -= batch_size * ms;
