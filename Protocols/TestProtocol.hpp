@@ -207,6 +207,12 @@ void TestProtocol<T>::verify_part4(int batch_id) {
                               Y_prover + batch_id * new_batch_size + j * vec_len, 
                               vec_len)
                 - thread_buffer[batch_id * k * k + i * k + j];
+
+            thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = 
+                    inner_product(X_prover + offset_data_xy + batch_id * new_batch_size + i * vec_len, 
+                                Y_prover + offset_data_xy + batch_id * new_batch_size + j * vec_len, 
+                                vec_len)
+                    - thread_buffer[offset_z_shares + batch_id * k * k + i * k + j];
         }
     }
 
@@ -216,49 +222,23 @@ void TestProtocol<T>::verify_part4(int batch_id) {
         XY_mask_thread_buffer[2 * batch_id] = XY_mask_prover[2 * batch_id] - XY_mask_thread_buffer[2 * batch_id];
         XY_mask_thread_buffer[2 * batch_id + 1] = XY_mask_prover[2 * batch_id] - XY_mask_thread_buffer[2 * batch_id + 1];
 
+        XY_mask_prover[offset_mono * 2 + 2 * batch_id] = local_prng.getDoubleWord();
+        XY_mask_prover[offset_mono * 2 + 2 * batch_id + 1] = local_prng.getDoubleWord();
+        XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id] = XY_mask_prover[offset_mono * 2 + 2 * batch_id] - XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id];
+        XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id + 1] = XY_mask_prover[offset_mono * 2 + 2 * batch_id] - XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id + 1];
+
         int cur_offset_z_masks = batch_id * (2 * k + 1);
         int cur_offset_xy = batch_id * new_batch_size;
         // x_0 * y_0
         Z_masks_thread_buffer[cur_offset_z_masks] = XY_mask_prover[batch_id * 2] * XY_mask_prover[batch_id * 2 + 1] - Z_masks_thread_buffer[cur_offset_z_masks];
+        Z_masks_thread_buffer[cur_offset_z_masks + offset_z_masks] = XY_mask_prover[offset_mono * 2 + batch_id * 2] * XY_mask_prover[offset_mono * 2 + batch_id * 2 + 1] - Z_masks_thread_buffer[cur_offset_z_masks];
+
         // x_0 * y_i, i = 1, ... k
         for (int i = 0; i < k; i++) {
             Z_masks_thread_buffer[cur_offset_z_masks + 1 + i] = XY_mask_prover[batch_id * 2] * X_prover[cur_offset_xy + i] - Z_masks_thread_buffer[cur_offset_z_masks + 1 + i];
-        }
-        // y_0 * x_i, i = 1, ... k
-        for (int i = 0; i < k; i++) {
             Z_masks_thread_buffer[cur_offset_z_masks + 1 + k + i] = XY_mask_prover[batch_id * 2 + 1] * Y_prover[cur_offset_xy + i] - Z_masks_thread_buffer[cur_offset_z_masks + 1 + k + i];
-        }
-    }
-
-    if (iter > 0) {
-        for (int i = 0; i < k; i ++) {
-            for (int j = 0; j < k; j ++) {
-                if (i == 0 && j == 0) {
-                    continue;
-                }
-                thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = 
-                    inner_product(X_prover + offset_data_xy + batch_id * new_batch_size + i * vec_len, 
-                                Y_prover + offset_data_xy + batch_id * new_batch_size + j * vec_len, 
-                                vec_len)
-                    - thread_buffer[offset_z_shares + batch_id * k * k + i * k + j];
-            }
-        }
-
-        if (vec_len == k) {
-            XY_mask_prover[offset_mono * 2 + 2 * batch_id] = local_prng.getDoubleWord();
-            XY_mask_prover[offset_mono * 2 + 2 * batch_id + 1] = local_prng.getDoubleWord();
-            XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id] = XY_mask_prover[offset_mono * 2 + 2 * batch_id] - XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id];
-            XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id + 1] = XY_mask_prover[offset_mono * 2 + 2 * batch_id] - XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id + 1];
-
-            int cur_offset_z_masks = batch_id * (2 * k + 1) + offset_z_masks;
-            int cur_offset_xy = batch_id * new_batch_size + offset_data_xy;
-            Z_masks_thread_buffer[cur_offset_z_masks] = XY_mask_prover[offset_mono * 2 + batch_id * 2] * XY_mask_prover[offset_mono * 2 + batch_id * 2 + 1] - Z_masks_thread_buffer[cur_offset_z_masks];
-            for (int i = 0; i < k; i++) {
-                Z_masks_thread_buffer[cur_offset_z_masks + 1 + i] = XY_mask_prover[offset_mono * 2 + batch_id * 2] * X_prover[cur_offset_xy + i] - Z_masks_thread_buffer[cur_offset_z_masks + 1 + i];
-            }
-            for (int i = 0; i < k; i++) {
-                Z_masks_thread_buffer[cur_offset_z_masks + 1 + k + i] = XY_mask_prover[offset_mono * 2 + batch_id * 2 + 1] * Y_prover[cur_offset_xy + i] - Z_masks_thread_buffer[cur_offset_z_masks + 1 + k + i];
-            }
+            Z_masks_thread_buffer[cur_offset_z_masks + offset_z_masks + 1 + i] = XY_mask_prover[offset_mono * 2 + batch_id * 2] * X_prover[cur_offset_xy + offset_data_xy + i] - Z_masks_thread_buffer[cur_offset_z_masks + offset_z_masks + 1 + i];
+            Z_masks_thread_buffer[cur_offset_z_masks + offset_z_masks + 1 + k + i] = XY_mask_prover[offset_mono * 2 + batch_id * 2 + 1] * Y_prover[cur_offset_xy + offset_data_xy + i] - Z_masks_thread_buffer[cur_offset_z_masks + offset_z_masks + 1 + k + i];
         }
     }
 
@@ -272,13 +252,20 @@ void TestProtocol<T>::verify_part5(int batch_id) {
 
     VerifyRing res_left[k * 2], res_right[k * 2];
     int cur_offset_xy = batch_id * new_batch_size;
+    int cur_offset_xy_2 = batch_id * new_batch_size + offset_data_xy;
 
     local_left[batch_id][0][0] = Z_left[batch_id];
     local_right[batch_id][0][0] = Z_right[batch_id];
 
+    local_left[batch_id][k][k] = Z_left[offset_mono + batch_id];
+    local_right[batch_id][k][k] = Z_right[offset_mono + batch_id];
+
     for (int i = 1; i < k; i ++) {
         local_left[batch_id][0][0] -= local_left[batch_id][i][i];
         local_right[batch_id][0][0] -= local_right[batch_id][i][i];
+
+        local_left[batch_id][k][k] -= local_left[batch_id][k + i][k + i];
+        local_right[batch_id][k][k] -= local_right[batch_id][k + i][k + i];
     }
 
     for (int j = 0; j < vec_len; j ++) {
@@ -286,6 +273,12 @@ void TestProtocol<T>::verify_part5(int batch_id) {
         Y_prover[cur_offset_xy + j] *= coeffsY_prover[0];
         X_left[cur_offset_xy + j] *= coeffsX_left[0];
         Y_right[cur_offset_xy + j] *= coeffsY_right[0];
+
+        X_prover[cur_offset_xy_2 + j] *= coeffsX_prover[k];
+        Y_prover[cur_offset_xy_2 + j] *= coeffsY_prover[k];
+        X_left[cur_offset_xy_2 + j] *= coeffsX_left[k];
+        Y_right[cur_offset_xy_2 + j] *= coeffsY_right[k];
+
     }
 
     for (int i = 1; i < k; i ++) {
@@ -295,6 +288,12 @@ void TestProtocol<T>::verify_part5(int batch_id) {
 
             X_left[cur_offset_xy + j] += X_left[cur_offset_xy + j + i * vec_len] * coeffsX_left[i];
             Y_right[cur_offset_xy + j] += Y_right[cur_offset_xy + j + i * vec_len] * coeffsY_right[i];
+
+            X_prover[cur_offset_xy_2 + j] += X_prover[cur_offset_xy_2 + j + i * vec_len] * coeffsX_prover[k + i];
+            Y_prover[cur_offset_xy_2 + j] += Y_prover[cur_offset_xy_2 + j + i * vec_len] * coeffsY_prover[k + i];
+
+            X_left[cur_offset_xy_2 + j] += X_left[cur_offset_xy_2 + j + i * vec_len] * coeffsX_left[k + i];
+            Y_right[cur_offset_xy_2 + j] += Y_right[cur_offset_xy_2 + j + i * vec_len] * coeffsY_right[k + i];
         }
     }
 
@@ -303,89 +302,51 @@ void TestProtocol<T>::verify_part5(int batch_id) {
         Y_prover[cur_offset_xy + vec_len + i] = 0;
         X_left[cur_offset_xy + vec_len + i] = 0;
         Y_right[cur_offset_xy + vec_len + i] = 0;
+
+        X_prover[cur_offset_xy_2 + vec_len + i] = 0;
+        Y_prover[cur_offset_xy_2 + vec_len + i] = 0;
+        X_left[cur_offset_xy_2 + vec_len + i] = 0;
+        Y_right[cur_offset_xy_2 + vec_len + i] = 0;
     }
 
     for (int i = 0; i < k; i ++) {
         res_left[i] = 0;
         res_right[i] = 0;
+
+        res_left[k + i] = 0;
+        res_right[k + i] = 0;
+
         for (int j = 0; j < k; j ++) {
             res_left[i] += coeffsY_left[j] * local_left[batch_id][i][j];
             res_right[i] += coeffsY_right[j] * local_right[batch_id][i][j];
+
+            res_left[k + i] += coeffsY_left[k + j] * local_left[batch_id][k + i][k + j];
+            res_right[k + i] += coeffsY_right[k + j] * local_right[batch_id][k + i][k + j];
         }
     }
 
     Z_left[batch_id] = Z_right[batch_id] = 0;
+    Z_left[offset_mono + batch_id] = Z_right[offset_mono + batch_id] = 0;
+
     for (int i = 0; i < k; i ++) {
         Z_left[batch_id] += res_left[i] * coeffsX_left[i];
         Z_right[batch_id] += res_right[i] * coeffsX_right[i];
+
+        Z_left[offset_mono + batch_id] += res_left[k + i] * coeffsX_left[k + i];
+        Z_right[offset_mono + batch_id] += res_right[k + i] * coeffsX_right[k + i];
     }
 
     if (vec_len == 1) {
         X_left[cur_offset_xy] += XY_mask_left[2 * batch_id];
         Y_right[cur_offset_xy] += XY_mask_right[2 * batch_id + 1];
      
+        X_left[cur_offset_xy_2] += XY_mask_left[offset_mono * 2 + 2 * batch_id];
+        Y_right[cur_offset_xy_2] += XY_mask_right[offset_mono * 2 + 2 * batch_id + 1];
+        
+
         for (int i = 0; i < 2 * k + 1; i++) {
             Z_left[batch_id] += Z_masks_left[batch_id * (2 * k + 1) + i];
-        }
-    }
-
-    if (iter > 0) {
-        cur_offset_xy += offset_data_xy;
-
-        local_left[batch_id][k][k] = Z_left[offset_mono + batch_id];
-        local_right[batch_id][k][k] = Z_right[offset_mono + batch_id];
-
-        for (int i = 1; i < k; i ++) {
-            local_left[batch_id][k][k] -= local_left[batch_id][k + i][k + i];
-            local_right[batch_id][k][k] -= local_right[batch_id][k + i][k + i];
-        }
-
-        for (int j = 0; j < vec_len; j ++) {
-            X_prover[cur_offset_xy + j] *= coeffsX_prover[k];
-            Y_prover[cur_offset_xy + j] *= coeffsY_prover[k];
-            X_left[cur_offset_xy + j] *= coeffsX_left[k];
-            Y_right[cur_offset_xy + j] *= coeffsY_right[k];
-        }
-
-        for (int i = 1; i < k; i ++) {
-            for (int j = 0; j < vec_len; j ++) {
-                X_prover[cur_offset_xy + j] += X_prover[cur_offset_xy + j + i * vec_len] * coeffsX_prover[k + i];
-                Y_prover[cur_offset_xy + j] += Y_prover[cur_offset_xy + j + i * vec_len] * coeffsY_prover[k + i];
-
-                X_left[cur_offset_xy + j] += X_left[cur_offset_xy + j + i * vec_len] * coeffsX_left[k + i];
-                Y_right[cur_offset_xy + j] += Y_right[cur_offset_xy + j + i * vec_len] * coeffsY_right[k + i];
-            }
-        }
-
-        for (int i = 0; i < k; i ++) {
-            X_prover[cur_offset_xy + vec_len + i] = 0;
-            Y_prover[cur_offset_xy + vec_len + i] = 0;
-            X_left[cur_offset_xy + vec_len + i] = 0;
-            Y_right[cur_offset_xy + vec_len + i] = 0;
-        }
-
-        for (int i = 0; i < k; i ++) {
-            res_left[k + i] = 0;
-            res_right[k + i] = 0;
-            for (int j = 0; j < k; j ++) {
-                res_left[k + i] += coeffsY_left[k + j] * local_left[batch_id][k + i][k + j];
-                res_right[k + i] += coeffsY_right[k + j] * local_right[batch_id][k + i][k + j];
-            }
-        }
-
-        Z_left[offset_mono + batch_id] = Z_right[offset_mono + batch_id] = 0;
-        for (int i = 0; i < k; i ++) {
-            Z_left[offset_mono + batch_id] += res_left[k + i] * coeffsX_left[k + i];
-            Z_right[offset_mono + batch_id] += res_right[k + i] * coeffsX_right[k + i];
-        }
-
-        if (vec_len == 1) {
-            X_left[cur_offset_xy] += XY_mask_left[offset_mono * 2 + 2 * batch_id];
-            Y_right[cur_offset_xy] += XY_mask_right[offset_mono * 2 + 2 * batch_id + 1];
-        
-            for (int i = 0; i < 2 * k + 1; i++) {
-                Z_left[offset_mono + batch_id] += Z_masks_left[offset_z_masks + batch_id * (2 * k + 1) + i];
-            }
+            Z_left[offset_mono + batch_id] += Z_masks_left[offset_z_masks + batch_id * (2 * k + 1) + i];
         }
     }
 
@@ -601,24 +562,23 @@ void TestProtocol<T>::verify() {
     vec_len = (s - 1) / k + 1;
 
     // chop
+
+    memcpy(X_prover + offset_data_xy, X_prover, sizeof(VerifyRing) * offset_data_xy);
+    memcpy(Y_prover + offset_data_xy, Y_prover, sizeof(VerifyRing) * offset_data_xy);
+    memcpy(Y_right + offset_data_xy, Y_right, sizeof(VerifyRing) * offset_data_xy);
+    memcpy(X_left + offset_data_xy, X_left, sizeof(VerifyRing) * offset_data_xy);
+    memcpy(_Z_left + offset_data_z, _Z_left, sizeof(VerifyRing) * offset_data_z);
+    memcpy(_Z_right + offset_data_z, _Z_right, sizeof(VerifyRing) * offset_data_z);
+
+    for (int batch_id = 0; batch_id < Nbatches; batch_id ++) { 
+        Z_left[offset_mono + batch_id] = Z_left[batch_id];
+        Z_right[offset_mono + batch_id] = Z_right[batch_id];
+    }
+
     while (true) {
  
         for (auto &o : os)
             o.reset_write_head();
-
-        if (iter == 1) {
-            memcpy(X_prover + offset_data_xy, X_prover, sizeof(VerifyRing) * offset_data_xy);
-            memcpy(Y_prover + offset_data_xy, Y_prover, sizeof(VerifyRing) * offset_data_xy);
-            memcpy(Y_right + offset_data_xy, Y_right, sizeof(VerifyRing) * offset_data_xy);
-            memcpy(X_left + offset_data_xy, X_left, sizeof(VerifyRing) * offset_data_xy);
-            memcpy(_Z_left + offset_data_z, _Z_left, sizeof(VerifyRing) * offset_data_z);
-            memcpy(_Z_right + offset_data_z, _Z_right, sizeof(VerifyRing) * offset_data_z);
-
-            for (int batch_id = 0; batch_id < Nbatches; batch_id ++) { 
-                Z_left[offset_mono + batch_id] = Z_left[batch_id];
-                Z_right[offset_mono + batch_id] = Z_right[batch_id];
-            }
-        }
 
         // thread_buffer stores random numbers with left.
         for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
@@ -629,6 +589,9 @@ void TestProtocol<T>::verify() {
                     }
                     thread_buffer[batch_id * k * k + i * k + j] = shared_prngs[1].getDoubleWord();
                     local_left[batch_id][i][j] = shared_prngs[0].getDoubleWord();
+
+                    thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = shared_prngs[1].getDoubleWord();
+                    local_left[batch_id][k + i][k + j] = shared_prngs[0].getDoubleWord();
                 }
             }
         }
@@ -640,38 +603,17 @@ void TestProtocol<T>::verify() {
                 XY_mask_left[2 * batch_id] = shared_prngs[0].getDoubleWord();
                 XY_mask_left[2 * batch_id + 1] = shared_prngs[0].getDoubleWord();
 
+                XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id] = shared_prngs[1].getDoubleWord();
+                XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id + 1] = shared_prngs[1].getDoubleWord();
+                XY_mask_left[offset_mono * 2 + 2 * batch_id] = shared_prngs[0].getDoubleWord();
+                XY_mask_left[offset_mono * 2 + 2 * batch_id + 1] = shared_prngs[0].getDoubleWord();
+
                 for (int i = 0; i < 2 * k + 1; i++) {
                     Z_masks_thread_buffer[batch_id * (2 * k + 1) + i] = shared_prngs[1].getDoubleWord();
                     Z_masks_left[batch_id * (2 * k + 1) + i] = shared_prngs[0].getDoubleWord();
-                }
-            }
-        }
 
-        if (iter > 0) {
-            // cout << "checkpoint 1.5" << endl;
-            for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-                for (int i = 0; i < k; i ++) {
-                    for (int j = 0; j < k; j ++) {
-                        if (i == 0 && j == 0) {  
-                            continue;
-                        }
-                        thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = shared_prngs[1].getDoubleWord();
-                        local_left[batch_id][k + i][k + j] = shared_prngs[0].getDoubleWord();
-                    }
-                }
-            }
-
-            if (vec_len == k) {
-                for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-                    XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id] = shared_prngs[1].getDoubleWord();
-                    XY_mask_thread_buffer[offset_mono * 2 + 2 * batch_id + 1] = shared_prngs[1].getDoubleWord();
-                    XY_mask_left[offset_mono * 2 + 2 * batch_id] = shared_prngs[0].getDoubleWord();
-                    XY_mask_left[offset_mono * 2 + 2 * batch_id + 1] = shared_prngs[0].getDoubleWord();
-
-                    for (int i = 0; i < 2 * k + 1; i++) {
-                        Z_masks_thread_buffer[offset_z_masks + batch_id * (2 * k + 1) + i] = shared_prngs[1].getDoubleWord();
-                        Z_masks_left[offset_z_masks + batch_id * (2 * k + 1) + i] = shared_prngs[0].getDoubleWord();
-                    }
+                    Z_masks_thread_buffer[offset_z_masks + batch_id * (2 * k + 1) + i] = shared_prngs[1].getDoubleWord();
+                    Z_masks_left[offset_z_masks + batch_id * (2 * k + 1) + i] = shared_prngs[0].getDoubleWord();
                 }
             }
         }
@@ -689,6 +631,7 @@ void TestProtocol<T>::verify() {
                         continue;
                     }
                     os[0].store(thread_buffer[batch_id * k * k + i * k + j]);
+                    os[0].store(thread_buffer[offset_z_shares + batch_id * k * k + i * k + j]);
                 }
             }
         }
@@ -698,32 +641,12 @@ void TestProtocol<T>::verify() {
                 os[0].store(XY_mask_thread_buffer[batch_id * 2]);
                 os[0].store(XY_mask_thread_buffer[batch_id * 2 + 1]);
 
+                os[0].store(XY_mask_thread_buffer[offset_mono * 2 + batch_id * 2]);
+                os[0].store(XY_mask_thread_buffer[offset_mono * 2 + batch_id * 2 + 1]);
+
                 for (int i = 0; i < 2 * k + 1; i++) {
                     os[0].store(Z_masks_thread_buffer[batch_id * (2 * k + 1) + i]);
-                }
-            }
-        }
-
-        if (iter > 0) {
-            for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-                for (int i = 0; i < k; i ++) {
-                    for (int j = 0; j < k; j ++) {
-                        if (i == 0 && j == 0) {
-                            continue;
-                        }
-                        os[0].store(thread_buffer[offset_z_shares + batch_id * k * k + i * k + j]);
-                    }
-                }
-            }
-
-            if (vec_len == k) {
-                for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-                    os[0].store(XY_mask_thread_buffer[offset_mono * 2 + batch_id * 2]);
-                    os[0].store(XY_mask_thread_buffer[offset_mono * 2 + batch_id * 2 + 1]);
-
-                    for (int i = 0; i < 2 * k + 1; i++) {
-                        os[0].store(Z_masks_thread_buffer[offset_z_masks + batch_id * (2 * k + 1) + i]);
-                    }
+                    os[0].store(Z_masks_thread_buffer[offset_z_masks + batch_id * (2 * k + 1) + i]);
                 }
             }
         }
@@ -737,6 +660,7 @@ void TestProtocol<T>::verify() {
                         continue;
                     }
                     os[1].get(local_right[batch_id][i][j]);
+                    os[1].get(local_right[batch_id][k + i][k + j]);
                 }
             }
         }
@@ -746,32 +670,12 @@ void TestProtocol<T>::verify() {
                 os[1].get(XY_mask_right[batch_id * 2]);
                 os[1].get(XY_mask_right[batch_id * 2 + 1]);
 
+                os[1].get(XY_mask_right[offset_mono * 2 + batch_id * 2]);
+                os[1].get(XY_mask_right[offset_mono * 2 + batch_id * 2 + 1]);
+
                 for (int i = 0; i < 2 * k + 1; i++) {
                     os[1].get(Z_masks_right[batch_id * (2 * k + 1) + i]);
-                }
-            }
-        }
-
-        if (iter > 0) {
-            for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-                for (int i = 0; i < k; i ++) {
-                    for (int j = 0; j < k; j ++) {
-                        if (i == 0 && j == 0) {
-                            continue;
-                        }
-                        os[1].get(local_right[batch_id][k + i][k + j]);
-                    }
-                }
-            }
-
-            if (vec_len == k) {
-                for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-                    os[1].get(XY_mask_right[offset_mono * 2 + batch_id * 2]);
-                    os[1].get(XY_mask_right[offset_mono * 2 + batch_id * 2 + 1]);
-
-                    for (int i = 0; i < 2 * k + 1; i++) {
-                        os[1].get(Z_masks_right[offset_z_masks + batch_id * (2 * k + 1) + i]);
-                    }
+                    os[1].get(Z_masks_right[offset_z_masks + batch_id * (2 * k + 1) + i]);
                 }
             }
         }
@@ -785,19 +689,16 @@ void TestProtocol<T>::verify() {
             coeffsY_left[i] = shared_prngs[1].getDoubleWord();
             coeffsX_right[i] = shared_prngs[0].getDoubleWord();
             coeffsY_right[i] = shared_prngs[0].getDoubleWord();
+            
+            coeffsX_left[k + i] = shared_prngs[1].getDoubleWord();
+            coeffsY_left[k + i] = shared_prngs[1].getDoubleWord();
+            coeffsX_right[k + i] = shared_prngs[0].getDoubleWord();
+            coeffsY_right[k + i] = shared_prngs[0].getDoubleWord();
+            
             os[0].store(coeffsX_left[i]);
             os[0].store(coeffsY_left[i]);
-        }
-
-        if (iter > 0) {
-            for (int i = 0; i < k; i ++) {
-                coeffsX_left[k + i] = shared_prngs[1].getDoubleWord();
-                coeffsY_left[k + i] = shared_prngs[1].getDoubleWord();
-                coeffsX_right[k + i] = shared_prngs[0].getDoubleWord();
-                coeffsY_right[k + i] = shared_prngs[0].getDoubleWord();
-                os[0].store(coeffsX_left[k + i]);
-                os[0].store(coeffsY_left[k + i]);
-            }
+            os[0].store(coeffsX_left[k + i]);
+            os[0].store(coeffsY_left[k + i]);
         }
 
         P.pass_around(os[0], os[1], 1);
@@ -805,13 +706,9 @@ void TestProtocol<T>::verify() {
         for (int i = 0; i < k; i ++) {
             os[1].get(coeffsX_prover[i]);
             os[1].get(coeffsY_prover[i]);
-        }
-        
-        if (iter > 0) {
-            for (int i = 0; i < k; i ++) {
-                os[1].get(coeffsX_prover[k + i]);
-                os[1].get(coeffsY_prover[k + i]);
-            }
+
+            os[1].get(coeffsX_prover[k + i]);
+            os[1].get(coeffsY_prover[k + i]);
         }
 
         ws.reset();
@@ -836,50 +733,36 @@ void TestProtocol<T>::verify() {
         os[0].store(XY_mask_right[2 * batch_id]);
         os[0].store(Y_right[new_batch_size * batch_id] + XY_mask_right[2 * batch_id + 1]);
         os[0].store(Z_right[batch_id]);
-    }
 
-    if (iter > 0) {
-        for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-            os[0].store(XY_mask_right[offset_mono * 2 + 2 * batch_id]);
-            os[0].store(Y_right[offset_data_xy + new_batch_size * batch_id] + XY_mask_right[offset_mono * 2 + 2 * batch_id + 1]);
-            os[0].store(Z_right[offset_mono + batch_id]);
-        }
+        os[0].store(XY_mask_right[offset_mono * 2 + 2 * batch_id]);
+        os[0].store(Y_right[offset_data_xy + new_batch_size * batch_id] + XY_mask_right[offset_mono * 2 + 2 * batch_id + 1]);
+        os[0].store(Z_right[offset_mono + batch_id]);
     }
 
     P.pass_around(os[0], os[1], 1);
 
     for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-        VerifyRing x, y, z;
+        VerifyRing x, y, z, x2, y2, z2;
         os[1].get(x);
         os[1].get(y);
         os[1].get(z);
+        os[1].get(x2);
+        os[1].get(y2);
+        os[1].get(z2);
+
         x += X_left[new_batch_size * batch_id];
         y += XY_mask_right[2 * batch_id + 1];
         z += Z_left[batch_id];
 
-        if (x * y != z) {
+        x2 += X_left[offset_data_xy + new_batch_size * batch_id];
+        y2 += XY_mask_right[offset_mono * 2 + 2 * batch_id + 1];
+        z2 += Z_left[offset_mono + batch_id];
+
+        if (x * y != z || x2 * y2 != z2) {
             throw mac_fail("ZKP check failed");
             // cout << "ZKP check failed" << endl;
         }
     }
-
-    if (iter > 0) {
-        for (int batch_id = 0; batch_id < Nbatches; batch_id ++) {
-            VerifyRing x, y, z;
-            os[1].get(x);
-            os[1].get(y);
-            os[1].get(z);
-            x += X_left[offset_data_xy + new_batch_size * batch_id];
-            y += XY_mask_right[offset_mono * 2 + 2 * batch_id + 1];
-            z += Z_left[offset_mono + batch_id];
-
-            if (x * y != z) {
-                throw mac_fail("ZKP 2 check failed");
-                // cout << "ZKP 2 check failed" << endl;
-            }
-        }
-    }
-
 }
 
 template <class T>
