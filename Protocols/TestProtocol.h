@@ -72,9 +72,9 @@ class TestProtocol : public ProtocolBase<T>, public ReplicatedBase
 
     MultiShare *verify_shares;
     int pointer, pointer_answer, iter, Nbatches;
-    int offset_data_xy, offset_data_z, offset_Z, offset_share;
+    int offset_data_xy, offset_data_z, offset_mono, offset_z_shares, offset_z_masks;
 
-    PRNG global_prng;
+    PRNG global_prng, local_prng;
 
     int batch_size, ms, k, new_batch_size;
     VerifyRing *X_prover, *Y_prover, *Y_right, *X_left, *_Z_left, *_Z_right, *E;
@@ -85,13 +85,16 @@ class TestProtocol : public ProtocolBase<T>, public ReplicatedBase
     VerifyRing *thread_buffer;
     VerifyRing *Z_left, *Z_right;
 
+    VerifyRing *XY_mask_left, *XY_mask_right, *XY_mask_prover, *Z_masks_left, *Z_masks_right, *Z_masks_prover;
+    VerifyRing *XY_mask_thread_buffer, *Z_masks_thread_buffer;
+
     VerifyRing *coeffsX_prover, *coeffsY_prover;
     VerifyRing *coeffsX_left, *coeffsY_left;
     VerifyRing *coeffsX_right, *coeffsY_right;
 
     VerifyRing ***local_right, ***local_left;
 
-    int s, vector_length;
+    int s, vec_len;
 
     WaitSize ws;
     WaitQueue<MyPair<int, int> > cv;
