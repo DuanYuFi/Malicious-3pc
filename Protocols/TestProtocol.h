@@ -139,22 +139,22 @@ public:
             verify_api();
         }
 
-        cout << "Pushing" << endl;
+        // cout << "Pushing" << endl;
 
         for (int i = 0; i < (int) verify_threads.size(); i ++) {
             cv.push(MyPair<int, int>(0, 0));
         }
 
-        cout << "Joining" << endl;
+        // cout << "Joining" << endl;
 
         for (auto &thread: verify_threads) {
             if (thread->joinable()) {
                 thread->join();
-                cout << "Joined" << endl;
+                // cout << "Joined" << endl;
             }
         }
 
-        cout << "Cleaning" << endl;
+        // cout << "Cleaning" << endl;
 
         delete[] X_prover;
         delete[] Y_prover;

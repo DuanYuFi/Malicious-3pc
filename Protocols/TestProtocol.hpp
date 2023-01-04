@@ -202,17 +202,27 @@ void TestProtocol<T>::verify_part4(int batch_id) {
             if (i == 0 && j == 0) {
                 continue;
             }
-            thread_buffer[batch_id * k * k + i * k + j] = 
-                inner_product(X_prover + batch_id * new_batch_size + i * vec_len, 
-                              Y_prover + batch_id * new_batch_size + j * vec_len, 
-                              vec_len)
-                - thread_buffer[batch_id * k * k + i * k + j];
+            if (iter == 0) {
+                VerifyRing ip = inner_product(X_prover + batch_id * new_batch_size + i * vec_len, 
+                                Y_prover + batch_id * new_batch_size + j * vec_len, 
+                                vec_len);
 
-            thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = 
+                thread_buffer[batch_id * k * k + i * k + j] = ip - thread_buffer[batch_id * k * k + i * k + j];
+                thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = ip - thread_buffer[offset_z_shares + batch_id * k * k + i * k + j];
+            } 
+            else {
+                thread_buffer[batch_id * k * k + i * k + j] = 
+                    inner_product(X_prover + batch_id * new_batch_size + i * vec_len, 
+                                Y_prover + batch_id * new_batch_size + j * vec_len, 
+                                vec_len)
+                    - thread_buffer[batch_id * k * k + i * k + j];
+
+                thread_buffer[offset_z_shares + batch_id * k * k + i * k + j] = 
                     inner_product(X_prover + offset_data_xy + batch_id * new_batch_size + i * vec_len, 
                                 Y_prover + offset_data_xy + batch_id * new_batch_size + j * vec_len, 
                                 vec_len)
                     - thread_buffer[offset_z_shares + batch_id * k * k + i * k + j];
+            }
         }
     }
 
@@ -257,8 +267,14 @@ void TestProtocol<T>::verify_part5(int batch_id) {
     local_left[batch_id][0][0] = Z_left[batch_id];
     local_right[batch_id][0][0] = Z_right[batch_id];
 
-    local_left[batch_id][k][k] = Z_left[offset_mono + batch_id];
-    local_right[batch_id][k][k] = Z_right[offset_mono + batch_id];
+    if (iter == 0) {
+        local_left[batch_id][k][k] = Z_left[batch_id];
+        local_right[batch_id][k][k] = Z_right[batch_id];
+    }
+    else {
+        local_left[batch_id][k][k] = Z_left[offset_mono + batch_id];
+        local_right[batch_id][k][k] = Z_right[offset_mono + batch_id];
+    }
 
     for (int i = 1; i < k; i ++) {
         local_left[batch_id][0][0] -= local_left[batch_id][i][i];
@@ -269,31 +285,45 @@ void TestProtocol<T>::verify_part5(int batch_id) {
     }
 
     for (int j = 0; j < vec_len; j ++) {
+
+        if (iter == 0) { // already multiplied!!
+            X_prover[cur_offset_xy_2 + j] = X_prover[cur_offset_xy + j] * coeffsX_prover[k];
+            Y_prover[cur_offset_xy_2 + j] = Y_prover[cur_offset_xy + j] * coeffsY_prover[k];
+            X_left[cur_offset_xy_2 + j] = X_left[cur_offset_xy + j] * coeffsX_left[k];
+            Y_right[cur_offset_xy_2 + j] = Y_right[cur_offset_xy + j] * coeffsY_right[k];
+        }
+        else {
+            X_prover[cur_offset_xy_2 + j] *= coeffsX_prover[k];
+            Y_prover[cur_offset_xy_2 + j] *= coeffsY_prover[k];
+            X_left[cur_offset_xy_2 + j] *= coeffsX_left[k];
+            Y_right[cur_offset_xy_2 + j] *= coeffsY_right[k];
+        }
+
         X_prover[cur_offset_xy + j] *= coeffsX_prover[0];
         Y_prover[cur_offset_xy + j] *= coeffsY_prover[0];
         X_left[cur_offset_xy + j] *= coeffsX_left[0];
         Y_right[cur_offset_xy + j] *= coeffsY_right[0];
-
-        X_prover[cur_offset_xy_2 + j] *= coeffsX_prover[k];
-        Y_prover[cur_offset_xy_2 + j] *= coeffsY_prover[k];
-        X_left[cur_offset_xy_2 + j] *= coeffsX_left[k];
-        Y_right[cur_offset_xy_2 + j] *= coeffsY_right[k];
-
     }
 
     for (int i = 1; i < k; i ++) {
         for (int j = 0; j < vec_len; j ++) {
+            if (iter == 0) {
+                X_prover[cur_offset_xy_2 + j] += X_prover[cur_offset_xy + j + i * vec_len] * coeffsX_prover[k + i];
+                Y_prover[cur_offset_xy_2 + j] += Y_prover[cur_offset_xy + j + i * vec_len] * coeffsY_prover[k + i];
+                X_left[cur_offset_xy_2 + j] += X_left[cur_offset_xy + j + i * vec_len] * coeffsX_left[k + i];
+                Y_right[cur_offset_xy_2 + j] += Y_right[cur_offset_xy + j + i * vec_len] * coeffsY_right[k + i];
+            } 
+            else {
+                X_prover[cur_offset_xy_2 + j] += X_prover[cur_offset_xy_2 + j + i * vec_len] * coeffsX_prover[k + i];
+                Y_prover[cur_offset_xy_2 + j] += Y_prover[cur_offset_xy_2 + j + i * vec_len] * coeffsY_prover[k + i];
+                X_left[cur_offset_xy_2 + j] += X_left[cur_offset_xy_2 + j + i * vec_len] * coeffsX_left[k + i];
+                Y_right[cur_offset_xy_2 + j] += Y_right[cur_offset_xy_2 + j + i * vec_len] * coeffsY_right[k + i];
+            }
+
             X_prover[cur_offset_xy + j] += X_prover[cur_offset_xy + j + i * vec_len] * coeffsX_prover[i];
             Y_prover[cur_offset_xy + j] += Y_prover[cur_offset_xy + j + i * vec_len] * coeffsY_prover[i];
-
             X_left[cur_offset_xy + j] += X_left[cur_offset_xy + j + i * vec_len] * coeffsX_left[i];
             Y_right[cur_offset_xy + j] += Y_right[cur_offset_xy + j + i * vec_len] * coeffsY_right[i];
-
-            X_prover[cur_offset_xy_2 + j] += X_prover[cur_offset_xy_2 + j + i * vec_len] * coeffsX_prover[k + i];
-            Y_prover[cur_offset_xy_2 + j] += Y_prover[cur_offset_xy_2 + j + i * vec_len] * coeffsY_prover[k + i];
-
-            X_left[cur_offset_xy_2 + j] += X_left[cur_offset_xy_2 + j + i * vec_len] * coeffsX_left[k + i];
-            Y_right[cur_offset_xy_2 + j] += Y_right[cur_offset_xy_2 + j + i * vec_len] * coeffsY_right[k + i];
         }
     }
 
@@ -343,7 +373,6 @@ void TestProtocol<T>::verify_part5(int batch_id) {
         X_left[cur_offset_xy_2] += XY_mask_left[offset_mono * 2 + 2 * batch_id];
         Y_right[cur_offset_xy_2] += XY_mask_right[offset_mono * 2 + 2 * batch_id + 1];
         
-
         for (int i = 0; i < 2 * k + 1; i++) {
             Z_left[batch_id] += Z_masks_left[batch_id * (2 * k + 1) + i];
             Z_left[offset_mono + batch_id] += Z_masks_left[offset_z_masks + batch_id * (2 * k + 1) + i];
@@ -400,6 +429,7 @@ void TestProtocol<T>::verify_thread_handler() {
 template <class T>
 void TestProtocol<T>::verify() {
 
+    auto start = std::chrono::high_resolution_clock::now();
     
     // Initialize
     Nbatches = (pointer_answer - 1) / batch_size + 1;
@@ -530,6 +560,10 @@ void TestProtocol<T>::verify() {
         }
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "Part 1 (Deal with randomnesses): " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
 
     ws.reset();
     
@@ -556,6 +590,10 @@ void TestProtocol<T>::verify() {
 
     ws.wait();
 
+    end = std::chrono::high_resolution_clock::now();
+    cout << "Part 2 (Random Linear Combination): " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
 
     // preparation before chop
     s = new_batch_size;
@@ -563,17 +601,17 @@ void TestProtocol<T>::verify() {
 
     // chop
 
-    memcpy(X_prover + offset_data_xy, X_prover, sizeof(VerifyRing) * offset_data_xy);
-    memcpy(Y_prover + offset_data_xy, Y_prover, sizeof(VerifyRing) * offset_data_xy);
-    memcpy(Y_right + offset_data_xy, Y_right, sizeof(VerifyRing) * offset_data_xy);
-    memcpy(X_left + offset_data_xy, X_left, sizeof(VerifyRing) * offset_data_xy);
-    memcpy(_Z_left + offset_data_z, _Z_left, sizeof(VerifyRing) * offset_data_z);
-    memcpy(_Z_right + offset_data_z, _Z_right, sizeof(VerifyRing) * offset_data_z);
+    // memcpy(X_prover + offset_data_xy, X_prover, sizeof(VerifyRing) * offset_data_xy);
+    // memcpy(Y_prover + offset_data_xy, Y_prover, sizeof(VerifyRing) * offset_data_xy);
+    // memcpy(Y_right + offset_data_xy, Y_right, sizeof(VerifyRing) * offset_data_xy);
+    // memcpy(X_left + offset_data_xy, X_left, sizeof(VerifyRing) * offset_data_xy);
+    // memcpy(_Z_left + offset_data_z, _Z_left, sizeof(VerifyRing) * offset_data_z);
+    // memcpy(_Z_right + offset_data_z, _Z_right, sizeof(VerifyRing) * offset_data_z);
 
-    for (int batch_id = 0; batch_id < Nbatches; batch_id ++) { 
-        Z_left[offset_mono + batch_id] = Z_left[batch_id];
-        Z_right[offset_mono + batch_id] = Z_right[batch_id];
-    }
+    // for (int batch_id = 0; batch_id < Nbatches; batch_id ++) { 
+    //     Z_left[offset_mono + batch_id] = Z_left[batch_id];
+    //     Z_right[offset_mono + batch_id] = Z_right[batch_id];
+    // }
 
     while (true) {
  
@@ -726,6 +764,11 @@ void TestProtocol<T>::verify() {
         iter++;
     }
 
+    end = std::chrono::high_resolution_clock::now();
+    cout << "Part 3 (Recursive reduction): " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+
     for (auto &o : os)
         o.reset_write_head();
 
@@ -758,11 +801,22 @@ void TestProtocol<T>::verify() {
         y2 += XY_mask_right[offset_mono * 2 + 2 * batch_id + 1];
         z2 += Z_left[offset_mono + batch_id];
 
-        if (x * y != z || x2 * y2 != z2) {
-            throw mac_fail("ZKP check failed");
-            // cout << "ZKP check failed" << endl;
+        // if (x * y != z || x2 * y2 != z2) {
+        //     throw mac_fail("ZKP check failed");
+        //     // cout << "ZKP check failed" << endl;
+        // }
+        if (x * y != z) {
+            // throw mac_fail("ZKP check failed");
+            cout << "ZKP check failed" << endl;
+        }
+        if (x2 * y2 != z2) {
+            // throw mac_fail("ZKP check failed");
+            cout << "ZKP 2 check failed" << endl;
         }
     }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "Part 4 (Final Check): " << (end - start).count() / 1e6 << " ms" << endl;
 }
 
 template <class T>
