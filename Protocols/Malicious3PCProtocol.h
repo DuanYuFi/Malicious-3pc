@@ -32,12 +32,12 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    uint64_t **input_shared_prev, **input_shared_next;
-    uint64_t **mask_ss_prev, **mask_ss_next;
+    Field **input_shared_prev, **input_shared_next;
+    Field **mask_ss_prev, **mask_ss_next;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
+    StatusData(DZKProof proof, Field **input_shared_prev, Field **input_shared_next, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
         proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };

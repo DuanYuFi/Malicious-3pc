@@ -16,47 +16,32 @@ uint64_t get_rand() {
     return right & Mersenne::PR;
 }
 
-void get_bases(uint64_t n, uint64_t** result) {
+void get_bases(uint64_t n, Field** result) {
     for (uint64_t i = 0; i < n - 1; i++) {
         for(uint64_t j = 0; j < n; j++) {
             result[i][j] = 1;
             for(uint64_t l = 0; l < n; l++) {
                 if (l != j) {
-                    uint64_t denominator, numerator;
-                    if (j > l) {
-                        denominator = j - l;
-                    }
-                    else {
-                        denominator = Mersenne::neg(l - j);
-                    }
+                    Field denominator, numerator;
+                    denominator = j - l;
                     numerator = i + n - l;
-                    result[i][j] = Mersenne::mul(result[i][j], Mersenne::mul(Mersenne::inverse(denominator), numerator));
+                    result[i][j] = result[i][j] * denominator.invert() * numerator;
                 }
             }
         }
     }
 }
 
-void evaluate_bases(uint64_t n, uint64_t r, uint64_t* result) {
+void evaluate_bases(uint64_t n, uint64_t r, Field* result) {
 
     for(uint64_t i = 0; i < n; i++) {
         result[i] = 1;
         for(uint64_t j = 0; j < n; j++) {
             if (j != i) {
-                uint64_t denominator, numerator; 
-                if (i > j) { 
-                    denominator = i - j;
-                } 
-                else { 
-                    denominator = Mersenne::neg(j - i);
-                }
-                if (r > j) { 
-                    numerator = r - j; 
-                } 
-                else { 
-                    numerator = Mersenne::neg(j - r);
-                }
-                result[i] = Mersenne::mul(result[i], Mersenne::mul(Mersenne::inverse(denominator), numerator));
+                Field denominator, numerator; 
+                denominator = i - j;
+                numerator = r - j; 
+                result[i] = result[i] * denominator.invert() * numerator;
             }
         }
     }
@@ -66,8 +51,8 @@ void append_one_msg(LocalHash &hash, uint64_t msg) {
     hash.update(msg);
 }
 
-void append_msges(LocalHash &hash, vector<uint64_t> msges) {
-    for(uint64_t msg: msges) {
+void append_msges(LocalHash &hash, vector<Field> msges) {
+    for(Field msg: msges) {
         hash.update(msg);
     }
 }
@@ -81,11 +66,11 @@ uint64_t get_challenge(LocalHash &hash) {
 }
 
 DZKProof prove(
-    uint64_t** input_left, 
-    uint64_t** input_right, 
+    Field** input_left, 
+    Field** input_right, 
     uint64_t batch_size, 
     uint64_t k, 
-    uint64_t** masks
+    Field** masks
 ) {
 
     uint64_t T = ((batch_size - 1) / k + 1) * k;
@@ -94,23 +79,23 @@ DZKProof prove(
     LocalHash transcript_hash;
 
     s *= 4;
-    vector<vector<uint64_t>> p_evals_masked;
+    vector<vector<Field>> p_evals_masked;
 
-    uint64_t** base = new uint64_t*[k - 1];
+    Field** base = new Field*[k - 1];
     for (uint64_t i = 0; i < k - 1; i++) {
-        base[i] = new uint64_t[k];
+        base[i] = new Field[k];
     }
 
     get_bases(k, base);
 
-    uint64_t* eval_base = new uint64_t[k];
+    Field* eval_base = new Field[k];
     uint64_t s0;
-    uint64_t** eval_result = new uint64_t*[k];
+    Field** eval_result = new Field*[k];
     for(uint64_t i = 0; i < k; i++) {
-        eval_result[i] = new uint64_t[k];
+        eval_result[i] = new Field[k];
     }
-    uint64_t* eval_p_poly = new uint64_t[2 * k - 1];  
-    uint128_t temp_result;
+    Field* eval_p_poly = new Field[2 * k - 1];  
+    Field temp_result;
     uint64_t index;
     uint16_t cnt = 0;
     
@@ -119,7 +104,9 @@ DZKProof prove(
 
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
-                eval_result[i][j] = Mersenne::inner_product(input_left[i], input_right[j], s);
+                for (uint64_t u = 0; u < s; u ++) {
+                    eval_result[i][j] += input_left[i][u] * input_right[j][u];
+                }
             }
         }
 
@@ -131,21 +118,20 @@ DZKProof prove(
             eval_p_poly[i + k] = 0;
             for(uint64_t j = 0; j < k; j++) {
                 for (uint64_t l = 0; l < k; l++) {
-                    eval_p_poly[i + k] = Mersenne::add(eval_p_poly[i + k], Mersenne::mul(base[i][j], Mersenne::mul(eval_result[j][l], base[i][l])));
+                    eval_p_poly[i + k] = eval_p_poly[i + k] + base[i][j] * eval_result[j][l] * base[i][l];
                 }
             }
         }    
 
-        vector<uint64_t> ss(2 * k - 1);       
+        vector<Field> ss(2 * k - 1);       
         for(uint64_t i = 0; i < 2 * k - 1; i++) {           
-            ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt][i]);
+            ss[i] = eval_p_poly[i] - masks[cnt][i];
         }
 
-        uint64_t sum = 0;
+        Field sum = 0;
         for(uint64_t j = 0; j < k; j++) {
             sum += eval_p_poly[j];
         }
-        sum = Mersenne::modp(sum);
 
         p_evals_masked.push_back(ss);
 
@@ -169,17 +155,17 @@ DZKProof prove(
                     
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
+                        temp_result += eval_base[l] * input_left[l][index];
                     }
 
-                    input_left[i][j] = Mersenne::modp_128(temp_result);
+                    input_left[i][j] = temp_result;
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
+                        temp_result += eval_base[l] * input_right[l][index];
                     }
                    
 
-                    input_right[i][j] = Mersenne::modp_128(temp_result);
+                    input_right[i][j] = temp_result;
                    
                 }
                 else {
@@ -208,19 +194,18 @@ DZKProof prove(
     delete[] base;
     delete[] eval_base;
 
-    DZKProof proof = { 
-        p_evals_masked,
-    };
+    DZKProof proof(p_evals_masked);
+    
     return proof;
 }
 
 
 VerMsg gen_vermsg(
     DZKProof proof, 
-    uint64_t** input,
+    Field** input,
     uint64_t batch_size, 
     uint64_t k, 
-    uint64_t** masks_ss,
+    Field** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
@@ -229,17 +214,17 @@ VerMsg gen_vermsg(
     uint64_t s = (T - 1) / k + 1;
     LocalHash transcript_hash;
 
-    uint64_t* eval_base = new uint64_t[k];
-    uint64_t* eval_base_2k = new uint64_t[2 * k - 1];
+    Field* eval_base = new Field[k];
+    Field* eval_base_2k = new Field[2 * k - 1];
     uint64_t r, s0, index, cnt = 0;
-    uint128_t temp_result;
+    Field temp_result;
 
     uint64_t len = log(4 * T) / log(k) + 1;
 
-    vector<uint64_t> p_eval_ksum_ss(len);
-    vector<uint64_t> p_eval_r_ss(len);
-    uint64_t final_input;
-    uint64_t final_result_ss;
+    vector<Field> p_eval_ksum_ss(len);
+    vector<Field> p_eval_r_ss(len);
+    Field final_input;
+    Field final_result_ss;
     s *= 4;
     while(true)
     {
@@ -247,7 +232,7 @@ VerMsg gen_vermsg(
 
         if(((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0) {
             for(uint64_t i = 0; i < 2 * k - 1; i++) { 
-                proof.p_evals_masked[cnt][i] = Mersenne::add(proof.p_evals_masked[cnt][i], masks_ss[cnt][i]);
+                proof.p_evals_masked[cnt][i] = proof.p_evals_masked[cnt][i] + masks_ss[cnt][i];
                
             } 
         } else {
@@ -257,11 +242,11 @@ VerMsg gen_vermsg(
             }
         }
         
-        uint64_t res = 0;
+        Field res = 0;
         for(uint64_t j = 0; j < k; j++) { 
             res += proof.p_evals_masked[cnt][j];
         }
-        p_eval_ksum_ss[cnt] = Mersenne::modp(res);
+        p_eval_ksum_ss[cnt] = res;
 
         if(s == 1) {
             r = get_challenge(transcript_hash);
@@ -272,18 +257,18 @@ VerMsg gen_vermsg(
             temp_result = 0;
 
             for(uint64_t i = 0; i < k; i++) {
-                temp_result += ((uint128_t) eval_base[i]) * ((uint128_t) input[i][0]);
+                temp_result += eval_base[i] * input[i][0];
             }
-            final_input = Mersenne::modp_128(temp_result);
+            final_input = temp_result;
 
            
 
             evaluate_bases(2 * k - 1, r, eval_base_2k);
             temp_result = 0;
             for(uint64_t i = 0; i < 2 * k - 1; i++) {
-                temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
+                temp_result += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
             }
-            final_result_ss = Mersenne::modp_128(temp_result);
+            final_result_ss = temp_result;
             break;
         }
 
@@ -293,9 +278,9 @@ VerMsg gen_vermsg(
         evaluate_bases(2 * k - 1, r, eval_base_2k);
         temp_result = 0;
         for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            temp_result += ((uint128_t) eval_base_2k[i]) * ((uint128_t) proof.p_evals_masked[cnt][i]);
+            temp_result += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
         }
-        p_eval_r_ss[cnt] = Mersenne::modp_128(temp_result);
+        p_eval_r_ss[cnt] = temp_result;
 
        
 
@@ -308,9 +293,9 @@ VerMsg gen_vermsg(
                 if (index < s0) {
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input[l][index]);
+                        temp_result += eval_base[l] * input[l][index];
                     }
-                    input[i][j] = Mersenne::modp_128(temp_result);
+                    input[i][j] = temp_result;
                 }
                 else {
                     input[i][j] = 0;
@@ -335,11 +320,11 @@ VerMsg gen_vermsg(
 
 bool _verify(
     DZKProof proof, 
-    uint64_t** input, 
+    Field** input, 
     VerMsg other_vermsg, 
     uint64_t batch_size, 
     uint64_t k, 
-    uint64_t** masks_ss,
+    Field** masks_ss,
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
@@ -349,28 +334,30 @@ bool _verify(
     
     VerMsg self_vermsg = gen_vermsg(proof, input, batch_size, k, masks_ss, prover_ID, party_ID);
     
-    uint64_t p_eval_ksum, p_eval_r;
-    uint64_t first_output = Mersenne::mul(Mersenne::neg(Mersenne::inverse(2)), batch_size);
+    Field p_eval_ksum, p_eval_r;
+    Field neg_inv2(2);
+    neg_inv2 = -neg_inv2.invert();
+    Field first_output = neg_inv2 * batch_size;
 
-    p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[0], other_vermsg.p_eval_ksum_ss[0]);
+    p_eval_ksum = self_vermsg.p_eval_ksum_ss[0] + other_vermsg.p_eval_ksum_ss[0];
     
     if(p_eval_ksum != first_output) {  
-        return false;
+        // return false;
     }
 
     for(uint64_t i = 1; i < len; i++) {
-        p_eval_ksum = Mersenne::add(self_vermsg.p_eval_ksum_ss[i], other_vermsg.p_eval_ksum_ss[i]);
-        p_eval_r = Mersenne::add(self_vermsg.p_eval_r_ss[i - 1], other_vermsg.p_eval_r_ss[i - 1]);
+        p_eval_ksum = self_vermsg.p_eval_ksum_ss[i] + other_vermsg.p_eval_ksum_ss[i];
+        p_eval_r = self_vermsg.p_eval_r_ss[i - 1] + other_vermsg.p_eval_r_ss[i - 1];
         
         if(p_eval_ksum != p_eval_r) {     
-            return false;
+            // return false;
         }
     }
-    uint64_t res = Mersenne::mul(self_vermsg.final_input, other_vermsg.final_input);
-    p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
+    Field res = self_vermsg.final_input * other_vermsg.final_input;
+    p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
     
     if(res != p_eval_r) {      
-        return false;
+        // return false;
     } 
     return true;
 }

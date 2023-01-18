@@ -14,6 +14,9 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 
+    gf2n_long::reset();
+    gf2n_long::init_field(64);
+
     cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
 
     assert(P.num_players() == 3);
@@ -162,8 +165,8 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     proof.unpack(proof_os[1]);
     verify_lock.unlock();
 
-    uint64_t **input_shared_next = status_queue[i].input_shared_next;
-    uint64_t **mask_ss_prev = status_queue[i].mask_ss_prev;
+    Field **input_shared_next = status_queue[i].input_shared_next;
+    Field **mask_ss_prev = status_queue[i].mask_ss_prev;
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
@@ -195,8 +198,8 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     int i = verify_index ++;
     verify_lock.unlock();
 
-    uint64_t **input_shared_prev = status_queue[i].input_shared_prev;
-    uint64_t **mask_ss_next = status_queue[i].mask_ss_next;
+    Field **input_shared_prev = status_queue[i].input_shared_prev;
+    Field **mask_ss_next = status_queue[i].mask_ss_next;
 
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
@@ -360,21 +363,21 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     outfile << "Check one with size " << sz << endl; 
 
-    uint64_t **masks, **mask_ss_next, **mask_ss_prev;
+    Field **masks, **mask_ss_next, **mask_ss_prev;
 
-    masks = new uint64_t*[cnt];
-    mask_ss_next = new uint64_t*[cnt];
-    mask_ss_prev = new uint64_t*[cnt];
+    masks = new Field*[cnt];
+    mask_ss_next = new Field*[cnt];
+    mask_ss_prev = new Field*[cnt];
     
     for (int i = 0; i < cnt; i++) {
-        masks[i] = new uint64_t[2 * k - 1];
-        mask_ss_next[i] = new uint64_t[2 * k - 1];
-        mask_ss_prev[i] = new uint64_t[2 * k - 1];
+        masks[i] = new Field[2 * k - 1];
+        mask_ss_next[i] = new Field[2 * k - 1];
+        mask_ss_prev[i] = new Field[2 * k - 1];
 
         for (int j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[i][j] = check_prngs[node_id % ms][1].get_word() & Mersenne::PR;
-            mask_ss_prev[i][j] = check_prngs[node_id % ms][0].get_word() & Mersenne::PR;
-            masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
+            mask_ss_next[i][j].randomize(check_prngs[node_id % ms][1]);
+            mask_ss_prev[i][j].randomize(check_prngs[node_id % ms][0]);
+            masks[i][j] = mask_ss_next[i][j] + mask_ss_prev[i][j];
         }
     }
 
@@ -397,22 +400,22 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
 
     int temp_pointer = 0;
-    uint64_t **input_left, **input_right, **input_shared_next, **input_shared_prev;
+    Field **input_left, **input_right, **input_shared_next, **input_shared_prev;
 
-    input_left = new uint64_t*[k];
-    input_right = new uint64_t*[k];
-    input_shared_next = new uint64_t*[k];
-    input_shared_prev = new uint64_t*[k];
+    input_left = new Field*[k];
+    input_right = new Field*[k];
+    input_shared_next = new Field*[k];
+    input_shared_prev = new Field*[k];
 
-    uint64_t neg_one = Mersenne::PR - 1;
-    uint64_t neg_two = Mersenne::PR - 2;
-    uint64_t neg_two_inverse = Mersenne::neg(two_inverse);
+    Field neg_one = -1;
+    Field neg_two = -2;
+    Field neg_two_inverse = neg_two.invert();
     
     for (int i = 0; i < k; i ++) {
-        input_left[i] = new uint64_t[cols * 4];
-        input_right[i] = new uint64_t[cols * 4];
-        input_shared_next[i] = new uint64_t[cols * 4];
-        input_shared_prev[i] = new uint64_t[cols * 4];
+        input_left[i] = new Field[cols * 4];
+        input_right[i] = new Field[cols * 4];
+        input_shared_next[i] = new Field[cols * 4];
+        input_shared_prev[i] = new Field[cols * 4];
     
         // memset(input_left[i], 0, sizeof(uint64_t) * cols * 4);
         // memset(input_right[i], 0, sizeof(uint64_t) * cols * 4);
@@ -459,8 +462,8 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
             bool e = z.first ^ (x.first & y.first) ^ rho.first;
             bool f = rho.second;
 
-            uint64_t t1 = e ? neg_one : 1;
-            uint64_t t2 = f ? neg_one : 1;
+            Field t1 = e ? neg_one : 1;
+            Field t2 = f ? neg_one : 1;
 
             
             input_left[i][j * 4] = x.first & y.first ? (e ? 2 : neg_two) : 0;

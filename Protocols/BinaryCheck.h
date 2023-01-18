@@ -7,6 +7,7 @@
 using namespace std;
 
 typedef unsigned __int128 uint128_t;
+typedef gf2n_long Field;
 
 // clock_t begin_time, finish_time;
 class LocalHash {
@@ -29,7 +30,10 @@ public:
 };
 
 struct DZKProof {
-    vector<vector<uint64_t>> p_evals_masked;
+    vector<vector<Field>> p_evals_masked;
+
+    DZKProof() {}
+    DZKProof(vector<vector<Field>> _x): p_evals_masked(_x) {}
 
     size_t get_size() {
         size_t size = 0;
@@ -53,7 +57,7 @@ struct DZKProof {
         os.store(p_evals_masked.size());
         os.store(p_evals_masked[0].size());
         for (auto each: p_evals_masked) {
-            for (uint64_t each_eval: each) {
+            for (auto each_eval: each) {
                 os.store(each_eval);
             }
         }
@@ -86,13 +90,13 @@ struct DZKProof {
 };
 
 struct VerMsg {
-    vector<uint64_t> p_eval_ksum_ss;
-    vector<uint64_t> p_eval_r_ss;
-    uint64_t final_input;
-    uint64_t final_result_ss;
+    vector<Field> p_eval_ksum_ss;
+    vector<Field> p_eval_r_ss;
+    Field final_input;
+    Field final_result_ss;
 
     VerMsg() {}
-    VerMsg(vector<uint64_t> p_eval_ksum_ss, vector<uint64_t> p_eval_r_ss, uint64_t final_input, uint64_t final_result_ss) {
+    VerMsg(vector<Field> p_eval_ksum_ss, vector<Field> p_eval_r_ss, Field final_input, Field final_result_ss) {
         this->p_eval_ksum_ss = p_eval_ksum_ss;
         this->p_eval_r_ss = p_eval_r_ss;
         this->final_input = final_input;
@@ -105,10 +109,10 @@ struct VerMsg {
 
     uint64_t get_hash() {
         LocalHash hash;
-        for (uint64_t each: p_eval_ksum_ss) {
+        for (Field each: p_eval_ksum_ss) {
             hash.update(each);
         }
-        for (uint64_t each: p_eval_r_ss) {
+        for (Field each: p_eval_r_ss) {
             hash.update(each);
         }
         hash.update(final_input);
