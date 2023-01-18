@@ -173,23 +173,23 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
 
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
-    int cnt = log(4 * sz) / log(k) + 1;
+    // int cnt = log(4 * sz) / log(k) + 1;
 
     vermsgs[i] = arith_gen_vermsg(proof, input_left_next, input_mono_next, mask_ss_prev, sz, k, sid, prev_number, my_number);
 
     ++ verify_tag;
 
-    for (int j = 0; j < k; j ++) {
-        delete[] input_left_next[j];
-        delete[] input_mono_next[j];
-    }
-    delete[] input_left_next;
-    delete[] input_mono_next;
+    // for (int j = 0; j < k; j ++) {
+    //     delete[] input_left_next[j];
+    //     delete[] input_mono_next[j];
+    // }
+    // delete[] input_left_next;
+    // delete[] input_mono_next;
 
-    for (int j = 0; j < cnt; j ++) {
-        delete[] mask_ss_prev[j];
-    }
-    delete[] mask_ss_prev;
+    // for (int j = 0; j < cnt; j ++) {
+    //     delete[] mask_ss_prev[j];
+    // }
+    // delete[] mask_ss_prev;
     
 }
 template <class T>
@@ -211,7 +211,7 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
 
-    int cnt = log(4 * sz) / log(k) + 1;
+    // int cnt = log(4 * sz) / log(k) + 1;
 
     bool res = arith_verify(proof, received_vermsg, input_right_prev, input_mono_prev, mask_ss_next, sz, k, sid, next_number, my_number);
     if (!res) {
@@ -220,17 +220,17 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
 
     ++ verify_tag;
 
-    for (int j = 0; j < k; j ++) {
-        delete[] input_right_prev[j];
-        delete[] input_mono_prev[j];
-    }
-    delete[] input_right_prev;
-    delete[] input_mono_prev;
+    // for (int j = 0; j < k; j ++) {
+    //     delete[] input_right_prev[j];
+    //     delete[] input_mono_prev[j];
+    // }
+    // delete[] input_right_prev;
+    // delete[] input_mono_prev;
 
-    for (int j = 0; j < cnt; j ++) {
-        delete[] mask_ss_next[j];
-    }
-    delete[] mask_ss_next;
+    // for (int j = 0; j < cnt; j ++) {
+    //     delete[] mask_ss_next[j];
+    // }
+    // delete[] mask_ss_next;
 
     
 
@@ -498,26 +498,26 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     // outfile << "in Check_one, after ++wait_size" << endl;
 
     for (int i = 0; i < k; i ++) {
-        delete[] input_left[i];
-        delete[] input_right[i];
+        // delete[] input_left[i];
+        // delete[] input_right[i];
         delete[] input_right_prev[i];
         delete[] input_left_next[i];
         delete[] input_mono_prev[i];
         delete[] input_mono_next[i];
     }
 
-    delete[] input_left;
-    delete[] input_right;
+    // delete[] input_left;
+    // delete[] input_right;
     delete[] input_right_prev;
     delete[] input_left_next;
     delete[] input_mono_prev;
     delete[] input_mono_next;
 
-    for (int i = 0; i < cnt; i ++) {
-        delete[] masks[i];
-    }
+    // for (int i = 0; i < cnt; i ++) {
+    //     delete[] masks[i];
+    // }
 
-    delete[] masks;
+    // delete[] masks;
 
     delete[] _input1;
     delete[] _input2;
