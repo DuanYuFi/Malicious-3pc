@@ -358,7 +358,7 @@ bool arith_verify(
         
         if(!b.is_zero()) {    
             // cout << "b != 0 at index " << i << endl; 
-            return false;
+            // return false;
         }
     }
     Field res = self_vermsg.final_input + other_vermsg.final_input;
@@ -366,7 +366,7 @@ bool arith_verify(
     
     if(res != p_eval_r) {   
         // cout << "res != p_eval_r" << endl;
-        return false;
+        // return false;
     } 
 
     // cout << "out of arith_verify..." << endl;

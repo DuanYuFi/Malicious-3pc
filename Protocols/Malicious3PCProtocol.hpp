@@ -499,17 +499,17 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     ++wait_size;
     // outfile << "in Check_one, after ++wait_size" << endl;
 
-    for (int i = 0; i < k; i ++) {
-        // delete[] input_left[i];
-        // delete[] input_right[i];
-        delete[] input_right_prev[i];
-        delete[] input_left_next[i];
-    }
+    // for (int i = 0; i < k; i ++) {
+    //     delete[] input_left[i];
+    //     delete[] input_right[i];
+    //     delete[] input_right_prev[i];
+    //     delete[] input_left_next[i];
+    // }
 
     // delete[] input_left;
     // delete[] input_right;
-    delete[] input_right_prev;
-    delete[] input_left_next;
+    // delete[] input_right_prev;
+    // delete[] input_left_next;
 
     delete[] _input1;
     delete[] _input2;
