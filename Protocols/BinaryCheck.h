@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "Tools/Hash.h"
+#include "Math/Z2k.h"
 
 using namespace std;
 

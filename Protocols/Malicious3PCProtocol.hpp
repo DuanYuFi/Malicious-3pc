@@ -14,8 +14,8 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 
-    gf2n_long::reset();
-    gf2n_long::init_field(64);
+    Field::reset();
+    Field::init_field(64);
 
     cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
 
@@ -367,8 +367,10 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     if (size == -1) size = OnlineOptions::singleton.binary_batch_size;
 
     int sz = size;
-    int k = OnlineOptions::singleton.k_size, cols = (sz - 1) / k + 1;
-    int cnt = log(4 * sz) / log(k) + 1;
+    int k = OnlineOptions::singleton.k_size;
+    int _T = ((sz - 1) / k + 1) * k;
+    int cols = (_T - 1) / k + 1;
+    int cnt = log(2 * _T) / log(k) + 1;
 
     outfile << "Check one with size " << sz << endl; 
 
@@ -419,12 +421,12 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     input_mono_next = new Field*[k];
     
     for (int i = 0; i < k; i ++) {
-        input_left[i] = new gf2n_long[cols * 2];
-        input_right[i] = new gf2n_long[cols * 2];
-        input_right_prev[i] = new gf2n_long[cols * 2];
-        input_left_next[i] = new gf2n_long[cols * 2];
-        input_mono_prev[i] = new gf2n_long[cols];
-        input_mono_next[i] = new gf2n_long[cols];
+        input_left[i] = new Field[cols * 2];
+        input_right[i] = new Field[cols * 2];
+        input_right_prev[i] = new Field[cols * 2];
+        input_left_next[i] = new Field[cols * 2];
+        input_mono_prev[i] = new Field[cols];
+        input_mono_next[i] = new Field[cols];
         
         for (int j = 0; j < cols; j++) {
 
@@ -502,22 +504,12 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
         // delete[] input_right[i];
         delete[] input_right_prev[i];
         delete[] input_left_next[i];
-        delete[] input_mono_prev[i];
-        delete[] input_mono_next[i];
     }
 
     // delete[] input_left;
     // delete[] input_right;
     delete[] input_right_prev;
     delete[] input_left_next;
-    delete[] input_mono_prev;
-    delete[] input_mono_next;
-
-    // for (int i = 0; i < cnt; i ++) {
-    //     delete[] masks[i];
-    // }
-
-    // delete[] masks;
 
     delete[] _input1;
     delete[] _input2;

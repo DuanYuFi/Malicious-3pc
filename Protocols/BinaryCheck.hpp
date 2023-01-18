@@ -4,7 +4,6 @@
 #include "BinaryCheck.h"
 
 #include "Math/mersenne.hpp"
-#include "Math/Z2k.h"
 #include <cstdlib>
 #include <ctime>
 
@@ -208,6 +207,9 @@ ArithVerMsg arith_gen_vermsg(
 
     Field out_ss, sum_ss;
     out_ss.assign_zero();
+
+    // cout << "arith_gen_vermsg::s = " << s << endl;
+
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
             out_ss += input_mono[i][j] * eta_power;
