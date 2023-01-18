@@ -5,6 +5,7 @@
 #include "BinaryCheck.h"
 #include "Processor/Data_Files.h"
 #include "Math/mersenne.hpp"
+// #include "dzkp-gf2n-bbcg19.cpp"
 
 #include "queue"
 #include "SafeQueue.h"
@@ -31,14 +32,16 @@ class Player;
 
 
 struct StatusData {
-    DZKProof proof;
-    Field **input_shared_prev, **input_shared_next;
+    ArithDZKProof proof;
+    Field **input_left_next;
+    Field **input_right_prev;
+    Field **input_mono_prev, **input_mono_next;
     Field **mask_ss_prev, **mask_ss_next;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, Field **input_shared_prev, Field **input_shared_next, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
-        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+    StatusData(ArithDZKProof proof, Field **input_left_next, Field **input_right_prev, Field **input_mono_prev, Field **input_mono_next, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
+        proof(proof), input_left_next(input_left_next), input_right_prev(input_right_prev), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
 
@@ -151,6 +154,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     size_t local_counter, status_counter, status_pointer;
     WaitSize wait_size;
+    Field sid;
 
     uint64_t two_inverse = Mersenne::inverse(2);
 
@@ -162,7 +166,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     array<octetStream, 2> proof_os, vermsg_os;
     size_t verify_index;
     mutex verify_lock;
-    VerMsg *vermsgs;
+    ArithVerMsg *vermsgs;
     WaitQueue<u_char> verify_queue;
     WaitSize verify_tag;
     bool check_passed;

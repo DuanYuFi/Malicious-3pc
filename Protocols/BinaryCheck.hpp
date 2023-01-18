@@ -4,10 +4,376 @@
 #include "BinaryCheck.h"
 
 #include "Math/mersenne.hpp"
-#include "Math/Z2k.h"
 #include <cstdlib>
 #include <ctime>
 
+
+ArithDZKProof arith_prove(
+    Field** input_left, 
+    Field** input_right, 
+    Field** masks,
+    uint64_t batch_size, 
+    uint64_t k, 
+    Field sid
+) {
+    // cout << "in arith_prove..." << endl;
+
+    uint64_t T = ((batch_size - 1) / k + 1) * k;
+    uint64_t s = (T - 1) / k + 1;
+
+    // Transcript
+    LocalHash transcript_hash;
+    transcript_hash.append_one_msg(sid);
+    Field eta = transcript_hash.get_challenge();
+
+    // cout << "checkpoint 1, s: " << s << "T: " << T << endl;
+
+    // auto start = std::chrono::high_resolution_clock::now();
+
+    Field eta_power = 1;
+    // Linear combination using randomness eta
+    for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t j = 0; j < s; j++) {
+            input_left[i][2 * j] = input_left[i][2 * j] * eta_power;
+            input_left[i][2 * j + 1] = input_left[i][2 * j + 1] * eta_power;
+            eta_power = eta_power * eta;
+        }
+    }
+
+    // auto end = std::chrono::high_resolution_clock::now();
+    // cout << "Linear Combination Time: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    // start = std::chrono::high_resolution_clock::now();
+
+    // cout << "checkpoint 1.2" << endl;
+
+    // Vectors of masked evaluations of polynomial p(X)
+    vector<vector<Field>> p_evals_masked;
+    // Evaluations of polynomial p(X)
+    Field* eval_p_poly = new Field[2 * k - 1];  
+
+    Field** base = new Field*[k - 1];
+    for (uint64_t i = 0; i < k - 1; i++) {
+        base[i] = new Field[k];
+    }
+    // Langrange::get_bases(k, base);
+
+    // cout << "checkpoint 1.5" << endl;
+    
+    Field* eval_base = new Field[k];
+    Field** eval_result = new Field*[k];
+    for(uint64_t i = 0; i < k; i++) {
+        eval_result[i] = (Field*)calloc(k, sizeof(Field));
+    }
+
+    size_t index = 0;
+    uint64_t cnt = 0;
+    s *= 2;
+    uint64_t s0 = s;
+
+    // cout << "checkpoint 2" << endl;
+
+    while(true){
+        // auto start = std::chrono::high_resolution_clock::now();
+
+        for(uint64_t i = 0; i < k; i++) {
+            for(uint64_t j = 0; j < k; j++) {
+                for(uint64_t l = 0; l < s; l++) {
+                    eval_result[i][j] += input_left[i][l] * input_right[j][l];
+                }
+            }
+        }
+
+        for(uint64_t i = 0; i < k; i++) {
+            eval_p_poly[i] = eval_result[i][i];
+        }
+
+        for(uint64_t i = 0; i < k - 1; i++) {
+            eval_p_poly[i + k] = 0;
+            for(uint64_t j = 0; j < k; j++) {
+                for (uint64_t l = 0; l < k; l++) {
+                    eval_p_poly[i + k] = eval_p_poly[i + k] + base[i][j] * eval_result[j][l] * base[i][l];
+                }
+            }
+        }    
+
+        vector<Field> ss(2 * k - 1);       
+        for(uint64_t i = 0; i < 2 * k - 1; i++) {           
+            ss[i] = eval_p_poly[i] - masks[cnt][i];
+        }
+        p_evals_masked.push_back(ss);
+
+        if (s == 1) {
+            break;
+        }
+        
+        transcript_hash.append_msges(ss);
+        Field r = transcript_hash.get_challenge();
+
+        Langrange::evaluate_bases(k, r, eval_base);
+
+        s0 = s;
+        s = (s - 1) / k + 1;
+       
+        for(uint64_t i = 0; i < k; i++) {
+            for(uint64_t j = 0; j < s; j++) {
+                index = i * s + j;
+               
+                if (index < s0) {
+                    Field temp_result;
+                    temp_result.assign_zero();
+                    for(uint64_t l = 0; l < k; l++) {
+                        temp_result += eval_base[l] * input_left[l][index];
+                    }
+                    input_left[i][j] = temp_result;
+
+                    temp_result.assign_zero();
+                    for(uint64_t l = 0; l < k; l++) {
+                        temp_result += eval_base[l] * input_right[l][index];
+                    }
+                    input_right[i][j] = temp_result;
+                }
+                else {
+                    input_left[i][j].assign_zero();
+                    input_right[i][j].assign_zero();
+                }
+            }
+        }
+        cnt++;
+    }
+
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "Recursion Time: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    // cout << "checkpoint 3" << endl;
+
+    for(uint64_t i = 0; i < k; i++) {
+        delete[] eval_result[i];
+    }
+    delete[] eval_result;
+    delete[] eval_p_poly;
+
+    for (uint64_t i = 0; i < k - 1; i++) {
+        delete[] base[i];
+    }
+    delete[] base;
+    delete[] eval_base;
+
+    for(uint64_t i = 0; i < k; i++) {
+        delete[] input_left[i];
+        delete[] input_right[i];
+    }
+
+    delete[] input_left;
+    delete[] input_right;
+
+    for (uint64_t j = 0; j < cnt; j ++) {
+        delete[] masks[j];
+    }
+    delete[] masks;
+
+    ArithDZKProof proof = {
+        p_evals_masked,
+    };
+    return proof;
+}
+
+ArithVerMsg arith_gen_vermsg(
+    ArithDZKProof proof, 
+    Field** input,
+    Field** input_mono,
+    Field** masks_ss,
+    uint64_t batch_size, 
+    uint64_t k, 
+    Field sid,
+    uint64_t prover_ID,
+    uint64_t party_ID
+) {
+   
+    uint64_t T = ((batch_size - 1) / k + 1) * k;
+    uint64_t s = (T - 1) / k + 1;
+    uint64_t len = log(2 * T) / log(k) + 1;
+
+    vector<Field> b_ss(len);
+    Field final_input, final_result_ss;
+    final_input.assign_zero(), final_result_ss.assign_zero();
+
+    // Transcript
+    LocalHash transcript_hash;
+    transcript_hash.append_one_msg(sid);
+    Field eta = transcript_hash.get_challenge();
+    Field eta_power = 1;
+    uint64_t cnt = 0;
+
+    Field out_ss, sum_ss;
+    out_ss.assign_zero();
+
+    // cout << "arith_gen_vermsg::s = " << s << endl;
+
+    for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t j = 0; j < s; j++) {
+            out_ss += input_mono[i][j] * eta_power;
+            eta_power = eta_power * eta;
+        }
+    }
+    
+    sum_ss.assign_zero();
+    for(uint64_t j = 0; j < k; j++) { 
+        sum_ss += proof.p_evals_masked[cnt][j];
+    }
+    b_ss[cnt] = sum_ss - out_ss;
+
+    bool prev_party = ((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0;
+    if(prev_party) {
+        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+            proof.p_evals_masked[cnt][i] = proof.p_evals_masked[cnt][i] + masks_ss[cnt][i];
+        } 
+    } else {
+        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+            proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
+        }
+    }
+    
+    Field* eval_base = new Field[k];
+    Field* eval_base_2k = new Field[2 * k - 1];
+
+    size_t index = 0;
+    s *= 2;
+    uint64_t s0 = s;
+    Field r;
+
+    while(true)
+    {
+        transcript_hash.append_msges(proof.p_evals_masked[cnt]);
+
+        if(prev_party) {
+            for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+                proof.p_evals_masked[cnt][i] = proof.p_evals_masked[cnt][i] + masks_ss[cnt][i];
+            } 
+        } else {
+            for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+                proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
+            }
+        }
+        sum_ss.assign_zero();
+        for(uint64_t j = 0; j < k; j++) { 
+            sum_ss += proof.p_evals_masked[cnt][j];
+        }
+
+        r = transcript_hash.get_challenge();
+        Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
+        out_ss.assign_zero();
+        for(uint64_t i = 0; i < 2 * k - 1; i++) {
+            out_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
+        }
+
+        b_ss[cnt] = sum_ss - out_ss;
+
+        if(s == 1) {
+            r = transcript_hash.get_challenge();
+            Langrange::evaluate_bases(k, r, eval_base);
+            
+            for(uint64_t i = 0; i < k; i++) {
+                final_input += eval_base[i] * input[i][0];
+            }
+            Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
+
+            for(uint64_t i = 0; i < 2 * k - 1; i++) {
+                final_result_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
+            }
+
+            break;
+        }
+
+        Langrange::evaluate_bases(k, r, eval_base);
+        s0 = s;
+        s = (s - 1) / k + 1;
+        for(uint64_t i = 0; i < k; i++) {
+            for(uint64_t j = 0; j < s; j++) {
+                index = i * s + j;
+                if (index < s0) {
+                    Field temp_result;
+                    temp_result.assign_zero();
+                    for(uint64_t l = 0; l < k; l++) {
+                        temp_result += eval_base[l] * input[l][index];
+                    }
+                    input[i][j] = temp_result;
+                }
+                else {
+                    input[i][j].assign_zero();
+                }
+            }
+        }
+
+        cnt++;
+    }
+
+    delete[] eval_base;
+    delete[] eval_base_2k;
+
+    for(uint64_t i = 0; i < k; i++) {
+        delete[] input[i];
+        delete[] input_mono[i];
+    }
+
+    delete[] input;
+    delete[] input_mono;
+
+    for (uint64_t j = 0; j < cnt; j ++) {
+        delete[] masks_ss[j];
+    }
+    delete[] masks_ss;
+
+    ArithVerMsg vermsg(
+        b_ss,
+        final_input,
+        final_result_ss
+    );
+    return vermsg;
+}
+
+bool arith_verify(
+    ArithDZKProof proof, 
+    ArithVerMsg other_vermsg, 
+    Field** input,
+    Field** input_mono,
+    Field** masks_ss,
+    uint64_t batch_size, 
+    uint64_t k, 
+    Field sid,
+    uint64_t prover_ID,
+    uint64_t party_ID
+) {
+    // cout << "in arith_verify..." << endl;
+    
+    uint64_t T = ((batch_size - 1) / k + 1) * k;
+    uint64_t len = log(2 * T) / log(k) + 1;
+    
+    ArithVerMsg self_vermsg = arith_gen_vermsg(proof, input, input_mono, masks_ss, batch_size, k, sid, prover_ID, party_ID);
+
+    Field b;
+
+    for(uint64_t i = 0; i < len; i++) {
+        b = self_vermsg.b_ss[i] + other_vermsg.b_ss[i];
+        
+        if(!b.is_zero()) {    
+            // cout << "b != 0 at index " << i << endl; 
+            // return false;
+        }
+    }
+    Field res = self_vermsg.final_input + other_vermsg.final_input;
+    Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
+    
+    if(res != p_eval_r) {   
+        // cout << "res != p_eval_r" << endl;
+        // return false;
+    } 
+
+    // cout << "out of arith_verify..." << endl;
+    return true;
+}
+
+/*
 
 uint64_t get_rand() {
     uint64_t left, right;
@@ -362,5 +728,6 @@ bool _verify(
     return true;
 }
 
-#endif
+*/
 
+#endif

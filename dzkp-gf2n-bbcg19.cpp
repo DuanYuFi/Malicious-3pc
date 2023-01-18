@@ -1,3 +1,6 @@
+#ifndef DZKP_GF2N_BBCG19_CPP
+#define DZKP_GF2N_BBCG19_CPP
+
 #include "Math/gf2n.h"
 #include <cstdlib>
 #include <ctime>
@@ -11,32 +14,7 @@
 
 using namespace std;
 
-struct ArithDZKProof {
-    vector<vector<gf2n_long>> p_evals_masked;
-
-    void print_out() {
-        cout << "proof: ";
-        for(auto row: p_evals_masked) {
-            for(auto x: row) {
-                cout << x << " ";
-            }
-        }
-        cout << endl;
-    }
-};
-
-struct ArithVerMsg {
-    vector<gf2n_long> b_ss;
-    gf2n_long final_input;
-    gf2n_long final_result_ss;
-
-    ArithVerMsg() {}
-    ArithVerMsg(vector<gf2n_long> b_ss, gf2n_long final_input, gf2n_long final_result_ss) {
-        this->b_ss = b_ss;
-        this->final_input = final_input;
-        this->final_result_ss = final_result_ss;
-    }
-};
+typedef gf2n_long Field;
 
 class LocalHash {
     octetStream buffer;
@@ -47,47 +25,147 @@ public:
         buffer.store(data);
     }
 
-    gf2n_long final() {
+    Field final() {
         Hash hash;
         hash.reset();
         hash.update(buffer);
-        gf2n_long result;
+        Field result;
         hash.final().get(result);
         return result;
     }
 
-    void append_one_msg(gf2n_long msg) {
+    void append_one_msg(Field msg) {
         update(msg);
     }
 
-    void append_msges(vector<gf2n_long> msges) {
-        for(gf2n_long msg: msges) {
+    void append_msges(vector<Field> msges) {
+        for(Field msg: msges) {
             update(msg);
         }
     }
 
-    gf2n_long get_challenge() {
-        gf2n_long r = final();
+    Field get_challenge() {
+        Field r = final();
         return r;
     }
 };
 
 
-class Langrange {
-public:
-    static void get_bases(uint64_t n, gf2n_long** result);
-    static void evaluate_bases(uint64_t n, gf2n_long r, gf2n_long* result);
+struct ArithDZKProof {
+    vector<vector<Field>> p_evals_masked;
+
+    void print_out() {
+        cout << "proof: ";
+        for(auto row: p_evals_masked) {
+            for(auto x: row) {
+                cout << x << " ";
+            }
+        }
+        cout << endl;
+    }
+
+    size_t get_size() {
+        size_t size = 0;
+        for (auto& v : p_evals_masked) {
+            size += v.size();
+        }
+        return size;
+    }
+
+    Field get_hash() {
+        LocalHash hash;
+        for (auto p_eval : p_evals_masked) {
+            for (auto each : p_eval) {
+                hash.update(each);
+            }
+        }
+        return hash.final();
+    }
+
+    void pack(octetStream &os) {
+        os.store(p_evals_masked.size());
+        os.store(p_evals_masked[0].size());
+        for (auto each: p_evals_masked) {
+            for (auto each_eval: each) {
+                os.store(each_eval);
+            }
+        }
+    }
+
+    void unpack(octetStream &os) {
+        size_t num_p_evals_masked = 0;
+        size_t num_p_evals_masked_each = 0;
+
+        os.get(num_p_evals_masked);
+        os.get(num_p_evals_masked_each);
+        p_evals_masked.resize(num_p_evals_masked);
+        for (size_t i = 0; i < num_p_evals_masked; i++) {
+            p_evals_masked[i].resize(num_p_evals_masked_each);
+            for (size_t j = 0; j < num_p_evals_masked_each; j++) {
+                os.get(p_evals_masked[i][j]);
+            }
+        }
+    }
 };
 
-inline void Langrange::get_bases(uint64_t n, gf2n_long** result) {
+struct ArithVerMsg {
+    vector<Field> b_ss;
+    Field final_input;
+    Field final_result_ss;
+
+    ArithVerMsg() {}
+    ArithVerMsg(vector<Field> b_ss, Field final_input, Field final_result_ss) {
+        this->b_ss = b_ss;
+        this->final_input = final_input;
+        this->final_result_ss = final_result_ss;
+    }
+
+    Field get_hash() {
+        LocalHash hash;
+        for (Field each: b_ss) {
+            hash.update(each);
+        }
+        hash.update(final_input);
+        hash.update(final_result_ss);
+        return hash.final();
+    }
+
+    void pack(octetStream &os) {
+        os.store(b_ss.size());
+        for(uint64_t i = 0; i < b_ss.size(); i++) {
+            os.store(b_ss[i]);
+        }
+        os.store(final_input);
+        os.store(final_result_ss);
+    }
+
+    void unpack(octetStream &os) {
+        uint64_t size = 0;
+        os.get(size);
+        b_ss.resize(size);
+        for(uint64_t i = 0; i < size; i++) {
+            os.get(b_ss[i]);
+        }
+        os.get(final_input);
+        os.get(final_result_ss);
+    }
+};
+
+class Langrange {
+public:
+    static void get_bases(uint64_t n, Field** result);
+    static void evaluate_bases(uint64_t n, Field r, Field* result);
+};
+
+inline void Langrange::get_bases(uint64_t n, Field** result) {
     for (uint64_t i = 0; i < n - 1; i++) {
         for(uint64_t j = 0; j < n; j++) {
             result[i][j].assign_one();
             for(uint64_t l = 0; l < n; l++) {
                 if (l != j) {
-                    gf2n_long denominator, numerator;
-                    denominator = gf2n_long(j) - gf2n_long(l);
-                    numerator = gf2n_long(i + n - l);
+                    Field denominator, numerator;
+                    denominator = Field(j) - Field(l);
+                    numerator = Field(i + n - l);
                     result[i][j] = result[i][j] * denominator.invert() * numerator;
                 }
             }
@@ -95,14 +173,14 @@ inline void Langrange::get_bases(uint64_t n, gf2n_long** result) {
     }
 }
 
-inline void Langrange::evaluate_bases(uint64_t n, gf2n_long r, gf2n_long* result) {
+inline void Langrange::evaluate_bases(uint64_t n, Field r, Field* result) {
     for(uint64_t i = 0; i < n; i++) {
         result[i].assign_one();
         for(uint64_t j = 0; j < n; j++) {
             if (j != i) {
-                gf2n_long denominator, numerator; 
-                denominator = gf2n_long(i) - gf2n_long(j);
-                numerator = r - gf2n_long(j);
+                Field denominator, numerator; 
+                denominator = Field(i) - Field(j);
+                numerator = r - Field(j);
                 result[i] = result[i] * denominator.invert() * numerator;
             }
         }
@@ -111,12 +189,12 @@ inline void Langrange::evaluate_bases(uint64_t n, gf2n_long r, gf2n_long* result
 
 
 ArithDZKProof arith_prove(
-    gf2n_long** input_left, 
-    gf2n_long** input_right, 
-    gf2n_long** masks,
+    Field** input_left, 
+    Field** input_right, 
+    Field** masks,
     uint64_t batch_size, 
     uint64_t k, 
-    gf2n_long sid
+    Field sid
 ) {
     // cout << "in arith_prove..." << endl;
 
@@ -126,13 +204,13 @@ ArithDZKProof arith_prove(
     // Transcript
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
-    gf2n_long eta = transcript_hash.get_challenge();
+    Field eta = transcript_hash.get_challenge();
 
     // cout << "checkpoint 1, s: " << s << "T: " << T << endl;
 
     // auto start = std::chrono::high_resolution_clock::now();
 
-    gf2n_long eta_power = 1;
+    Field eta_power = 1;
     // Linear combination using randomness eta
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
@@ -150,22 +228,22 @@ ArithDZKProof arith_prove(
     // cout << "checkpoint 1.2" << endl;
 
     // Vectors of masked evaluations of polynomial p(X)
-    vector<vector<gf2n_long>> p_evals_masked;
+    vector<vector<Field>> p_evals_masked;
     // Evaluations of polynomial p(X)
-    gf2n_long* eval_p_poly = new gf2n_long[2 * k - 1];  
+    Field* eval_p_poly = new Field[2 * k - 1];  
 
-    gf2n_long** base = new gf2n_long*[k - 1];
+    Field** base = new Field*[k - 1];
     for (uint64_t i = 0; i < k - 1; i++) {
-        base[i] = new gf2n_long[k];
+        base[i] = new Field[k];
     }
     // Langrange::get_bases(k, base);
 
     // cout << "checkpoint 1.5" << endl;
     
-    gf2n_long* eval_base = new gf2n_long[k];
-    gf2n_long** eval_result = new gf2n_long*[k];
+    Field* eval_base = new Field[k];
+    Field** eval_result = new Field*[k];
     for(uint64_t i = 0; i < k; i++) {
-        eval_result[i] = (gf2n_long*)calloc(k, sizeof(gf2n_long));
+        eval_result[i] = (Field*)calloc(k, sizeof(Field));
     }
 
     size_t index = 0;
@@ -199,7 +277,7 @@ ArithDZKProof arith_prove(
             }
         }    
 
-        vector<gf2n_long> ss(2 * k - 1);       
+        vector<Field> ss(2 * k - 1);       
         for(uint64_t i = 0; i < 2 * k - 1; i++) {           
             ss[i] = eval_p_poly[i] - masks[cnt][i];
         }
@@ -210,7 +288,7 @@ ArithDZKProof arith_prove(
         }
         
         transcript_hash.append_msges(ss);
-        gf2n_long r = transcript_hash.get_challenge();
+        Field r = transcript_hash.get_challenge();
 
         Langrange::evaluate_bases(k, r, eval_base);
 
@@ -222,7 +300,7 @@ ArithDZKProof arith_prove(
                 index = i * s + j;
                
                 if (index < s0) {
-                    gf2n_long temp_result;
+                    Field temp_result;
                     temp_result.assign_zero();
                     for(uint64_t l = 0; l < k; l++) {
                         temp_result += eval_base[l] * input_left[l][index];
@@ -269,7 +347,7 @@ ArithDZKProof arith_prove(
     delete[] input_left;
     delete[] input_right;
 
-    for (int j = 0; j < cnt; j ++) {
+    for (uint64_t j = 0; j < cnt; j ++) {
         delete[] masks[j];
     }
     delete[] masks;
@@ -282,12 +360,12 @@ ArithDZKProof arith_prove(
 
 ArithVerMsg arith_gen_vermsg(
     ArithDZKProof proof, 
-    gf2n_long** input,
-    gf2n_long** input_mono,
-    gf2n_long** masks_ss,
+    Field** input,
+    Field** input_mono,
+    Field** masks_ss,
     uint64_t batch_size, 
     uint64_t k, 
-    gf2n_long sid,
+    Field sid,
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
@@ -296,18 +374,18 @@ ArithVerMsg arith_gen_vermsg(
     uint64_t s = (T - 1) / k + 1;
     uint64_t len = log(2 * T) / log(k) + 1;
 
-    vector<gf2n_long> b_ss(len);
-    gf2n_long final_input, final_result_ss;
+    vector<Field> b_ss(len);
+    Field final_input, final_result_ss;
     final_input.assign_zero(), final_result_ss.assign_zero();
 
     // Transcript
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
-    gf2n_long eta = transcript_hash.get_challenge();
-    gf2n_long eta_power = 1;
+    Field eta = transcript_hash.get_challenge();
+    Field eta_power = 1;
     uint64_t cnt = 0;
 
-    gf2n_long out_ss, sum_ss;
+    Field out_ss, sum_ss;
     out_ss.assign_zero();
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
@@ -333,13 +411,13 @@ ArithVerMsg arith_gen_vermsg(
         }
     }
     
-    gf2n_long* eval_base = new gf2n_long[k];
-    gf2n_long* eval_base_2k = new gf2n_long[2 * k - 1];
+    Field* eval_base = new Field[k];
+    Field* eval_base_2k = new Field[2 * k - 1];
 
     size_t index = 0;
     s *= 2;
     uint64_t s0 = s;
-    gf2n_long r;
+    Field r;
 
     while(true)
     {
@@ -391,7 +469,7 @@ ArithVerMsg arith_gen_vermsg(
             for(uint64_t j = 0; j < s; j++) {
                 index = i * s + j;
                 if (index < s0) {
-                    gf2n_long temp_result;
+                    Field temp_result;
                     temp_result.assign_zero();
                     for(uint64_t l = 0; l < k; l++) {
                         temp_result += eval_base[l] * input[l][index];
@@ -418,7 +496,7 @@ ArithVerMsg arith_gen_vermsg(
     delete[] input;
     delete[] input_mono;
 
-    for (int j = 0; j < cnt; j ++) {
+    for (uint64_t j = 0; j < cnt; j ++) {
         delete[] masks_ss[j];
     }
     delete[] masks_ss;
@@ -434,12 +512,12 @@ ArithVerMsg arith_gen_vermsg(
 bool arith_verify(
     ArithDZKProof proof, 
     ArithVerMsg other_vermsg, 
-    gf2n_long** input,
-    gf2n_long** input_mono,
-    gf2n_long** masks_ss,
+    Field** input,
+    Field** input_mono,
+    Field** masks_ss,
     uint64_t batch_size, 
     uint64_t k, 
-    gf2n_long sid,
+    Field sid,
     uint64_t prover_ID,
     uint64_t party_ID
 ) {
@@ -450,7 +528,7 @@ bool arith_verify(
     
     ArithVerMsg self_vermsg = arith_gen_vermsg(proof, input, input_mono, masks_ss, batch_size, k, sid, prover_ID, party_ID);
 
-    gf2n_long b;
+    Field b;
 
     for(uint64_t i = 0; i < len; i++) {
         b = self_vermsg.b_ss[i] + other_vermsg.b_ss[i];
@@ -460,8 +538,8 @@ bool arith_verify(
             return false;
         }
     }
-    gf2n_long res = self_vermsg.final_input + other_vermsg.final_input;
-    gf2n_long p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
+    Field res = self_vermsg.final_input + other_vermsg.final_input;
+    Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
     
     if(res != p_eval_r) {   
         // cout << "res != p_eval_r" << endl;
@@ -472,10 +550,10 @@ bool arith_verify(
     return true;
 }
 
-
+/*
 int main() {
 
-    gf2n_long::init_field(64);
+    Field::init_field(64);
 
     srand(time(0));
     SeededPRNG prng;
@@ -487,15 +565,15 @@ int main() {
     int cnt = log(2 * T) / log(k) + 1;
     int cols = (T - 1) / k + 1;
 
-    gf2n_long **input_left, **input_right, **input_left_next, **input_right_prev, **input_mono_prev, **input_mono_next, **masks, **masks_prev, **masks_next;
-    masks = new gf2n_long*[cnt];
-    masks_prev = new gf2n_long*[cnt];
-    masks_next = new gf2n_long*[cnt];
+    Field **input_left, **input_right, **input_left_next, **input_right_prev, **input_mono_prev, **input_mono_next, **masks, **masks_prev, **masks_next;
+    masks = new Field*[cnt];
+    masks_prev = new Field*[cnt];
+    masks_next = new Field*[cnt];
 
     for (int i = 0; i < cnt; i++) {
-        masks[i] = new gf2n_long[2 * k - 1];
-        masks_prev[i] = new gf2n_long[2 * k - 1];
-        masks_next[i] = new gf2n_long[2 * k - 1];
+        masks[i] = new Field[2 * k - 1];
+        masks_prev[i] = new Field[2 * k - 1];
+        masks_next[i] = new Field[2 * k - 1];
 
         for (int j = 0; j < 2 * k - 1; j++) {
             masks_prev[i][j].randomize(prng);
@@ -504,22 +582,22 @@ int main() {
         }
     }
 
-    input_left = new gf2n_long*[k];
-    input_right = new gf2n_long*[k];
-    input_left_next = new gf2n_long*[k];
-    input_right_prev = new gf2n_long*[k];
-    input_mono_prev = new gf2n_long*[k];
-    input_mono_next = new gf2n_long*[k];
+    input_left = new Field*[k];
+    input_right = new Field*[k];
+    input_left_next = new Field*[k];
+    input_right_prev = new Field*[k];
+    input_mono_prev = new Field*[k];
+    input_mono_next = new Field*[k];
 
     int temp_pointer = 0; 
 
     for (int i = 0; i < k; i++) {
-        input_left[i] = new gf2n_long[cols * 2];
-        input_right[i] = new gf2n_long[cols * 2];
-        input_right_prev[i] = new gf2n_long[cols * 2];
-        input_left_next[i] = new gf2n_long[cols * 2];
-        input_mono_prev[i] = new gf2n_long[cols];
-        input_mono_next[i] = new gf2n_long[cols];
+        input_left[i] = new Field[cols * 2];
+        input_right[i] = new Field[cols * 2];
+        input_right_prev[i] = new Field[cols * 2];
+        input_left_next[i] = new Field[cols * 2];
+        input_mono_prev[i] = new Field[cols];
+        input_mono_next[i] = new Field[cols];
 
         for (int j = 0; j < cols; j++) {
             if (temp_pointer >= T) {
@@ -534,14 +612,14 @@ int main() {
                 input_mono_prev[i][j].assign_zero();
                 input_mono_next[i][j].assign_zero();
             } else {
-                gf2n_long x_first, x_second, y_first, y_second, rho_first, rho_second;
+                Field x_first, x_second, y_first, y_second, rho_first, rho_second;
                 x_first.randomize(prng);
                 x_second.randomize(prng);
                 y_first.randomize(prng);
                 y_second.randomize(prng);
                 rho_first.randomize(prng);
                 rho_second.randomize(prng);
-                gf2n_long z = x_first * (y_first + y_second) + x_second * y_first + rho_first - rho_second;
+                Field z = x_first * (y_first + y_second) + x_second * y_first + rho_first - rho_second;
 
                 // Share with P_{i+1}
                 input_left[i][j * 2] = x_first;
@@ -559,8 +637,8 @@ int main() {
                 input_mono_prev[i][j] = z - x_first * y_first - rho_first;
                 input_mono_next[i][j] = rho_second;
 
-                gf2n_long left = input_left[i][j * 2] * input_right[i][j * 2] + input_left[i][j * 2 + 1] * input_right[i][j * 2 + 1];
-                gf2n_long right = input_mono_prev[i][j] +input_mono_next[i][j];
+                Field left = input_left[i][j * 2] * input_right[i][j * 2] + input_left[i][j * 2 + 1] * input_right[i][j * 2 + 1];
+                Field right = input_mono_prev[i][j] +input_mono_next[i][j];
                 assert(left == right);
 
             }
@@ -569,7 +647,7 @@ int main() {
         }
     }
 
-    gf2n_long sid;
+    Field sid;
     sid.randomize(prng);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -587,3 +665,6 @@ int main() {
     return 0;
 } 
 
+*/
+
+#endif
