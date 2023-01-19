@@ -10,8 +10,6 @@
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <fstream>
 
 #include <chrono>

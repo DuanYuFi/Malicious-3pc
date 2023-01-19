@@ -4,6 +4,8 @@
 #pragma once
 #include <queue>
 #include <pthread.h>
+#include <mutex>
+#include <condition_variable>
  
 using namespace std;
  
