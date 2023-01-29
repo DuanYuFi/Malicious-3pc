@@ -552,7 +552,7 @@ template <class U>
 gf2n_<U> inner_product(const gf2n_<U>* x, const gf2n_<U>* y, size_t length) {
   gf2n_<U> answer;
   __m128i tmp = _mm_setzero_si128();
-  for (int i = 0; i < length; ++i) {
+  for (size_t i = 0; i < length; ++i) {
     tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
   }
 
