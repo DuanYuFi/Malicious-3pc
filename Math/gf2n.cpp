@@ -548,6 +548,20 @@ void collapse_byte(int& b,const gf2n_short& aa)
     }
 }
 
+template <class U>
+gf2n_<U> inner_product(const gf2n_<U>* x, const gf2n_<U>* y, size_t length) {
+  gf2n_<U> answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (int i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  int128 _tmp(tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
 template class gf2n_<word>;
 template class gf2n_<octet>;
 template class gf2n_<int128> ;
