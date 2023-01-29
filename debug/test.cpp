@@ -1,25 +1,80 @@
-#include <iostream>
-#include <cstdio>
+#include <cstdlib>
+#include "Math/gf2nlong.h"
+#include <chrono>
 
-using namespace std;
+typedef gf2n_long Field;
+
+#define LENGTH 10000000
+
+uint64_t get_int64() {
+    uint64_t ret = rand();
+    ret = ret << 16;
+    ret = ret | rand();
+    ret = ret << 16;
+    ret = ret | rand();
+    ret = ret << 16;
+    ret = ret | rand();
+    return ret;
+}
+
+int get_int() {
+    int ret = rand();
+    ret = ret << 16;
+    ret = ret | rand();
+    return ret;
+}
+
+Field vector1[LENGTH], vector2[LENGTH];
+
+void test1() {
+    auto start = chrono::high_resolution_clock::now();
+
+    Field answer = 0;
+
+    for (int i = 0; i < LENGTH; ++i) {
+        answer += vector1[i] * vector2[i];
+    }
+
+    auto end = chrono::high_resolution_clock::now();
+
+    cout << answer << endl;
+
+    cout << "GF2N<64> with multiple mod op (" << LENGTH << " times): " << (end - start).count() / 1e6 << " ms" << endl;
+}
+
+void test2() {
+    auto start = chrono::high_resolution_clock::now();
+
+    Field answer;
+    __m128i tmp = _mm_setzero_si128();
+
+    for (int i = 0; i < LENGTH; ++i) {
+        tmp ^= clmul<0>(int128(vector1[i].get()).a, int128(vector2[i].get()).a);
+    }
+
+    int128 _tmp(tmp);
+    answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+    auto end = chrono::high_resolution_clock::now();
+
+    cout << answer << endl;
+    cout << "GF2N<64> with one mod op (" << LENGTH << " times): " << (end - start).count() / 1e6 << " ms" << endl;
+
+}
 
 int main() {
-    unsigned long a = 2773165201, b = 3500405213;
-    unsigned long a1 = a >> 32, a2 = a & 0xFFFFFFFF;
-    unsigned long b1 = b >> 32, b2 = b & 0xFFFFFFFF;
 
-    unsigned long upper = 0, lower = 0;
-    unsigned long tmp = a1 * b2 + a2 * b1;
+    // srand(time(0));
 
-    upper = a1 * b1 + (tmp >> 32);
-    lower = a2 * b2 + (tmp & 0xFFFFFFFF);
+    Field::init_field(64);
 
-    printf("a1 = %lu, a2 = %lu\n", a1, a2);
-    printf("b1 = %lu, b2 = %lu\n", b1, b2);
+    for (int i = 0; i < LENGTH; ++i) {
+        vector1[i] = Field(get_int());
+        vector2[i] = Field(get_int());
+    }
 
-    cout << a << " " << b << endl;
-    cout << hex << upper << " " << lower << endl;
-
+    test1();
+    test2();
 
     return 0;
 }
