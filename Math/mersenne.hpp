@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cmath>
 #include <iostream>
+#include <cassert>
 
 using namespace std;
 

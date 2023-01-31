@@ -271,7 +271,14 @@ inline gf2n_<octet>& gf2n_<octet>::mul(const gf2n_<octet>& x, const gf2n_<octet>
   return *this = mult_table[octet(x.a)][octet(y.a)];
 }
 
-template <class U>
-gf2n_<U> inner_product(const gf2n_<U>* x, const gf2n_<U>* y, size_t length);
+// template <class U>
+// gf2n_<U> inner_product(const gf2n_<U>* x, const gf2n_<U>* y, size_t length);
+
+// template <class U>
+// gf2n_<U> inner_product_2(gf2n_<U>** x, gf2n_<U>** y, size_t rows, size_t cols);
+
+gf2n_long inner_product(gf2n_long* x, gf2n_long* y, size_t length);
+gf2n_long inner_product(gf2n_long* x, vector<gf2n_long> y, size_t length);
+gf2n_long inner_product(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols);
 
 #endif
