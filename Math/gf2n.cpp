@@ -449,6 +449,7 @@ gf2n_<U> gf2n_<U>::operator >>(int i) const
 template<class U>
 void gf2n_<U>::randomize(PRNG& G, int n)
 {
+  // cout << "in gf2n_<U>::randomize()" << endl;
   (void) n;
   a=G.get<U>();
   a&=mask;
@@ -551,3 +552,70 @@ void collapse_byte(int& b,const gf2n_short& aa)
 template class gf2n_<word>;
 template class gf2n_<octet>;
 template class gf2n_<int128> ;
+
+gf2n_long inner_product(gf2n_long* x, gf2n_long* y, size_t length) {
+  gf2n_long answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  int128 _tmp(tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_long inner_product(gf2n_long* x, vector<gf2n_long> y, size_t length) {
+  gf2n_long answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  int128 _tmp(tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_long inner_product(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols) {
+  gf2n_long answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[i][j].get()).a);
+    }
+  }
+
+  int128 _tmp(tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_long inner_product_naive(gf2n_long* x, gf2n_long* y, size_t length) {
+  gf2n_long answer = gf2n_long(0);
+  for (size_t i = 0; i < length; ++i) {
+    answer += x[i] * y[i];
+  }
+  return answer;
+}
+
+gf2n_long inner_product_naive(gf2n_long* x, vector<gf2n_long> y, size_t length) {
+  gf2n_long answer = gf2n_long(0);
+  for (size_t i = 0; i < length; ++i) {
+    answer += x[i] * y[i];
+  }
+  return answer;
+}
+
+gf2n_long inner_product_naive(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols) {
+  gf2n_long answer = gf2n_long(0);
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      answer += x[i][j] * y[i][j];
+    }
+  }
+  return answer;
+}

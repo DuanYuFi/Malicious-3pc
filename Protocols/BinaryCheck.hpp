@@ -6,6 +6,7 @@
 #include "Math/mersenne.hpp"
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
 
 
 ArithDZKProof arith_prove(
@@ -14,36 +15,55 @@ ArithDZKProof arith_prove(
     Field** masks,
     uint64_t batch_size, 
     uint64_t k, 
-    Field sid
+    Field sid,
+    PRNG prng
 ) {
-    // cout << "in arith_prove..." << endl;
-
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
+
+    // cout << "in arith_prove(), batch size: " << T << endl;
 
     // Transcript
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
-    Field eta = transcript_hash.get_challenge();
+    // Field eta = transcript_hash.get_challenge();
 
     // cout << "checkpoint 1, s: " << s << "T: " << T << endl;
 
-    // auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
 
-    Field eta_power = 1;
+    // Field eta_power = 1;
     // Linear combination using randomness eta
+    // for(uint64_t i = 0; i < k; i++) {
+    //     for(uint64_t j = 0; j < s; j++) {
+    //         input_left[i][2 * j] = input_left[i][2 * j] * eta_power;
+    //         input_left[i][2 * j + 1] = input_left[i][2 * j + 1] * eta_power;
+    //         eta_power = eta_power * eta;
+    //     }
+    // }
+
+    gf2n_long* thetas = new gf2n_long[s];
+    for(uint64_t j = 0; j < s; j++) {
+        thetas[j].randomize(prng);
+    }
+
+    gf2n_long* betas = new gf2n_long[k];
+    for(uint64_t i = 0; i < k; i++) {
+        betas[i].randomize(prng);
+    }
+
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
-            input_left[i][2 * j] = input_left[i][2 * j] * eta_power;
-            input_left[i][2 * j + 1] = input_left[i][2 * j + 1] * eta_power;
-            eta_power = eta_power * eta;
+            gf2n_long coeff = betas[i] * thetas[j];
+            input_left[i][2 * j] *= coeff;
+            input_left[i][2 * j + 1] *= coeff;
         }
     }
 
-    // auto end = std::chrono::high_resolution_clock::now();
-    // cout << "Linear Combination Time: " << (end - start).count() / 1e6 << " ms" << endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "Random Linear Combination Time: " << (end - start).count() / 1e6 << " ms" << endl;
 
-    // start = std::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
 
     // cout << "checkpoint 1.2" << endl;
 
@@ -78,9 +98,10 @@ ArithDZKProof arith_prove(
 
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
-                for(uint64_t l = 0; l < s; l++) {
-                    eval_result[i][j] += input_left[i][l] * input_right[j][l];
-                }
+                eval_result[i][j] = inner_product(input_left[i], input_right[j], (size_t)s);
+                // for(uint64_t l = 0; l < s; l++) {
+                //     eval_result[i][j] += input_left[i][l] * input_right[j][l];
+                // }
             }
         }
 
@@ -142,8 +163,8 @@ ArithDZKProof arith_prove(
         cnt++;
     }
 
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "Recursion Time: " << (end - start).count() / 1e6 << " ms" << endl;
+    end = std::chrono::high_resolution_clock::now();
+    cout << "Recursion Time: " << (end - start).count() / 1e6 << " ms" << endl;
 
     // cout << "checkpoint 3" << endl;
 
@@ -187,7 +208,8 @@ ArithVerMsg arith_gen_vermsg(
     uint64_t k, 
     Field sid,
     uint64_t prover_ID,
-    uint64_t party_ID
+    uint64_t party_ID,
+    PRNG prng
 ) {
    
     uint64_t T = ((batch_size - 1) / k + 1) * k;
@@ -201,8 +223,8 @@ ArithVerMsg arith_gen_vermsg(
     // Transcript
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
-    Field eta = transcript_hash.get_challenge();
-    Field eta_power = 1;
+    // Field eta = transcript_hash.get_challenge();
+    // Field eta_power = 1;
     uint64_t cnt = 0;
 
     Field out_ss, sum_ss;
@@ -210,12 +232,31 @@ ArithVerMsg arith_gen_vermsg(
 
     // cout << "arith_gen_vermsg::s = " << s << endl;
 
+    gf2n_long* thetas = new gf2n_long[s];
+    for(uint64_t j = 0; j < s; j++) {
+        thetas[j].randomize(prng);
+    }
+    gf2n_long* betas = new gf2n_long[k];
     for(uint64_t i = 0; i < k; i++) {
+        betas[i].randomize(prng);
+    }
+
+    gf2n_long** coeffs = new gf2n_long*[k];
+
+    for(uint64_t i = 0; i < k; i++) {
+        coeffs[i] = new gf2n_long[s];
         for(uint64_t j = 0; j < s; j++) {
-            out_ss += input_mono[i][j] * eta_power;
-            eta_power = eta_power * eta;
+            coeffs[i][j] = betas[i] * thetas[j];
         }
     }
+    out_ss = inner_product(input_mono, coeffs, (size_t)k, (size_t)s);
+    
+    // for(uint64_t i = 0; i < k; i++) {
+    //     for(uint64_t j = 0; j < s; j++) {
+    //         out_ss += input_mono[i][j] * eta_power;
+    //         eta_power = eta_power * eta;
+    //     }
+    // }
     
     sum_ss.assign_zero();
     for(uint64_t j = 0; j < k; j++) { 
@@ -278,9 +319,11 @@ ArithVerMsg arith_gen_vermsg(
             }
             Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
 
-            for(uint64_t i = 0; i < 2 * k - 1; i++) {
-                final_result_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
-            }
+            final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (size_t)(2 * k - 1));
+
+            // for(uint64_t i = 0; i < 2 * k - 1; i++) {
+            //     final_result_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
+            // }
 
             break;
         }
@@ -342,14 +385,15 @@ bool arith_verify(
     uint64_t k, 
     Field sid,
     uint64_t prover_ID,
-    uint64_t party_ID
+    uint64_t party_ID,
+    PRNG prng
 ) {
     // cout << "in arith_verify..." << endl;
     
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t len = log(2 * T) / log(k) + 1;
     
-    ArithVerMsg self_vermsg = arith_gen_vermsg(proof, input, input_mono, masks_ss, batch_size, k, sid, prover_ID, party_ID);
+    ArithVerMsg self_vermsg = arith_gen_vermsg(proof, input, input_mono, masks_ss, batch_size, k, sid, prover_ID, party_ID, prng);
 
     Field b;
 

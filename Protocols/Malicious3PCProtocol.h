@@ -193,6 +193,25 @@ public:
     ~Malicious3PCProtocol() {
 
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+            cv.push(-1);
+        }
+        
+        for (auto &each_thread: check_threads) {
+            each_thread.join();
+        }
+
+        if (local_counter > 0) {
+            // cout << "local_counter = " << local_counter << endl;
+            Check_one(status_pointer, local_counter);
+            status_counter ++;
+        }
+
+        if (status_counter > 0) {
+            // cout << "status_counter = " << status_counter << endl;
+            verify();
+        }
+        
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             verify_queue.push(0);
         }
@@ -204,7 +223,7 @@ public:
 
         cout << "Destroyed." << endl;
 
-        this->print_debug_info("Binary Part");
+        // this->print_debug_info("Binary Part");
         cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     
@@ -254,7 +273,7 @@ public:
 
     void verify_part1(int prev_number, int my_number);
     void verify_part2(int next_number, int my_number);
-    void verify_thread_handler();
+    void verify_thread_handler(int tid);
 
 };
 

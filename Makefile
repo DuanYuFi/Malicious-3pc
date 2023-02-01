@@ -132,19 +132,20 @@ $(LIBRELEASE): Protocols/MalRepRingOptions.o $(PROCESSOR) $(COMMONOBJS) $(TINIER
 	$(AR) -csr $@ $^
 
 CFLAGS += -fPIC
+CFLAGS += -mpclmul -msse2
 LDLIBS += -Wl,-rpath -Wl,$(CURDIR)
 
 $(SHAREDLIB): $(PROCESSOR) $(COMMONOBJS) GC/square64.o GC/Instruction.o
-	$(CXX) $(CFLAGS) -shared -o $@ $^ $(LDLIBS)
+	$(CXX) $(CFLAGS) -shared -o $@ $^ $(LDLIBS) 
 
 $(FHEOFFLINE): $(FHEOBJS) $(SHAREDLIB)
-	$(CXX) $(CFLAGS) -shared -o $@ $^ $(LDLIBS)
+	$(CXX) $(CFLAGS) -shared -o $@ $^ $(LDLIBS) 
 
 static/%.x: Machines/%.o $(LIBRELEASE) $(LIBSIMPLEOT)
-	$(CXX) $(CFLAGS) -o $@ $^ -Wl,-Map=$<.map -Wl,-Bstatic -static-libgcc -static-libstdc++  $(LIBRELEASE) $(LIBSIMPLEOT) $(BOOST) $(LDLIBS) -Wl,-Bdynamic -ldl
+	$(CXX) $(CFLAGS) -o $@ $^ -Wl,-Map=$<.map -Wl,-Bstatic -static-libgcc -static-libstdc++  $(LIBRELEASE) $(LIBSIMPLEOT) $(BOOST) $(LDLIBS) -Wl,-Bdynamic -ldl 
 
 static/%.x: ECDSA/%.o ECDSA/P256Element.o $(VMOBJS) $(OT) $(LIBSIMPLEOT)
-	$(CXX) $(CFLAGS) -o $@ $^ -Wl,-Map=$<.map -Wl,-Bstatic -static-libgcc -static-libstdc++ $(BOOST) $(LDLIBS) -Wl,-Bdynamic -ldl
+	$(CXX) $(CFLAGS) -o $@ $^ -Wl,-Map=$<.map -Wl,-Bstatic -static-libgcc -static-libstdc++ $(BOOST) $(LDLIBS) -Wl,-Bdynamic -ldl 
 
 static-dir:
 	@ mkdir static 2> /dev/null; true
@@ -197,10 +198,10 @@ Fake-Offline.x: Utils/Fake-Offline.o $(VM)
 	$(CXX) -o $@ $(CFLAGS) $^ $(LDLIBS)
 
 %.x: Utils/%.o $(COMMON)
-	$(CXX) -o $@ $(CFLAGS) $^ $(LDLIBS)
+	$(CXX) -o $@ $(CFLAGS) $^ $(LDLIBS) 
 
 %.x: Machines/%.o $(MINI_OT) $(SHAREDLIB)
-	$(CXX) -o $@ $(CFLAGS) $^ $(LDLIBS)
+	$(CXX) -o $@ $(CFLAGS) $^ $(LDLIBS) 
 
 %-ecdsa-party.x: ECDSA/%-ecdsa-party.o ECDSA/P256Element.o $(VM)
 	$(CXX) -o $@ $(CFLAGS) $^ $(LDLIBS)
