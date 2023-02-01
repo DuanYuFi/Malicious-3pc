@@ -13,10 +13,10 @@
 #define NEG_ONE (Mersenne::PR - 1)
 #define NEG_TWO (Mersenne::PR - 2)
 #define NEG_TWO_INVERSE Mersenne::neg(two_inverse)
-#define input_x(i, j) share_tuples[start + (i + (j >> 2) * k)].input1
-#define input_y(i, j) share_tuples[start + (i + (j >> 2) * k)].input2
-#define input_z(i, j) share_tuples[start + (i + (j >> 2) * k)].result
-#define input_rho(i, j) share_tuples[start + (i + (j >> 2) * k)].rho
+#define input_x(i, j) local_share_tuples[(i + (j >> 2) * k)].input1
+#define input_y(i, j) local_share_tuples[(i + (j >> 2) * k)].input2
+#define input_z(i, j) local_share_tuples[(i + (j >> 2) * k)].result
+#define input_rho(i, j) local_share_tuples[(i + (j >> 2) * k)].rho
 
 #define tmp_input_x(i, j) tmp_share_tuples[i + (j >> 2) * k].input1
 #define tmp_input_y(i, j) tmp_share_tuples[i + (j >> 2) * k].input2
@@ -235,16 +235,19 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         extra_addition = Mersenne::add(extra_addition, neg_two_inverse);   
     }
 
+    ShareTuple *local_share_tuples = new ShareTuple[batch_size];
+    memcpy(local_share_tuples, share_tuples + start, sizeof(ShareTuple) * batch_size);
+
     ShareTuple tmp_share_tuple[k];
 
     int this_column = 0;
     for (int column = 0; column < (int) s; column ++) {
 
-        memcpy(tmp_share_tuple, share_tuples + start + this_column, sizeof(ShareTuple) * min(k, batch_size - this_column));
+        memcpy(tmp_share_tuple, local_share_tuples + this_column, sizeof(ShareTuple) * min(k, batch_size - this_column));
         // split the inner product into monomials' sum
         for(uint64_t i = 0; i < k; i++) {
 
-            ShareTuple this_tuple = share_tuples[start + this_column + i];
+            ShareTuple this_tuple = local_share_tuples[this_column + i];
 
             for(uint64_t j = 0; j < k; j++) {                
 
@@ -582,6 +585,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     delete[] input_left;
     delete[] input_right;
 
+    delete[] local_share_tuples;
+
     DZKProof proof = {
         p_evals_masked,
     };
@@ -631,6 +636,9 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
 
     size_t start = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size;
     // size_t cols = (T - 1) / k + 1;
+
+    ShareTuple* local_share_tuples = new ShareTuple[batch_size];
+    memcpy(local_share_tuples, share_tuples + start, sizeof(ShareTuple) * batch_size);
 
     append_msges(transcript_hash, proof.p_evals_masked[cnt]);
 
@@ -920,6 +928,8 @@ VerMsg Malicious3PCProtocol<_T>::gen_vermsg(
     }
 
     delete[] input;
+
+    delete[] local_share_tuples;
 
     VerMsg vermsg(
         b_ss,
