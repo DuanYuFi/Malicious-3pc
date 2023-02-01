@@ -53,7 +53,7 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     }
 
     for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-        check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this, i));
+        check_threads.push_back(std::thread(&Malicious3PCProtocol<T>::thread_handler, this));
         verify_threads.push_back(std::thread(&Malicious3PCProtocol<T>::verify_thread_handler, this));
     }
 
@@ -117,31 +117,31 @@ void Malicious3PCProtocol<T>::finalize_check() {
     // cout << "in finalize_check" << endl;
 #ifdef DO_CHECK
 
-    for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-        cv.push(-1);
-    }
+    // for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+    //     cv.push(-1);
+    // }
     
-    for (auto &each_thread: check_threads) {
-        each_thread.join();
-    }
+    // for (auto &each_thread: check_threads) {
+    //     each_thread.join();
+    // }
 
-    if (local_counter > 0) {
-        // cout << "local_counter = " << local_counter << endl;
-        Check_one(status_pointer, local_counter);
-        status_counter ++;
-    }
+    // if (local_counter > 0) {
+    //     // cout << "local_counter = " << local_counter << endl;
+    //     Check_one(status_pointer, local_counter);
+    //     status_counter ++;
+    // }
 
-    if (status_counter > 0) {
-        // cout << "status_counter = " << status_counter << endl;
-        verify();
-    }
+    // if (status_counter > 0) {
+    //     // cout << "status_counter = " << status_counter << endl;
+    //     verify();
+    // }
 
 #endif
     
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::thread_handler(int tid) {
+void Malicious3PCProtocol<T>::thread_handler() {
     // ofstream outfile;
     // outfile.open("logs/Thread_P" + to_string(P.my_real_num()) + "_" + to_string(tid));
 
@@ -178,7 +178,10 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     int k = OnlineOptions::singleton.k_size;
     int cnt = log(4 * sz) / log(k) + 1;
 
+    auto cp1 = std::chrono::high_resolution_clock::now();
     vermsgs[i] = gen_vermsg(proof, status_queue[i].node_id, sz, k, mask_ss_prev, prev_number, my_number);
+    auto cp3 = std::chrono::high_resolution_clock::now();
+    cout << "Gen_vermsg uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
 
     ++ verify_tag;
 
@@ -207,7 +210,11 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
 
     int cnt = log(4 * sz) / log(k) + 1;
 
+    auto cp1 = std::chrono::high_resolution_clock::now();
     bool res = _verify(proof, status_queue[i].node_id, received_vermsg, sz, k, mask_ss_next, next_number, my_number);   
+    auto cp3 = std::chrono::high_resolution_clock::now();
+    cout << "Verify uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
+
     if (!res) {
         check_passed = false;
     }
@@ -379,13 +386,10 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
         }
     }
 
-    // auto cp1 = std::chrono::high_resolution_clock::now();
-
+    auto cp1 = std::chrono::high_resolution_clock::now();
     DZKProof dzkproof = prove(node_id, sz, k, masks);
-
-    // auto cp3 = std::chrono::high_resolution_clock::now();
-
-    // cout << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
+    auto cp3 = std::chrono::high_resolution_clock::now();
+    cout << "Prove uses " << (cp3 - cp1).count() / 1e6 << "ms." << endl;
 
     status_queue[node_id % ms] = StatusData(dzkproof,
                                        node_id,

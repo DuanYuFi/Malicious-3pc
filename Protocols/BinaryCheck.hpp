@@ -8,6 +8,7 @@
 #include "Math/Z2k.h"
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
 
 #define NEG_ONE (Mersenne::PR - 1)
 #define NEG_TWO (Mersenne::PR - 2)
@@ -188,6 +189,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
 
+    // cout << "in prove(), batch size: " << T << endl;
+
     LocalHash transcript_hash;
 
     vector<vector<uint64_t>> p_evals_masked;
@@ -218,7 +221,7 @@ DZKProof Malicious3PCProtocol<_T>::prove(
                     ==================================================================================
     */
 
-    // auto cp1 = std::chrono::high_resolution_clock::now();
+    auto cp1 = std::chrono::high_resolution_clock::now();
 
     uint64_t **input_left, **input_right;
     input_left = new uint64_t*[k];
@@ -272,7 +275,8 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         this_column += k;
     }
 
-    // auto cp2 = std::chrono::high_resolution_clock::now();
+    auto cp2 = std::chrono::high_resolution_clock::now();
+    cout << "3-layer loop uses " << (cp2 - cp1).count() / 1e6 << " ms" << endl;
     
 
     for(uint64_t i = 0; i < k; i++) {
@@ -461,8 +465,9 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         }
     }
     cnt++;
-
-    // auto cp3 = std::chrono::high_resolution_clock::now();
+    auto cp3 = std::chrono::high_resolution_clock::now();
+    cout << "First round uses " << (cp3 - cp2).count() / 1e6 << " ms" << endl;
+    
 
     // outfile << "First round uses " << (cp3 - cp1).count() / 1e6 << " ms, while inner product uses " << (cp2 - cp1).count() / 1e6 << " ms." << endl;
 
@@ -552,6 +557,10 @@ DZKProof Malicious3PCProtocol<_T>::prove(
         // auto end = std::chrono::high_resolution_clock::now();
         // outfile << "This round uses " << (end - start).count() / 1e6 << " ms." << endl;
     }
+
+    auto cp4 = std::chrono::high_resolution_clock::now();
+    cout << "Recursion uses " << (cp4 - cp3).count() / 1e6 << " ms" << endl;
+    
 
     for(uint64_t i = 0; i < k; i++) {
         delete[] eval_result[i];
