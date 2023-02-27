@@ -185,18 +185,6 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     auto cp2 = std::chrono::high_resolution_clock::now();
     cout << "Gen_vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
     ++ verify_tag;
-
-    // for (int j = 0; j < k; j ++) {
-    //     delete[] input_left_next[j];
-    //     delete[] input_mono_next[j];
-    // }
-    // delete[] input_left_next;
-    // delete[] input_mono_next;
-
-    // for (int j = 0; j < cnt; j ++) {
-    //     delete[] mask_ss_prev[j];
-    // }
-    // delete[] mask_ss_prev;
     
 }
 template <class T>
@@ -229,21 +217,7 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     }
 
     ++ verify_tag;
-
-    // for (int j = 0; j < k; j ++) {
-    //     delete[] input_right_prev[j];
-    //     delete[] input_mono_prev[j];
-    // }
-    // delete[] input_right_prev;
-    // delete[] input_mono_prev;
-
-    // for (int j = 0; j < cnt; j ++) {
-    //     delete[] mask_ss_next[j];
-    // }
-    // delete[] mask_ss_next;
-
     
-
 }
 
 template <class T>
@@ -519,18 +493,6 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     // outfile << "in Check_one, ++wait_size" << endl;
     ++wait_size;
     // outfile << "in Check_one, after ++wait_size" << endl;
-
-    // for (int i = 0; i < k; i ++) {
-    //     delete[] input_left[i];
-    //     delete[] input_right[i];
-    //     delete[] input_right_prev[i];
-    //     delete[] input_left_next[i];
-    // }
-
-    // delete[] input_left;
-    // delete[] input_right;
-    // delete[] input_right_prev;
-    // delete[] input_left_next;
 
     delete[] _input1;
     delete[] _input2;

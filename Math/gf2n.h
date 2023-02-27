@@ -273,10 +273,12 @@ inline gf2n_<octet>& gf2n_<octet>::mul(const gf2n_<octet>& x, const gf2n_<octet>
 
 gf2n_long inner_product(gf2n_long* x, gf2n_long* y, size_t length);
 gf2n_long inner_product(gf2n_long* x, vector<gf2n_long> y, size_t length);
+gf2n_long inner_product(gf2n_long** x, gf2n_long* y, size_t rows, size_t cols);
 gf2n_long inner_product(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols);
 
-gf2n_long inner_product_naive(gf2n_long* x, gf2n_long* y, size_t length);
-gf2n_long inner_product_naive(gf2n_long* x, vector<gf2n_long> y, size_t length);
-gf2n_long inner_product_naive(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols);
+gf2n_short inner_product(gf2n_short* x, gf2n_short* y, size_t length);
+gf2n_short inner_product(gf2n_short* x, vector<gf2n_short> y, size_t length);
+gf2n_short inner_product(gf2n_short** x, gf2n_short* y, size_t rows, size_t cols);
+gf2n_short inner_product(gf2n_short** x, gf2n_short** y, size_t rows, size_t cols);
 
 #endif

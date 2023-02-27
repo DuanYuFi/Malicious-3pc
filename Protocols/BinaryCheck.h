@@ -8,7 +8,7 @@
 using namespace std;
 
 typedef unsigned __int128 uint128_t;
-typedef gf2n_long Field;
+typedef gf2n_short Field;
 
 // clock_t begin_time, finish_time;
 class LocalHash {

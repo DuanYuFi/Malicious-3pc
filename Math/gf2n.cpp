@@ -560,8 +560,11 @@ gf2n_long inner_product(gf2n_long* x, gf2n_long* y, size_t length) {
     tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
   }
 
-  int128 _tmp(tmp);
-  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
 
   return answer;
 }
@@ -573,8 +576,11 @@ gf2n_long inner_product(gf2n_long* x, vector<gf2n_long> y, size_t length) {
     tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
   }
 
-  int128 _tmp(tmp);
-  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
 
   return answer;
 }
@@ -588,34 +594,88 @@ gf2n_long inner_product(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols) 
     }
   }
 
-  int128 _tmp(tmp);
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
+
+  return answer;
+}
+
+gf2n_long inner_product(gf2n_long** x, gf2n_long* y, size_t rows, size_t cols) {
+  gf2n_long answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[j].get()).a);
+    }
+  }
+
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
+
+  return answer;
+}
+
+// ============================================================
+
+
+gf2n_short inner_product(gf2n_short* x, gf2n_short* y, size_t length) {
+  gf2n_short answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  int128 _tmp = (tmp);
   answer.reduce(_tmp.get_upper(), _tmp.get_lower());
 
   return answer;
 }
 
-gf2n_long inner_product_naive(gf2n_long* x, gf2n_long* y, size_t length) {
-  gf2n_long answer = gf2n_long(0);
+gf2n_short inner_product(gf2n_short* x, vector<gf2n_short> y, size_t length) {
+  gf2n_short answer;
+  __m128i tmp = _mm_setzero_si128();
   for (size_t i = 0; i < length; ++i) {
-    answer += x[i] * y[i];
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
   }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
   return answer;
 }
 
-gf2n_long inner_product_naive(gf2n_long* x, vector<gf2n_long> y, size_t length) {
-  gf2n_long answer = gf2n_long(0);
-  for (size_t i = 0; i < length; ++i) {
-    answer += x[i] * y[i];
-  }
-  return answer;
-}
-
-gf2n_long inner_product_naive(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols) {
-  gf2n_long answer = gf2n_long(0);
+gf2n_short inner_product(gf2n_short** x, gf2n_short** y, size_t rows, size_t cols) {
+  gf2n_short answer;
+  __m128i tmp = _mm_setzero_si128();
   for (size_t i = 0; i < rows; ++i) {
     for (size_t j = 0; j < cols; ++j) {
-      answer += x[i][j] * y[i][j];
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[i][j].get()).a);
     }
   }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_short inner_product(gf2n_short** x, gf2n_short* y, size_t rows, size_t cols) {
+  gf2n_short answer;
+  __m128i tmp = _mm_setzero_si128();
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[j].get()).a);
+    }
+  }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
   return answer;
 }

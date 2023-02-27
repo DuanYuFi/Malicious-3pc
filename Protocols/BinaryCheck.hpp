@@ -1,13 +1,12 @@
-#ifndef PROTOCOLS_BINSRYCHECK_HPP_
-#define PROTOCOLS_BINSRYCHECK_HPP_
+#ifndef PROTOCOLS_BINARYCHECK_HPP_
+#define PROTOCOLS_BINARYCHECK_HPP_
 
 #include "BinaryCheck.h"
 
-#include "Math/mersenne.hpp"
+#include "Math/gf2n.h"
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
-
 
 ArithDZKProof arith_prove(
     Field** input_left, 
@@ -32,31 +31,15 @@ ArithDZKProof arith_prove(
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Field eta_power = 1;
-    // Linear combination using randomness eta
-    // for(uint64_t i = 0; i < k; i++) {
-    //     for(uint64_t j = 0; j < s; j++) {
-    //         input_left[i][2 * j] = input_left[i][2 * j] * eta_power;
-    //         input_left[i][2 * j + 1] = input_left[i][2 * j + 1] * eta_power;
-    //         eta_power = eta_power * eta;
-    //     }
-    // }
-
-    gf2n_long* thetas = new gf2n_long[s];
+    Field* thetas = new Field[s];
     for(uint64_t j = 0; j < s; j++) {
         thetas[j].randomize(prng);
     }
 
-    gf2n_long* betas = new gf2n_long[k];
-    for(uint64_t i = 0; i < k; i++) {
-        betas[i].randomize(prng);
-    }
-
     for(uint64_t i = 0; i < k; i++) {
         for(uint64_t j = 0; j < s; j++) {
-            gf2n_long coeff = betas[i] * thetas[j];
-            input_left[i][2 * j] *= coeff;
-            input_left[i][2 * j + 1] *= coeff;
+            input_left[i][2 * j] *= thetas[j];
+            input_left[i][2 * j + 1] *= thetas[j];
         }
     }
 
@@ -98,10 +81,7 @@ ArithDZKProof arith_prove(
 
         for(uint64_t i = 0; i < k; i++) {
             for(uint64_t j = 0; j < k; j++) {
-                eval_result[i][j] = inner_product(input_left[i], input_right[j], (size_t)s);
-                // for(uint64_t l = 0; l < s; l++) {
-                //     eval_result[i][j] += input_left[i][l] * input_right[j][l];
-                // }
+                eval_result[i][j] = inner_product(input_left[i], input_right[j], s);
             }
         }
 
@@ -232,35 +212,21 @@ ArithVerMsg arith_gen_vermsg(
 
     // cout << "arith_gen_vermsg::s = " << s << endl;
 
-    gf2n_long* thetas = new gf2n_long[s];
+    Field* thetas = new Field[s];
     for(uint64_t j = 0; j < s; j++) {
         thetas[j].randomize(prng);
     }
-    gf2n_long* betas = new gf2n_long[k];
-    for(uint64_t i = 0; i < k; i++) {
-        betas[i].randomize(prng);
+
+    out_ss = inner_product(input_mono, thetas, k, s);
+    
+    Field* betas = new Field[s];
+    for(uint64_t j = 0; j < s; j++) {
+        betas[j].randomize(prng);
     }
 
-    gf2n_long** coeffs = new gf2n_long*[k];
-
-    for(uint64_t i = 0; i < k; i++) {
-        coeffs[i] = new gf2n_long[s];
-        for(uint64_t j = 0; j < s; j++) {
-            coeffs[i][j] = betas[i] * thetas[j];
-        }
-    }
-    out_ss = inner_product(input_mono, coeffs, (size_t)k, (size_t)s);
-    
-    // for(uint64_t i = 0; i < k; i++) {
-    //     for(uint64_t j = 0; j < s; j++) {
-    //         out_ss += input_mono[i][j] * eta_power;
-    //         eta_power = eta_power * eta;
-    //     }
-    // }
-    
     sum_ss.assign_zero();
     for(uint64_t j = 0; j < k; j++) { 
-        sum_ss += proof.p_evals_masked[cnt][j];
+        sum_ss = inner_product(betas, proof.p_evals_masked[cnt], k);
     }
     b_ss[cnt] = sum_ss - out_ss;
 
@@ -319,11 +285,7 @@ ArithVerMsg arith_gen_vermsg(
             }
             Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
 
-            final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (size_t)(2 * k - 1));
-
-            // for(uint64_t i = 0; i < 2 * k - 1; i++) {
-            //     final_result_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
-            // }
+            final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k - 1));
 
             break;
         }
