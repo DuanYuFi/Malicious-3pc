@@ -378,29 +378,45 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     int cur_k_blocks = 0;
     ShareTupleBlock k_share_tuple_blocks[k];
 
-    for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
-        // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+    if (prev_party) {
+        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+            // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
 
-        for (uint64_t i = 0; i < k; i++) { 
-            if (cur_k_blocks + i >= block_batch_size) {
-                continue;
-            }
-            long this_block_value;
-            if (prev_party) {
-                this_block_value = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
-            }
-            else {
-                this_block_value = k_share_tuple_blocks[i].rho.second;
-            }
-            for(int l = 0; l < BLOCK_SIZE; l++) {
-                if ((this_block_value >> l) & 1) {
-                    out_ss += thetas[block_col * BLOCK_SIZE + l];
+            for (uint64_t i = 0; i < k; i++) { 
+                if (cur_k_blocks + i >= block_batch_size) {
+                    continue;
+                }
+                long this_block_value = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
+                for(int l = 0; l < BLOCK_SIZE; l++) {
+                    if ((this_block_value >> l) & 1) {
+                        out_ss += thetas[block_col * BLOCK_SIZE + l];
+                    }
                 }
             }
+            cur_k_blocks += k;
         }
-        cur_k_blocks += k;
     }
+    else {
+        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+            // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+
+            for (uint64_t i = 0; i < k; i++) { 
+                if (cur_k_blocks + i >= block_batch_size) {
+                    continue;
+                }
+                long this_block_value = k_share_tuple_blocks[i].rho.second;
+                for(int l = 0; l < BLOCK_SIZE; l++) {
+                    if ((this_block_value >> l) & 1) {
+                        out_ss += thetas[block_col * BLOCK_SIZE + l];
+                    }
+                }
+            }
+            cur_k_blocks += k;
+        }
+    }
+    
     // cout << "cp 2" << endl;
     
     b_ss[cnt] = sum_ss - out_ss;
