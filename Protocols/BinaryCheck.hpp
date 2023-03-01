@@ -430,61 +430,63 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
     if (prev_party) {
         for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
-        // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
-        
-        for (int l = 0; l < BLOCK_SIZE; l++) {
-            int row = index / s;
-            int col = index % s;
-            if (index >= s0) {
-                input[row][col] = 0;
-                input[row][col + 1] = 0;
-            } 
-            else {
-                Field sum1 = 0, sum2 = 0;
-                // linear combination
-                for(uint64_t i = 0; i < k; i++) { 
-                    if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
-                        sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
-                    
-                    if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
-                        sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+            // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+            
+            for (int l = 0; l < BLOCK_SIZE; l++) {
+                int row = index / s;
+                int col = index % s;
+                if (index >= s0) {
+                    input[row][col] = 0;
+                    input[row][col + 1] = 0;
+                } 
+                else {
+                    Field sum1 = 0, sum2 = 0;
+                    // linear combination
+                    for(uint64_t i = 0; i < k; i++) { 
+                        if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
+                            sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                        
+                        if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
+                            sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                    }
+                    input[row][col] = sum1;
+                    input[row][col + 1] = sum2;
                 }
-                input[row][col] = sum1;
-                input[row][col + 1] = sum2;
+                index += 2;
             }
-            index += 2;
+            cur_k_blocks += k;
         }
-        cur_k_blocks += k;
     } 
     else {
         for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
-        // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
-        
-        for (int l = 0; l < BLOCK_SIZE; l++) {
-            int row = index / s;
-            int col = index % s;
-            if (index >= s0) {
-                input[row][col] = 0;
-                input[row][col + 1] = 0;
-            } 
-            else {
-                Field sum1 = 0, sum2 = 0;
-                // linear combination
-                for(uint64_t i = 0; i < k; i++) { 
-                    if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
-                        sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
-                    
-                    if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
-                        sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+            // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+            
+            for (int l = 0; l < BLOCK_SIZE; l++) {
+                int row = index / s;
+                int col = index % s;
+                if (index >= s0) {
+                    input[row][col] = 0;
+                    input[row][col + 1] = 0;
+                } 
+                else {
+                    Field sum1 = 0, sum2 = 0;
+                    // linear combination
+                    for(uint64_t i = 0; i < k; i++) { 
+                        if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
+                            sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                        
+                        if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
+                            sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                    }
+                    input[row][col] = sum1;
+                    input[row][col + 1] = sum2;
                 }
-                input[row][col] = sum1;
-                input[row][col + 1] = sum2;
+                index += 2;
             }
-            index += 2;
+            cur_k_blocks += k;
         }
-        cur_k_blocks += k;
     }
     // cout << "cp 4" << endl;
 
