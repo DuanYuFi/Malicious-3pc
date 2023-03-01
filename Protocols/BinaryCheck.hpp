@@ -108,7 +108,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
                 long this_value_block = 0;
                 this_value_block ^= (row_tuple_block.input1.first & col_tuple_block.input2.second);
-                this_value_block ^= (col_tuple_block.input1.second & row_tuple_block.input2.first);
+                this_value_block ^= (row_tuple_block.input1.second & col_tuple_block.input2.first);
 
                 for(int l = 0; l < BLOCK_SIZE; l++) {
                     if ((this_value_block >> l) & 1) {
@@ -183,10 +183,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 // linear combination
                 for(uint64_t i = 0; i < k; i++) { 
                     if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
-                        sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                        sum1 += eval_base[i];
                     
                     if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
-                        sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                        sum2 += eval_base[i];
 
                     if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
                         sum3 += eval_base[i];
@@ -194,8 +194,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
                         sum4 += eval_base[i];
                 }
-                input_left[row][col] = sum1;
-                input_left[row][col + 1] = sum2;
+                input_left[row][col] = sum1 * thetas[block_col * BLOCK_SIZE + l];
+                input_left[row][col + 1] = sum2 * thetas[block_col * BLOCK_SIZE + l];
                 input_right[row][col] = sum3;
                 input_right[row][col + 1] = sum4;
             }
@@ -385,7 +385,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
             for (uint64_t i = 0; i < k; i++) { 
                 if (cur_k_blocks + i >= block_batch_size) {
-                    continue;
+                    break;
                 }
                 long this_block_value = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
                 for(int l = 0; l < BLOCK_SIZE; l++) {
@@ -404,7 +404,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
             for (uint64_t i = 0; i < k; i++) { 
                 if (cur_k_blocks + i >= block_batch_size) {
-                    continue;
+                    break;
                 }
                 long this_block_value = k_share_tuple_blocks[i].rho.second;
                 for(int l = 0; l < BLOCK_SIZE; l++) {
@@ -461,10 +461,10 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     // linear combination
                     for(uint64_t i = 0; i < k; i++) { 
                         if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
-                            sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                            sum1 += eval_base[i];
                         
                         if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
-                            sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                            sum2 += eval_base[i];
                     }
                     input[row][col] = sum1;
                     input[row][col + 1] = sum2;
@@ -491,13 +491,13 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     // linear combination
                     for(uint64_t i = 0; i < k; i++) { 
                         if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
-                            sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                            sum1 += eval_base[i];
                         
                         if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
-                            sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                            sum2 += eval_base[i];
                     }
-                    input[row][col] = sum1;
-                    input[row][col + 1] = sum2;
+                    input[row][col] = sum1 * thetas[block_col * BLOCK_SIZE + l];
+                    input[row][col + 1] = sum2  * thetas[block_col * BLOCK_SIZE + l];
                 }
                 index += 2;
             }
