@@ -185,10 +185,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
                         sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
                     
-                    if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
+                    if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
                         sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
 
-                    if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
+                    if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
                         sum3 += eval_base[i];
 
                     if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
@@ -197,7 +197,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 input_left[row][col] = sum1;
                 input_left[row][col + 1] = sum2;
                 input_right[row][col] = sum3;
-                input_left[row][col + 1] = sum4;
+                input_right[row][col + 1] = sum4;
             }
             index += 2;
         }
@@ -415,53 +415,74 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     Field r = transcript_hash.get_challenge();
     Langrange::evaluate_bases(k, r, eval_base);
 
-    size_t index = 0;
+    s *= 2;
     uint64_t s0 = s;
     s = (s - 1) / k + 1;
+    size_t index = 0;
  
-    Field **input_mono = new Field*[k];
+    Field **input = new Field*[k];
 
     for(uint64_t i = 0; i < k; i++) {
-        input_mono[i] = new Field[s];
+        input[i] = new Field[s];
     }
     // cout << "cp 3" << endl;
     cur_k_blocks = 0;
 
-    for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+    if (prev_party) {
+        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
         memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
         
-        long* block_mono_values = new long[k];
-        if (prev_party) {
-            for(uint64_t i = 0; i < k; i++) {
-                block_mono_values[i] = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
-            }
-        }
-        else {
-            for(uint64_t i = 0; i < k; i++) {
-                block_mono_values[i] = k_share_tuple_blocks[i].rho.second;
-            }
-        }
-
         for (int l = 0; l < BLOCK_SIZE; l++) {
             int row = index / s;
             int col = index % s;
-
             if (index >= s0) {
-                input_mono[row][col] = 0;
-                index++;
-            }
+                input[row][col] = 0;
+                input[row][col + 1] = 0;
+            } 
             else {
-                Field sum = 0;
+                Field sum1 = 0, sum2 = 0;
                 // linear combination
                 for(uint64_t i = 0; i < k; i++) { 
-                    if ((block_mono_values[i] >> l) & 1)
-                        sum += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
-                } 
-                
-                input_mono[row][col] = sum;
-                index++;
+                    if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
+                        sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                    
+                    if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
+                        sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                }
+                input[row][col] = sum1;
+                input[row][col + 1] = sum2;
             }
+            index += 2;
+        }
+        cur_k_blocks += k;
+    } 
+    else {
+        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+        // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
+        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+        
+        for (int l = 0; l < BLOCK_SIZE; l++) {
+            int row = index / s;
+            int col = index % s;
+            if (index >= s0) {
+                input[row][col] = 0;
+                input[row][col + 1] = 0;
+            } 
+            else {
+                Field sum1 = 0, sum2 = 0;
+                // linear combination
+                for(uint64_t i = 0; i < k; i++) { 
+                    if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
+                        sum1 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                    
+                    if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
+                        sum2 += eval_base[i] * thetas[block_col * BLOCK_SIZE + l];
+                }
+                input[row][col] = sum1;
+                input[row][col + 1] = sum2;
+            }
+            index += 2;
         }
         cur_k_blocks += k;
     }
@@ -499,7 +520,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
             Langrange::evaluate_bases(k, r, eval_base);
             
             for(uint64_t i = 0; i < k; i++) {
-                final_input += eval_base[i] * input_mono[i][0];
+                final_input += eval_base[i] * input[i][0];
             }
             Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
 
@@ -518,12 +539,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     Field temp_result;
                     temp_result = 0;
                     for(uint64_t l = 0; l < k; l++) {
-                        temp_result += eval_base[l] * input_mono[l][index];
+                        temp_result += eval_base[l] * input[l][index];
                     }
-                    input_mono[i][j] = temp_result;
+                    input[i][j] = temp_result;
                 }
                 else {
-                    input_mono[i][j] = 0;
+                    input[i][j] = 0;
                 }
             }
         }
@@ -536,12 +557,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     // delete[] eval_base_2k;
 
     // for(uint64_t i = 0; i < k; i++) {
-    //     delete[] input_mono[i];
-    //     delete[] input_mono[i];
+    //     delete[] input[i];
+    //     delete[] input[i];
     // }
 
     // delete[] input;
-    // delete[] input_mono;
+    // delete[] input;
 
     // for (uint64_t j = 0; j < cnt; j ++) {
     //     delete[] masks_ss[j];
@@ -588,7 +609,7 @@ bool Malicious3PCProtocol<_T>::_verify(
             return false;
         }
     }
-    Field res = self_vermsg.final_input + other_vermsg.final_input;
+    Field res = self_vermsg.final_input * other_vermsg.final_input;
     Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
     
     if(res != p_eval_r) {   
