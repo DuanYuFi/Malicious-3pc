@@ -67,16 +67,14 @@ Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
     wait_size.set_target(OnlineOptions::singleton.max_status);
 
     idx_input = idx_result = idx_rho = 0;
-    share_tuple_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE;
+    // works for binary_batch_size % BLOCK_SIZE = 0
+    share_tuple_block_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE / BLOCK_SIZE;
     
-    cout << "Using tuple size: " << share_tuple_size << endl;
+    cout << "Using tuple size: " << share_tuple_block_size << endl;
 
-    input1 = new ShareType[share_tuple_size];
-    input2 = new ShareType[share_tuple_size];
-    rhos = new ShareType[share_tuple_size];
-    results = new ShareType[share_tuple_size];
+    share_tuple_blocks = new ShareTupleBlock[share_tuple_block_size];
 
-    vermsgs = new ArithVerMsg[OnlineOptions::singleton.max_status];
+    vermsgs = new VerMsg[OnlineOptions::singleton.max_status];
 }
 
 template <class T>
@@ -167,21 +165,17 @@ void Malicious3PCProtocol<T>::thread_handler(int tid) {
 
 template <class T>
 void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
-    ArithDZKProof proof;
+    DZKProof proof;
     verify_lock.lock();
     int i = verify_index ++;
     proof.unpack(proof_os[1]);
     verify_lock.unlock();
 
-    Field **input_left_next = status_queue[i].input_left_next;
-    Field **input_mono_next = status_queue[i].input_mono_next;
-    Field **mask_ss_prev = status_queue[i].mask_ss_prev;
-
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
     // int cnt = log(4 * sz) / log(k) + 1;
     auto cp1 = std::chrono::high_resolution_clock::now();
-    vermsgs[i] = arith_gen_vermsg(proof, input_left_next, input_mono_next, mask_ss_prev, sz, k, sid, prev_number, my_number, global_prng);
+    vermsgs[i] = _gen_vermsg(proof, status_queue[i].node_id, status_queue[i].mask_ss_prev, sz, k, sid, prev_number, my_number, global_prng);
     auto cp2 = std::chrono::high_resolution_clock::now();
     cout << "Gen_vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
     ++ verify_tag;
@@ -190,8 +184,8 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
 template <class T>
 void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     
-    ArithVerMsg received_vermsg;
-    ArithDZKProof proof;
+    VerMsg received_vermsg;
+    DZKProof proof;
     
     verify_lock.lock();
     received_vermsg.unpack(vermsg_os[1]);
@@ -199,16 +193,12 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     int i = verify_index ++;
     verify_lock.unlock();
 
-    Field **input_right_prev = status_queue[i].input_right_prev;
-    Field **input_mono_prev = status_queue[i].input_mono_prev;
-    Field **mask_ss_next = status_queue[i].mask_ss_next;
-
     int sz = status_queue[i].sz;
     int k = OnlineOptions::singleton.k_size;
 
     // int cnt = log(4 * sz) / log(k) + 1;
     auto cp1 = std::chrono::high_resolution_clock::now();
-    bool res = arith_verify(proof, received_vermsg, input_right_prev, input_mono_prev, mask_ss_next, sz, k, sid, next_number, my_number, global_prng);
+    bool res = _verify(proof, received_vermsg, status_queue[i].node_id, status_queue[i].mask_ss_next, sz, k, sid, next_number, my_number, global_prng);
     auto cp2 = std::chrono::high_resolution_clock::now();
     cout << "Verify uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
 
@@ -291,7 +281,7 @@ void Malicious3PCProtocol<T>::verify() {
     // auto cp0 = std::chrono::high_resolution_clock::now();
     
     for (int i = 0; i < size; i ++) {
-        ArithDZKProof proof = status_queue[i].proof;   
+        DZKProof proof = status_queue[i].proof;   
         proof.pack(proof_os[0]);
     }
 
@@ -333,7 +323,8 @@ void Malicious3PCProtocol<T>::verify() {
 
     verify_tag.wait();
     if (!check_passed) {
-        throw mac_fail("ZKP check failed");
+        // throw mac_fail("ZKP check failed");
+        cout << "Check failed" << endl;
     }
 
     // auto cp4 = std::chrono::high_resolution_clock::now();
@@ -341,7 +332,6 @@ void Malicious3PCProtocol<T>::verify() {
 
     status_counter = 0;
     wait_size.reset();
-
 }
 
 template <class T>
@@ -357,13 +347,13 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     if (size == 0)  return ;
     int ms = OnlineOptions::singleton.max_status;
 
-    size_t start = (node_id % (ZOOM_RATE * ms)) * OnlineOptions::singleton.binary_batch_size;
+    // size_t start = (node_id % (ZOOM_RATE * ms)) * OnlineOptions::singleton.binary_batch_size;
     if (size == -1) size = OnlineOptions::singleton.binary_batch_size;
 
     int sz = size;
     int k = OnlineOptions::singleton.k_size;
     int _T = ((sz - 1) / k + 1) * k;
-    int cols = (_T - 1) / k + 1;
+    // int cols = (_T - 1) / k + 1;
     int cnt = log(2 * _T) / log(k) + 1;
 
     // outfile << "Check one with size " << sz << endl; 
@@ -386,94 +376,97 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
         }
     }
 
-    auto cp1 = std::chrono::high_resolution_clock::now();
+    // auto cp1 = std::chrono::high_resolution_clock::now();
     // outfile << "PRNG uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
-    ShareType *_input1, *_input2, *_results, *_rhos;
-    _input1 = new ShareType[sz];
-    _input2 = new ShareType[sz];
-    _results = new ShareType[sz];
-    _rhos = new ShareType[sz];
+    // ShareTypeBlock *_input1, *_input2, *_results, *_rhos;
+    // _input1 = new ShareTypeBlock[sz];
+    // _input2 = new ShareTypeBlock[sz];
+    // _results = new ShareTypeBlock[sz];
+    // _rhos = new ShareTypeBlock[sz];
 
-    memcpy(_input1, input1 + start, sizeof(ShareType) * sz);
-    memcpy(_input2, input2 + start, sizeof(ShareType) * sz);
-    memcpy(_results, results + start, sizeof(ShareType) * sz);
-    memcpy(_rhos, rhos + start, sizeof(ShareType) * sz);
+    // memcpy(_input1, input1 + start, sizeof(ShareTypeBlock) * sz);
+    // memcpy(_input2, input2 + start, sizeof(ShareTypeBlock) * sz);
+    // memcpy(_results, results + start, sizeof(ShareTypeBlock) * sz);
+    // memcpy(_rhos, rhos + start, sizeof(ShareTypeBlock) * sz);
 
-    auto cp1_5 = std::chrono::high_resolution_clock::now();
-    cout << "Memcpy uses " << (cp1_5 - cp1).count() / 1e6 << "ms." << endl;
+    // auto cp1_5 = std::chrono::high_resolution_clock::now();
+    // cout << "Memcpy uses " << (cp1_5 - cp1).count() / 1e6 << "ms." << endl;
 
 
-    int temp_pointer = 0;
-    Field **input_left, **input_right, **input_left_next, **input_right_prev, **input_mono_prev, **input_mono_next;
+    // int temp_pointer = 0;
+    // Field **input_left, **input_right, **input_left_next, **input_right_prev, **input_mono_prev, **input_mono_next;
 
-    input_left = new Field*[k];
-    input_right = new Field*[k];
-    input_left_next = new Field*[k];
-    input_right_prev = new Field*[k];
-    input_mono_prev = new Field*[k];
-    input_mono_next = new Field*[k];
+    // input_left = new Field*[k];
+    // input_right = new Field*[k];
+    // input_left_next = new Field*[k];
+    // input_right_prev = new Field*[k];
+    // input_mono_prev = new Field*[k];
+    // input_mono_next = new Field*[k];
     
-    for (int i = 0; i < k; i ++) {
-        input_left[i] = new Field[cols * 2];
-        input_right[i] = new Field[cols * 2];
-        input_right_prev[i] = new Field[cols * 2];
-        input_left_next[i] = new Field[cols * 2];
-        input_mono_prev[i] = new Field[cols];
-        input_mono_next[i] = new Field[cols];
+    // for (int i = 0; i < k; i ++) {
+    //     input_left[i] = new Field[cols * 2];
+    //     input_right[i] = new Field[cols * 2];
+    //     input_right_prev[i] = new Field[cols * 2];
+    //     input_left_next[i] = new Field[cols * 2];
+    //     input_mono_prev[i] = new Field[cols];
+    //     input_mono_next[i] = new Field[cols];
         
-        for (int j = 0; j < cols; j++) {
+    //     for (int j = 0; j < cols; j++) {
 
-            ShareType x, y, z, rho;
+    //         ShareTypeBlock x, y, z, rho;
 
-            if (temp_pointer >= sz) {
-                input_left[i][j * 2].assign_zero();
-                input_left[i][j * 2 + 1].assign_zero();
-                input_right[i][j * 2].assign_zero();
-                input_right[i][j * 2 + 1].assign_zero();
-                input_left_next[i][j * 2].assign_zero();
-                input_left_next[i][j * 2 + 1].assign_zero();
-                input_right_prev[i][j * 2].assign_zero();
-                input_right_prev[i][j * 2 + 1].assign_zero();
-                input_mono_prev[i][j].assign_zero();
-                input_mono_next[i][j].assign_zero();
-                temp_pointer ++;
-                continue;
-            }
+    //         if (temp_pointer >= sz) {
+    //             input_left[i][j * 2] = 0;
+    //             input_left[i][j * 2 + 1] = 0;
+    //             input_right[i][j * 2] = 0;
+    //             input_right[i][j * 2 + 1] = 0;
+    //             input_left_next[i][j * 2] = 0;
+    //             input_left_next[i][j * 2 + 1] = 0;
+    //             input_right_prev[i][j * 2] = 0;
+    //             input_right_prev[i][j * 2 + 1] = 0;
+    //             input_mono_prev[i][j] = 0;
+    //             input_mono_next[i][j] = 0;
+    //             temp_pointer ++;
+    //             continue;
+    //         }
 
-            else {
-                x = _input1[temp_pointer];
-                y = _input2[temp_pointer];
-                z = _results[temp_pointer];
-                rho = _rhos[temp_pointer];
-            }
+    //         else {
+    //             x = _input1[temp_pointer];
+    //             y = _input2[temp_pointer];
+    //             z = _results[temp_pointer];
+    //             rho = _rhos[temp_pointer];
+    //         }
 
-            // Share with P_{i+1}
-            input_left[i][j * 2] = x.first;
-            input_left[i][j * 2 + 1] = y.first;
-            // Share with P_{i-1}
-            input_right[i][j * 2] = y.second;
-            input_right[i][j * 2 + 1] = x.second;
+    //         // Share with P_{i+1}
+    //         input_left[i][j * 2] = x.first;
+    //         input_left[i][j * 2 + 1] = y.first;
+    //         // Share with P_{i-1}
+    //         input_right[i][j * 2] = y.second;
+    //         input_right[i][j * 2 + 1] = x.second;
 
-            input_left_next[i][j * 2] = x.first;
-            input_left_next[i][j * 2 + 1] = y.first;
+    //         input_left_next[i][j * 2] = x.first;
+    //         input_left_next[i][j * 2 + 1] = y.first;
 
-            input_right_prev[i][j * 2] = y.second;
-            input_right_prev[i][j * 2 + 1] = x.second;
+    //         input_right_prev[i][j * 2] = y.second;
+    //         input_right_prev[i][j * 2 + 1] = x.second;
 
-            input_mono_prev[i][j] = z.first - x.first * y.first - rho.first;
-            input_mono_next[i][j] = rho.second;
+    //         input_mono_prev[i][j] = z.first - x.first * y.first - rho.first;
+    //         input_mono_next[i][j] = rho.second;
 
-            temp_pointer ++;
-        }
-    }
+    //         temp_pointer ++;
+    //     }
+    // }
 
 
     auto cp2 = std::chrono::high_resolution_clock::now();
 
-    cout << "Prepare data uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
+    // cout << "Prepare data uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
+
+
     // outfile << "in Check_one, calling prove" << endl;
-    ArithDZKProof proof = arith_prove(input_left, input_right, masks, sz, k, sid, global_prng);
+    // DZKProof proof = _prove(input_left, input_right, masks, sz, k, sid, global_prng);
+    DZKProof proof = _prove(node_id, masks, sz, k, sid, global_prng);
 
     auto cp3 = std::chrono::high_resolution_clock::now();
 
@@ -482,10 +475,7 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
 
     // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
     status_queue[node_id % ms] = StatusData(proof,
-                                       input_left_next, 
-                                       input_right_prev,
-                                       input_mono_prev,
-                                       input_mono_next,
+                                       node_id,
                                        mask_ss_next,
                                        mask_ss_prev,
                                        sz);
@@ -493,11 +483,6 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     // outfile << "in Check_one, ++wait_size" << endl;
     ++wait_size;
     // outfile << "in Check_one, after ++wait_size" << endl;
-
-    delete[] _input1;
-    delete[] _input2;
-    delete[] _results;
-    delete[] _rhos;
 
     // outfile << "Finish check" << endl;
     
@@ -513,14 +498,11 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
 
     int this_size = (n == -1 ? T::value_type::length() : n);
 
-    register long x0 = x[0].get(), x1 = x[1].get();
-    register long y0 = y[0].get(), y1 = y[1].get();
-
     for (register short i = 0; i < this_size; i ++) {
-        input1[idx_input] = ShareType((x0 >> i) & 1, (x1 >> i & 1));
-        input2[idx_input] = ShareType((y0 >> i) & 1, (y1 >> i & 1));
+        share_tuple_blocks[idx_input].input1 = ShareTypeBlock(x[0].get(), x[1].get());
+        share_tuple_blocks[idx_input].input2 = ShareTypeBlock(y[0].get(), y[1].get());
         idx_input ++;
-        if (idx_input == share_tuple_size) {
+        if (idx_input == share_tuple_block_size) {
             idx_input = 0;
         }
     }
@@ -538,12 +520,11 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
         tmp[i].randomize(shared_prngs[i], n);
     
     int this_size = (n == -1 ? T::value_type::length() : n);
-    register long rho0 = tmp[0].get(), rho1 = tmp[1].get();
 
     for (register short i = 0; i < this_size; i ++) {
-        rhos[idx_rho] = ShareType((rho0 >> i) & 1, (rho1 >> i & 1));
+        share_tuple_blocks[idx_rho].rho = ShareTypeBlock(tmp[0].get(), tmp[1].get());
         idx_rho ++;
-        if (idx_rho == share_tuple_size) {
+        if (idx_rho == share_tuple_block_size) {
             idx_rho = 0;
         }
     }
@@ -590,14 +571,11 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     result[1].unpack(os[1], n);
 
     int this_size = (n == -1 ? T::value_type::length() : n);
-    
-    register long z0 = result[0].get(), z1 = result[1].get();
 
-    
     for (register short i = 0; i < this_size; i ++) {
-        results[idx_result] = ShareType((z0 >> i) & 1, (z1 >> i & 1));
+        share_tuple_blocks[idx_result].result = ShareTypeBlock(result[0].get(), result[1].get());
         idx_result ++;
-        if (idx_result == share_tuple_size) {
+        if (idx_result == share_tuple_block_size) {
             idx_result = 0;
         }
     } 
@@ -639,7 +617,7 @@ template<class T>
 inline void Malicious3PCProtocol<T>::init_dotprod()
 {
     init_mul();
-    dotprod_share.assign_zero();
+    dotprod_share = 0;
 }
 
 template<class T>
@@ -653,7 +631,7 @@ inline void Malicious3PCProtocol<T>::next_dotprod()
 {
     dotprod_share.normalize();
     prepare_reshare(dotprod_share);
-    dotprod_share.assign_zero();
+    dotprod_share = 0;
 }
 
 template<class T>

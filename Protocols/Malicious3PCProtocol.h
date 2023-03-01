@@ -4,53 +4,29 @@
 #include "Replicated.h"
 #include "BinaryCheck.h"
 #include "Processor/Data_Files.h"
-#include "Math/mersenne.hpp"
-// #include "dzkp-gf2n-bbcg19.cpp"
 
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
 #include <fstream>
-
 #include <chrono>
 
 #define USE_THREAD
-
-// #ifdef USE_THREAD
-// #define Queue SafeQueue
-// #else
-// #define Queue queue
-// #endif
-
-// #define Queue SafeQueue
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
 class Player;
 
-
 struct StatusData {
-    ArithDZKProof proof;
-    Field **input_left_next;
-    Field **input_right_prev;
-    Field **input_mono_prev, **input_mono_next;
+    DZKProof proof;
+    int node_id;
     Field **mask_ss_prev, **mask_ss_next;
     int sz;
 
     StatusData() {}
-    StatusData(ArithDZKProof proof, Field **input_left_next, Field **input_right_prev, Field **input_mono_prev, Field **input_mono_next, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
-        proof(proof), input_left_next(input_left_next), input_right_prev(input_right_prev), input_mono_prev(input_mono_prev), input_mono_next(input_mono_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+    StatusData(DZKProof proof, int node_id, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
+        proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
-};
-
-template <typename T1, typename T2>
-struct MyPair {
-public:
-    T1 first;
-    T2 second;
-
-    MyPair(): first(0), second(0) {}
-    MyPair(T1 a, T2 b): first(a), second(b) {}
 };
 
 class WaitSize {
@@ -115,15 +91,21 @@ public:
 
 };
 
-typedef MyPair<bool, bool> ShareType;
+template <typename T1, typename T2>
+struct MyPair {
+public:
+    T1 first;
+    T2 second;
 
-// struct ShareTuple {
-//     ShareType input1, input2, result, rho;
-// };
+    MyPair(): first(0), second(0) {}
+    MyPair(T1 a, T2 b): first(a), second(b) {}
+};
 
+typedef MyPair<long, long> ShareTypeBlock;
 
-// #define THREAD_NUM 5
-// #define MAX_STATUS 10
+struct ShareTupleBlock {
+    ShareTypeBlock input1, input2, result, rho;
+};
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -133,9 +115,9 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    ShareType *input1, *input2, *results, *rhos;
+    ShareTupleBlock *share_tuple_blocks;
     size_t idx_input, idx_rho, idx_result;
-    size_t share_tuple_size;
+    size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
 
     StatusData *status_queue;
@@ -154,17 +136,12 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     WaitSize wait_size;
     Field sid;
 
-    uint64_t two_inverse = Mersenne::inverse(2);
-
-    // const static size_t MAX_STATUS = 100;
-    // const static short THREAD_NUM = 4;
-
     vector<std::thread> check_threads, verify_threads;
 
     array<octetStream, 2> proof_os, vermsg_os;
     size_t verify_index;
     mutex verify_lock;
-    ArithVerMsg *vermsgs;
+    VerMsg *vermsgs;
     WaitQueue<u_char> verify_queue;
     WaitSize verify_tag;
     bool check_passed;
@@ -174,14 +151,11 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, false_type);
 
-    // const static int BATCH_SIZE = OnlineOptions::singleton.batch_size;
-
 public:
 
     static const bool uses_triples = false;
 
     array<PRNG, 2> shared_prngs;
-    // array<PRNG, 2> *check_prngs;
     vector<array<PRNG, 2> > check_prngs;
 
     PRNG global_prng;
@@ -231,7 +205,7 @@ public:
     static void assign(T& share, const typename T::clear& value, int my_num)
     {
         assert(T::vector_length == 2);
-        share.assign_zero();
+        share = 0;
         if (my_num < 2)
             share[my_num] = value;
     }
@@ -262,6 +236,40 @@ public:
         return {P, shared_prngs};
         // return {P, shared_prngs, check_prngs};
     }
+
+    DZKProof _prove(
+        int node_id,
+        Field** masks,
+        uint64_t batch_size, 
+        uint64_t k, 
+        Field sid,
+        PRNG prng
+    );
+
+    VerMsg _gen_vermsg(
+        DZKProof proof, 
+        int node_id,
+        Field** masks_ss,
+        uint64_t batch_size, 
+        uint64_t k, 
+        Field sid,
+        uint64_t prover_ID,
+        uint64_t party_ID,
+        PRNG prng
+    );
+
+    bool _verify(
+        DZKProof proof, 
+        VerMsg other_vermsg, 
+        int node_id,
+        Field** masks_ss,
+        uint64_t batch_size, 
+        uint64_t k, 
+        Field sid,
+        uint64_t prover_ID,
+        uint64_t party_ID,
+        PRNG prng
+    );
 
     void check();
     void finalize_check();
