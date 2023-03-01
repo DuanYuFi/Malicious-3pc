@@ -496,15 +496,13 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
     
     typename T::value_type add_share = x.local_mul(y);
 
-    int this_size = (n == -1 ? T::value_type::length() : n);
+    // int this_size = (n == -1 ? T::value_type::length() : n);
 
-    for (register short i = 0; i < this_size; i ++) {
-        share_tuple_blocks[idx_input].input1 = ShareTypeBlock(x[0].get(), x[1].get());
-        share_tuple_blocks[idx_input].input2 = ShareTypeBlock(y[0].get(), y[1].get());
-        idx_input ++;
-        if (idx_input == share_tuple_block_size) {
-            idx_input = 0;
-        }
+    share_tuple_blocks[idx_input].input1 = ShareTypeBlock(x[0].get(), x[1].get());
+    share_tuple_blocks[idx_input].input2 = ShareTypeBlock(y[0].get(), y[1].get());
+    idx_input ++;
+    if (idx_input == share_tuple_block_size) {
+        idx_input = 0;
     }
 
     prepare_reshare(add_share, n);
@@ -519,14 +517,10 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     for (int i = 0; i < 2; i++) 
         tmp[i].randomize(shared_prngs[i], n);
     
-    int this_size = (n == -1 ? T::value_type::length() : n);
-
-    for (register short i = 0; i < this_size; i ++) {
-        share_tuple_blocks[idx_rho].rho = ShareTypeBlock(tmp[0].get(), tmp[1].get());
-        idx_rho ++;
-        if (idx_rho == share_tuple_block_size) {
-            idx_rho = 0;
-        }
+    share_tuple_blocks[idx_rho].rho = ShareTypeBlock(tmp[0].get(), tmp[1].get());
+    idx_rho ++;
+    if (idx_rho == share_tuple_block_size) {
+        idx_rho = 0;
     }
 
     auto add_share = share + tmp[0] - tmp[1];
@@ -572,17 +566,14 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 
     int this_size = (n == -1 ? T::value_type::length() : n);
 
-    for (register short i = 0; i < this_size; i ++) {
-        share_tuple_blocks[idx_result].result = ShareTypeBlock(result[0].get(), result[1].get());
-        idx_result ++;
-        if (idx_result == share_tuple_block_size) {
-            idx_result = 0;
-        }
-    } 
+    share_tuple_blocks[idx_result].result = ShareTypeBlock(result[0].get(), result[1].get());
+    idx_result ++;
+    if (idx_result == share_tuple_block_size) {
+        idx_result = 0;
+    }
     
     this->local_counter += this_size;
     
-
     while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
         local_counter -= OnlineOptions::singleton.binary_batch_size;     
         
