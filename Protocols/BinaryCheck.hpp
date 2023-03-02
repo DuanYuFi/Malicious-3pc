@@ -485,9 +485,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
 
                         input[row][col] += (x_first & y_first) ? t2 : 0;
-                        input[i][col + 1] += x_first ? t2 : 0;
-                        input[i][col + 2] += y_first ? t2 : 0;
-                        input[i][col + 3] += t2;
+                        input[row][col + 1] += x_first ? t2 : 0;
+                        input[row][col + 2] += y_first ? t2 : 0;
+                        input[row][col + 3] += t2;
                     }
                 
                     input[row][col] = Mersenne::modp(input[row][col]);
