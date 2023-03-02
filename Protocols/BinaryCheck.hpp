@@ -107,6 +107,15 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         cur_k_blocks += k;
     }
 
+    uint64_t num = (0xFFFFFFFF - 1) * 2 * block_s;
+    Field extra_addition = Mersenne::mul(neg_two_inverse, num);
+
+    for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t j = 0; j < k; j++) {
+            eval_result[i][j] = Mersenne::add(eval_result[i][j], extra_addition);
+        }
+    }
+
     for(uint64_t i = 0; i < k; i++) {
         eval_p_poly[i] = eval_result[i][i];
     }
