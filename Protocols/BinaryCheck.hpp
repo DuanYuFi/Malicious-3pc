@@ -108,7 +108,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
                 long this_value_block = 0;
                 this_value_block ^= (row_tuple_block.input1.first & col_tuple_block.input2.second);
-                this_value_block ^= (row_tuple_block.input1.second & col_tuple_block.input2.first);
+                this_value_block ^= (row_tuple_block.input2.first & col_tuple_block.input1.second);
 
                 for(int l = 0; l < BLOCK_SIZE; l++) {
                     if ((this_value_block >> l) & 1) {
@@ -132,6 +132,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             }
         }
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute p coeffs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
 
     uint16_t cnt = 0;
 
@@ -204,8 +209,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         cur_k_blocks += k;
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    cout << "First round uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
     start = std::chrono::high_resolution_clock::now();
 
@@ -353,8 +358,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     }
 
     // sample randomness betas
-    Field* betas = new Field[s];
-    for(uint64_t j = 0; j < s; j++) {
+    Field* betas = new Field[k];
+    for(uint64_t j = 0; j < k; j++) {
         betas[j].randomize(prng);
     }
 
