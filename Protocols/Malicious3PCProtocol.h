@@ -241,7 +241,6 @@ public:
         int node_id,
         Field** masks,
         uint64_t batch_size, 
-        uint64_t k, 
         Field sid,
         PRNG prng
     );
@@ -251,7 +250,6 @@ public:
         int node_id,
         Field** masks_ss,
         uint64_t batch_size, 
-        uint64_t k, 
         Field sid,
         uint64_t prover_ID,
         uint64_t party_ID,
@@ -264,7 +262,6 @@ public:
         int node_id,
         Field** masks_ss,
         uint64_t batch_size, 
-        uint64_t k, 
         Field sid,
         uint64_t prover_ID,
         uint64_t party_ID,

@@ -79,8 +79,8 @@ struct DZKProof {
 
     void pack(octetStream &os) {
         os.store(p_evals_masked.size());
-        os.store(p_evals_masked[0].size());
         for (auto each: p_evals_masked) {
+            os.store(each.size());
             for (auto each_eval: each) {
                 os.store(each_eval);
             }
@@ -92,9 +92,9 @@ struct DZKProof {
         size_t num_p_evals_masked_each = 0;
 
         os.get(num_p_evals_masked);
-        os.get(num_p_evals_masked_each);
         p_evals_masked.resize(num_p_evals_masked);
         for (size_t i = 0; i < num_p_evals_masked; i++) {
+            os.get(num_p_evals_masked_each);
             p_evals_masked[i].resize(num_p_evals_masked_each);
             for (size_t j = 0; j < num_p_evals_masked_each; j++) {
                 os.get(p_evals_masked[i][j]);

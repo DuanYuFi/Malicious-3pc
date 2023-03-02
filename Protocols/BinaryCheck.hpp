@@ -8,75 +8,71 @@
 #include <ctime>
 #include <chrono>
 
-Field general_reduce(int128 a) {
-    Field::internal_type hi,lo;
+// Field general_reduce(int128 a) {
+//     Field::internal_type hi,lo;
 
-    if (Field::MAX_N_BITS <= 64){
-        hi = a.get_upper();
-        lo = a.get_lower();
-    } 
-    else {
-        a.to(lo);
-        hi = 0;
-    }
-    Field res;
-    res.reduce(hi, lo);
-    return res;
-}
+//     if (Field::MAX_N_BITS <= 64){
+//         hi = a.get_upper();
+//         lo = a.get_lower();
+//     } 
+//     else {
+//         a.to(lo);
+//         hi = 0;
+//     }
+//     Field res;
+//     res.reduce(hi, lo);
+//     return res;
+// }
 
 template <class _T>
 DZKProof Malicious3PCProtocol<_T>::_prove(
     int node_id,
     Field** masks,
     uint64_t batch_size, 
-    uint64_t k, 
     Field sid,
     PRNG prng
 ) {
-    uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t s = (T - 1) / k + 1;
+    uint64_t k = OnlineOptions::singleton.k_size;
+    uint64_t k2 = OnlineOptions::singleton.k2_size;
 
     // cout << "in _prove" << endl;
     // cout << "batch_size: " << T << ", s: " << s << endl;
 
-    // Transcript
-    LocalHash transcript_hash;
-    transcript_hash.append_one_msg(sid);
-    // Field eta = transcript_hash.get_challenge();
+    // Vectors of masked evaluations of polynomial p(X)
+    vector<vector<Field>> p_evals_masked;
+    uint64_t k_max = max(k, k2);
+    // Evaluations of polynomial p(X)
+    Field* eval_p_poly = new Field[2 * k_max - 1];  
 
-    // cout << "checkpoint 1, s: " << s << "T: " << T << endl;
+    Field** base = new Field*[k_max - 1];
+    for (uint64_t i = 0; i < k_max - 1; i++) {
+        base[i] = new Field[k_max];
+    }
+    
+    Field** eval_result = new Field*[k_max];
+    for(uint64_t i = 0; i < k; i++) {
+        eval_result[i] = new Field[k_max];
+    }
+
+    Field* eval_base = new Field[k_max];
+
+    // ===============================  First Round  ===============================
 
     auto start = std::chrono::high_resolution_clock::now();
+
+    uint64_t T = ((batch_size - 1) / k + 1) * k;
+    uint64_t s = (T - 1) / k + 1;
 
     Field* thetas = new Field[s];
     for(uint64_t j = 0; j < s; j++) {
         thetas[j].randomize(prng);
     }
 
-    // auto end = std::chrono::high_resolution_clock::now();
-    // cout << "Random Linear Combination Time: " << (end - start).count() / 1e6 << " ms" << endl;
-
-    // start = std::chrono::high_resolution_clock::now();
-
-    // cout << "checkpoint 1.2" << endl;
-
-    // Vectors of masked evaluations of polynomial p(X)
-    vector<vector<Field>> p_evals_masked;
-    // Evaluations of polynomial p(X)
-    Field* eval_p_poly = new Field[2 * k - 1];  
-
-    Field** base = new Field*[k - 1];
-    for (uint64_t i = 0; i < k - 1; i++) {
-        base[i] = new Field[k];
-    }
-    Langrange::get_bases(k, base);
-
-    // cout << "checkpoint 1.5" << endl;
+    // Transcript
+    LocalHash transcript_hash;
+    transcript_hash.append_one_msg(sid);
     
-    Field** eval_result = new Field*[k];
-    for(uint64_t i = 0; i < k; i++) {
-        eval_result[i] = new Field[k];
-    }
+    Langrange::get_bases(k, base);
 
     ShareTupleBlock k_share_tuple_blocks[k];
     // works for binary_batch_size % BLOCK_SIZE = 0
@@ -121,7 +117,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     }
 
     for(uint64_t i = 0; i < k; i++) {
-        eval_p_poly[i] = eval_result[i][i];
+        eval_p_poly[i] = 0;
     }
 
     for(uint64_t i = 0; i < k - 1; i++) {
@@ -151,18 +147,18 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     transcript_hash.append_msges(ss);
     Field r = transcript_hash.get_challenge();
 
-    Field* eval_base = new Field[k];
     Langrange::evaluate_bases(k, r, eval_base);
 
     s *= 2;
     uint64_t s0 = s;
-    s = (s - 1) / k + 1;
+    // use k2 as the compression parameter from the second round
+    s = (s - 1) / k2 + 1;
 
     Field **input_left, **input_right;
-    input_left = new Field*[k];
-    input_right = new Field*[k];
+    input_left = new Field*[k2];
+    input_right = new Field*[k2];
 
-    for(uint64_t i = 0; i < k; i++) {
+    for(uint64_t i = 0; i < k2; i++) {
         input_left[i] = new Field[s];
         input_right[i] = new Field[s];
     }
@@ -217,27 +213,27 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     while(true){
         // auto start = std::chrono::high_resolution_clock::now();
 
-        for(uint64_t i = 0; i < k; i++) {
-            for(uint64_t j = 0; j < k; j++) {
+        for(uint64_t i = 0; i < k2; i++) {
+            for(uint64_t j = 0; j < k2; j++) {
                 eval_result[i][j] = inner_product(input_left[i], input_right[j], s);
             }
         }
 
-        for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t i = 0; i < k2; i++) {
             eval_p_poly[i] = eval_result[i][i];
         }
 
-        for(uint64_t i = 0; i < k - 1; i++) {
-            eval_p_poly[i + k] = 0;
-            for(uint64_t j = 0; j < k; j++) {
-                for (uint64_t l = 0; l < k; l++) {
-                    eval_p_poly[i + k] += base[i][j] * eval_result[j][l] * base[i][l];
+        for(uint64_t i = 0; i < k2 - 1; i++) {
+            eval_p_poly[i + k2] = 0;
+            for(uint64_t j = 0; j < k2; j++) {
+                for (uint64_t l = 0; l < k2; l++) {
+                    eval_p_poly[i + k2] += base[i][j] * eval_result[j][l] * base[i][l];
                 }
             }
         }
 
-        vector<Field> ss(2 * k - 1);       
-        for(uint64_t i = 0; i < 2 * k - 1; i++) {           
+        vector<Field> ss(2 * k2 - 1);       
+        for(uint64_t i = 0; i < 2 * k2 - 1; i++) {           
             ss[i] = eval_p_poly[i] - masks[cnt][i];
         }
         p_evals_masked.push_back(ss);
@@ -249,25 +245,25 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         transcript_hash.append_msges(ss);
         Field r = transcript_hash.get_challenge();
 
-        Langrange::evaluate_bases(k, r, eval_base);
+        Langrange::evaluate_bases(k2, r, eval_base);
 
         s0 = s;
-        s = (s - 1) / k + 1;
+        s = (s - 1) / k2 + 1;
        
-        for(uint64_t i = 0; i < k; i++) {
+        for(uint64_t i = 0; i < k2; i++) {
             for(uint64_t j = 0; j < s; j++) {
                 index = i * s + j;
                
                 if (index < s0) {
                     Field temp_result;
                     temp_result = 0;
-                    for(uint64_t l = 0; l < k; l++) {
+                    for(uint64_t l = 0; l < k2; l++) {
                         temp_result += eval_base[l] * input_left[l][index];
                     }
                     input_left[i][j] = temp_result;
 
                     temp_result = 0;
-                    for(uint64_t l = 0; l < k; l++) {
+                    for(uint64_t l = 0; l < k2; l++) {
                         temp_result += eval_base[l] * input_right[l][index];
                     }
                     input_right[i][j] = temp_result;
@@ -286,25 +282,25 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     // cout << "checkpoint 3" << endl;
 
-    for(uint64_t i = 0; i < k; i++) {
-        delete[] eval_result[i];
-    }
-    delete[] eval_result;
-    delete[] eval_p_poly;
+    // for(uint64_t i = 0; i < k_max; i++) {
+    //     delete[] eval_result[i];
+    // }
+    // delete[] eval_result;
+    // delete[] eval_p_poly;
 
-    for (uint64_t i = 0; i < k - 1; i++) {
-        delete[] base[i];
-    }
-    delete[] base;
-    delete[] eval_base;
+    // for (uint64_t i = 0; i < k_max - 1; i++) {
+    //     delete[] base[i];
+    // }
+    // delete[] base;
+    // delete[] eval_base;
 
-    for(uint64_t i = 0; i < k; i++) {
-        delete[] input_left[i];
-        delete[] input_right[i];
-    }
+    // for(uint64_t i = 0; i < k2; i++) {
+    //     delete[] input_left[i];
+    //     delete[] input_right[i];
+    // }
 
-    delete[] input_left;
-    delete[] input_right;
+    // delete[] input_left;
+    // delete[] input_right;
 
     // for (uint64_t j = 0; j < cnt; j ++) {
     //     delete[] masks[j];
@@ -323,17 +319,25 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     int node_id,
     Field** masks_ss,
     uint64_t batch_size, 
-    uint64_t k, 
     Field sid,
     uint64_t prover_ID,
     uint64_t party_ID,
     PRNG prng
 ) {
     // cout << "in _gen_vermsg " << endl;
-   
+    uint64_t k = OnlineOptions::singleton.k_size;
+    uint64_t k2 = OnlineOptions::singleton.k2_size;
+
+    uint64_t k_max = max(k, k2);
+
+    Field* eval_base = new Field[k_max];
+    Field* eval_base_2k = new Field[2 * k_max - 1];    
+
+    // ===============================  First Round  ===============================
+    
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
-    uint64_t len = log(2 * T) / log(k) + 1;
+    uint64_t len = log(2 * s) / log(k2) + 2;
 
     vector<Field> b_ss(len);
     Field final_input = 0, final_result_ss = 0;
@@ -428,22 +432,19 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     cnt++;
 
     // new evaluations at random point r
-
-    Field* eval_base = new Field[k];
-    Field* eval_base_2k = new Field[2 * k - 1];    
-
     transcript_hash.append_msges(proof.p_evals_masked[cnt]);
     Field r = transcript_hash.get_challenge();
     Langrange::evaluate_bases(k, r, eval_base);
 
     s *= 2;
     uint64_t s0 = s;
-    s = (s - 1) / k + 1;
+    // use k2 as the compression parameter from the second round
+    s = (s - 1) / k2 + 1;
     size_t index = 0;
  
-    Field **input = new Field*[k];
+    Field **input = new Field*[k2];
 
-    for(uint64_t i = 0; i < k; i++) {
+    for(uint64_t i = 0; i < k2; i++) {
         input[i] = new Field[s];
     }
     // cout << "cp 3" << endl;
@@ -516,23 +517,23 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         transcript_hash.append_msges(proof.p_evals_masked[cnt]);
 
         if(prev_party) {
-            for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+            for(uint64_t i = 0; i < 2 * k2 - 1; i++) { 
                 proof.p_evals_masked[cnt][i] += masks_ss[cnt][i];
             } 
         } else {
-            for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+            for(uint64_t i = 0; i < 2 * k2 - 1; i++) { 
                 proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
             }
         }
         sum_ss = 0;
-        for(uint64_t j = 0; j < k; j++) { 
+        for(uint64_t j = 0; j < k2; j++) { 
             sum_ss += proof.p_evals_masked[cnt][j];
         }
 
         r = transcript_hash.get_challenge();
-        Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
+        Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
         out_ss = 0;
-        for(uint64_t i = 0; i < 2 * k - 1; i++) {
+        for(uint64_t i = 0; i < 2 * k2 - 1; i++) {
             out_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
         }
 
@@ -540,28 +541,28 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         if(s == 1) {
             r = transcript_hash.get_challenge();
-            Langrange::evaluate_bases(k, r, eval_base);
+            Langrange::evaluate_bases(k2, r, eval_base);
             
-            for(uint64_t i = 0; i < k; i++) {
+            for(uint64_t i = 0; i < k2; i++) {
                 final_input += eval_base[i] * input[i][0];
             }
-            Langrange::evaluate_bases(2 * k - 1, r, eval_base_2k);
+            Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
 
-            final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k - 1));
+            final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
             break;
         }
 
-        Langrange::evaluate_bases(k, r, eval_base);
+        Langrange::evaluate_bases(k2, r, eval_base);
         s0 = s;
-        s = (s - 1) / k + 1;
-        for(uint64_t i = 0; i < k; i++) {
+        s = (s - 1) / k2 + 1;
+        for(uint64_t i = 0; i < k2; i++) {
             for(uint64_t j = 0; j < s; j++) {
                 index = i * s + j;
                 if (index < s0) {
                     Field temp_result;
                     temp_result = 0;
-                    for(uint64_t l = 0; l < k; l++) {
+                    for(uint64_t l = 0; l < k2; l++) {
                         temp_result += eval_base[l] * input[l][index];
                     }
                     input[i][j] = temp_result;
@@ -609,18 +610,20 @@ bool Malicious3PCProtocol<_T>::_verify(
     int node_id,
     Field** masks_ss,
     uint64_t batch_size, 
-    uint64_t k, 
     Field sid,
     uint64_t prover_ID,
     uint64_t party_ID,
     PRNG prng
 ) {
-    // cout << "in arith_verify..." << endl;
+    // cout << "in _verify..." << endl;
+    uint64_t k = OnlineOptions::singleton.k_size;
+    uint64_t k2 = OnlineOptions::singleton.k2_size;
     
     uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t len = log(2 * T) / log(k) + 1;
+    uint64_t s = (T - 1) / k + 1;
+    uint64_t len = log(2 * s) / log(k2) + 2;
     
-    VerMsg self_vermsg = _gen_vermsg(proof, node_id, masks_ss, batch_size, k, sid, prover_ID, party_ID, prng);
+    VerMsg self_vermsg = _gen_vermsg(proof, node_id, masks_ss, batch_size, sid, prover_ID, party_ID, prng);
 
     Field b;
 
