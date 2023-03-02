@@ -121,6 +121,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         }
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute p coeffs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+
     uint16_t cnt = 0;
 
     vector<Field> ss(2 * k - 1);       
@@ -154,14 +159,14 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t index = 0;
     cur_k_blocks = 0;
 
-    Field* block_input_left1 = new Field[k];
-    Field* block_input_left2 = new Field[k];
-    Field* block_input_left3 = new Field[k];
-    Field* block_input_left4 = new Field[k];
-    Field* block_input_right1 = new Field[k];
-    Field* block_input_right2 = new Field[k];
-    Field* block_input_right3 = new Field[k];
-    Field* block_input_right4 = new Field[k];
+    // Field* block_input_left1 = new Field[k];
+    // Field* block_input_left2 = new Field[k];
+    // Field* block_input_left3 = new Field[k];
+    // Field* block_input_left4 = new Field[k];
+    // Field* block_input_right1 = new Field[k];
+    // Field* block_input_right2 = new Field[k];
+    // Field* block_input_right3 = new Field[k];
+    // Field* block_input_right4 = new Field[k];
 
     for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
@@ -179,42 +184,75 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     long temp_e = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
                 
                     bool e = (temp_e >> l) & 1;
-                    bool t1 = e ? neg_one : 1;
-                    bool t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? neg_one : 1;
+                    Field t1 = e ? Mersenne::neg(eval_base[i]) : eval_base[i];
+                    Field t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? Mersenne::neg(eval_base[i]) : eval_base[i];
 
                     bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
                     bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
                     bool x_second = (k_share_tuple_blocks[i].input1.first >> l) & 1;
                     bool y_second = (k_share_tuple_blocks[i].input2.first >> l) & 1;
 
-                    block_input_left1[i] = (x_first & y_first) ? (e ? 2 : neg_two) : 0;
-                    block_input_left2[i] = y_first ? t1 : 0;
-                    block_input_left3[i] = x_first ? t1 : 0;
-                    block_input_left4[i] = e ? two_inverse : neg_two_inverse;
+                    input_left[row][col] += (x_first & y_first) ? ((e ? 2 : neg_two) * eval_base[i]) : 0;
+                    input_left[row][col + 1] += y_first ? t1 : 0;
+                    input_left[row][col + 2] += x_first ? t1 : 0;
+                    input_left[row][col + 3] += (e ? two_inverse : neg_two_inverse) * eval_base[i];
                     
-                    block_input_right1[i] = (y_second & x_second) ? t2 : 0;
-                    block_input_right2[i] = x_second ? t2 : 0;
-                    block_input_right3[i] = y_second ? t2 : 0;
-                    block_input_right4[i] = t2;
-                
+                    input_right[row][col] += (y_second & x_second) ? t2 : 0;
+                    input_right[i][col + 1] += x_second ? t2 : 0;
+                    input_right[i][col + 2] += y_second ? t2 : 0;
+                    input_right[i][col + 3] += t2;
                 }
-                input_left[row][col] = Mersenne::inner_product(block_input_left1, eval_base, k);
-                input_left[row][col + 1] = Mersenne::inner_product(block_input_left2, eval_base, k);
-                input_left[row][col + 2] = Mersenne::inner_product(block_input_left3, eval_base, k);
-                input_left[row][col + 3] = Mersenne::inner_product(block_input_left4, eval_base, k);
 
-                input_right[row][col] = Mersenne::inner_product(block_input_right1, eval_base, k);
-                input_right[row][col + 1] = Mersenne::inner_product(block_input_right2, eval_base, k);
-                input_right[row][col + 2] = Mersenne::inner_product(block_input_right3, eval_base, k);
-                input_right[row][col + 3] = Mersenne::inner_product(block_input_right4, eval_base, k);
+                input_left[row][col] = Mersenne::modp(input_left[row][col]);
+                input_left[row][col + 1] = Mersenne::modp(input_left[row][col + 1]);
+                input_left[row][col + 2] = Mersenne::modp(input_left[row][col + 2]);
+                input_left[row][col + 3] = Mersenne::modp(input_left[row][col + 3]);
+                    
+                input_right[row][col] = Mersenne::modp(input_right[row][col]);
+                input_right[row][col + 1] = Mersenne::modp(input_right[row][col + 1]);
+                input_right[row][col + 2] = Mersenne::modp(input_right[row][col + 2]);
+                input_right[row][col + 3] = Mersenne::modp(input_right[row][col + 3]);
+
+                // for(uint64_t i = 0; i < k; i++) {
+                //     long temp_e = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
+                
+                //     bool e = (temp_e >> l) & 1;
+                //     bool t1 = e ? neg_one : 1;
+                //     bool t2 = (((k_share_tuple_blocks[i].rho.first >> l) & 1) & 1) ? neg_one : 1;
+
+                //     bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
+                //     bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                //     bool x_second = (k_share_tuple_blocks[i].input1.first >> l) & 1;
+                //     bool y_second = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+
+                //     block_input_left1[i] = (x_first & y_first) ? (e ? 2 : neg_two) : 0;
+                //     block_input_left2[i] = y_first ? t1 : 0;
+                //     block_input_left3[i] = x_first ? t1 : 0;
+                //     block_input_left4[i] = e ? two_inverse : neg_two_inverse;
+                    
+                //     block_input_right1[i] = (y_second & x_second) ? t2 : 0;
+                //     block_input_right2[i] = x_second ? t2 : 0;
+                //     block_input_right3[i] = y_second ? t2 : 0;
+                //     block_input_right4[i] = t2;
+                
+                // }
+                // input_left[row][col] = Mersenne::inner_product(block_input_left1, eval_base, k);
+                // input_left[row][col + 1] = Mersenne::inner_product(block_input_left2, eval_base, k);
+                // input_left[row][col + 2] = Mersenne::inner_product(block_input_left3, eval_base, k);
+                // input_left[row][col + 3] = Mersenne::inner_product(block_input_left4, eval_base, k);
+
+                // input_right[row][col] = Mersenne::inner_product(block_input_right1, eval_base, k);
+                // input_right[row][col + 1] = Mersenne::inner_product(block_input_right2, eval_base, k);
+                // input_right[row][col + 2] = Mersenne::inner_product(block_input_right3, eval_base, k);
+                // input_right[row][col + 3] = Mersenne::inner_product(block_input_right4, eval_base, k);
             }
             index += 4;
         }
         cur_k_blocks += k;
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    cout << "First round uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
     start = std::chrono::high_resolution_clock::now();
 
@@ -427,11 +465,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         input[i] = new Field[s];
     }
 
-    Field* block_input1 = new Field[k];
-    Field* block_input2 = new Field[k];
-    Field* block_input3 = new Field[k];
-    Field* block_input4 = new Field[k];
-
     if (prev_party) {
         for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
@@ -446,21 +479,21 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 else {
                     for(uint64_t i = 0; i < k; i++) {
                     
-                        bool t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? neg_one : 1;
+                        Field t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? Mersenne::neg(eval_base[i]) : eval_base[i];
 
                         bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
                         bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
 
-                        block_input1[i] = (x_first & y_first) ? t2 : 0;
-                        block_input2[i] = x_first ? t2 : 0;
-                        block_input3[i] = y_first ? t2 : 0;
-                        block_input4[i] = t2;
+                        input[row][col] += (x_first & y_first) ? t2 : 0;
+                        input[i][col + 1] += x_first ? t2 : 0;
+                        input[i][col + 2] += y_first ? t2 : 0;
+                        input[i][col + 3] += t2;
                     }
                 
-                    input[row][col] = Mersenne::inner_product(block_input1, eval_base, k);
-                    input[row][col + 1] = Mersenne::inner_product(block_input2, eval_base, k);
-                    input[row][col + 2] = Mersenne::inner_product(block_input3, eval_base, k);
-                    input[row][col + 3] = Mersenne::inner_product(block_input4, eval_base, k);
+                    input[row][col] = Mersenne::modp(input[row][col]);
+                    input[row][col + 1] = Mersenne::modp(input[row][col + 1]);
+                    input[row][col + 2] = Mersenne::modp(input[row][col + 2]);
+                    input[row][col + 3] = Mersenne::modp(input[row][col + 3]);
                 }
                 index += 4;
             }
@@ -480,24 +513,25 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 } 
                 else {
                     for(uint64_t i = 0; i < k; i++) {
-                        long temp_e = k_share_tuple_blocks[i].result.second ^ (k_share_tuple_blocks[i].result.second & k_share_tuple_blocks[i].input2.second) ^ k_share_tuple_blocks[i].rho.second;
                     
+                        long temp_e = k_share_tuple_blocks[i].result.second ^ (k_share_tuple_blocks[i].result.second & k_share_tuple_blocks[i].input2.second) ^ k_share_tuple_blocks[i].rho.second;
                         bool e = (temp_e >> l) & 1;
-                        bool t1 = e ? neg_one : 1;
+                        Field t1 = e ? Mersenne::neg(eval_base[i]) : eval_base[i];
 
                         bool x_second = (k_share_tuple_blocks[i].input1.second >> l) & 1;
                         bool y_second = (k_share_tuple_blocks[i].input2.second >> l) & 1;
 
-                        block_input1[i] = (x_second & y_second) ? (e ? 2 : neg_two) : 0;
-                        block_input2[i] = y_second ? t1 : 0;
-                        block_input3[i] = x_second ? t1 : 0;
-                        block_input4[i] = e ? two_inverse : neg_two_inverse;
+                        input[row][col] += (x_second & y_second) ? ((e ? 2 : neg_two) * eval_base[i]) : 0;
+                        input[row][col + 1] += y_second ? t1 : 0;
+                        input[row][col + 2] += x_second ? t1 : 0;
+                        input[row][col + 3] += (e ? two_inverse : neg_two_inverse) * eval_base[i];
+                   
                     }
                 
-                    input[row][col] = Mersenne::inner_product(block_input1, eval_base, k);
-                    input[row][col + 1] = Mersenne::inner_product(block_input2, eval_base, k);
-                    input[row][col + 2] = Mersenne::inner_product(block_input3, eval_base, k);
-                    input[row][col + 3] = Mersenne::inner_product(block_input4, eval_base, k);
+                    input[row][col] = Mersenne::modp(input[row][col]);
+                    input[row][col + 1] = Mersenne::modp(input[row][col + 1]);
+                    input[row][col + 2] = Mersenne::modp(input[row][col + 2]);
+                    input[row][col + 3] = Mersenne::modp(input[row][col + 3]);
                 }
                 index += 4;
             }
