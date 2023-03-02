@@ -88,7 +88,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     // cout  << "continue, i=j " << j << endl;
                     continue;
                 }
-                // cout  << "cp 1.6 " << endl;
                 ShareTupleBlock col_tuple_block = k_share_tuple_blocks[j];
 
                 long this_value_block = 0;
@@ -104,10 +103,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 Field sum = (this_value_block >> 32) + (this_value_block & 0x00000000FFFFFFFF);
                 eval_result[i][j] = Mersenne::add(eval_result[i][j], sum);
             }
-            // cout  << "cp 1.9" << endl;
         }
         cur_k_blocks += k;
-        // cout  << "cp 1.95 " << endl;
     }
 
     for(uint64_t i = 0; i < k; i++) {
@@ -157,62 +154,60 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t index = 0;
     cur_k_blocks = 0;
 
+    Field* block_input_left1 = new Field[k];
+    Field* block_input_left2 = new Field[k];
+    Field* block_input_left3 = new Field[k];
+    Field* block_input_left4 = new Field[k];
+    Field* block_input_right1 = new Field[k];
+    Field* block_input_right2 = new Field[k];
+    Field* block_input_right3 = new Field[k];
+    Field* block_input_right4 = new Field[k];
+
     for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
         memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
-        
-        Field* block_input_left1 = new Field[k];
-        Field* block_input_left2 = new Field[k];
-        Field* block_input_left3 = new Field[k];
-        Field* block_input_left4 = new Field[k];
-        Field* block_input_right1 = new Field[k];
-        Field* block_input_right2 = new Field[k];
-        Field* block_input_right3 = new Field[k];
-        Field* block_input_right4 = new Field[k];
 
         for(uint64_t i = 0; i < k; i++) {
             long temp_e = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
             for (int l = 0; l < BLOCK_SIZE; l++) {
-                bool e = (temp_e >> l) & 1;
-                bool t1 = e ? neg_one : 1;
-                bool t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? neg_one : 1;
+                int row = index / s;
+                int col = index % s;
+                if (index >= s0) {
+                    input_left[row][col] = input_left[row][col + 1] = input_left[row][col + 2] = input_left[row][col + 3] = 0;
+                    input_right[row][col] = input_right[row][col + 1] = input_right[row][col + 2] = input_right[row][col + 3] = 0;
+                } 
+                else {
+                    bool e = (temp_e >> l) & 1;
+                    bool t1 = e ? neg_one : 1;
+                    bool t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? neg_one : 1;
 
-                bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
-                bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
-                bool x_second = (k_share_tuple_blocks[i].input1.first >> l) & 1;
-                bool y_second = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                    bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
+                    bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                    bool x_second = (k_share_tuple_blocks[i].input1.first >> l) & 1;
+                    bool y_second = (k_share_tuple_blocks[i].input2.first >> l) & 1;
 
-                block_input_left1[i] = (x_first & y_first) ? (e ? 2 : neg_two) : 0;
-                block_input_left2[i] = y_first ? t1 : 0;
-                block_input_left3[i] = x_first ? t1 : 0;
-                block_input_left4[i] = e ? two_inverse : neg_two_inverse;
-                
-                block_input_right1[i] = (y_second & x_second) ? t2 : 0;
-                block_input_right2[i] = x_second ? t2 : 0;
-                block_input_right3[i] = y_second ? t2 : 0;
-                block_input_right4[i] = t2;
+                    block_input_left1[i] = (x_first & y_first) ? (e ? 2 : neg_two) : 0;
+                    block_input_left2[i] = y_first ? t1 : 0;
+                    block_input_left3[i] = x_first ? t1 : 0;
+                    block_input_left4[i] = e ? two_inverse : neg_two_inverse;
+                    
+                    block_input_right1[i] = (y_second & x_second) ? t2 : 0;
+                    block_input_right2[i] = x_second ? t2 : 0;
+                    block_input_right3[i] = y_second ? t2 : 0;
+                    block_input_right4[i] = t2;
+                    
+                    input_left[row][col] = Mersenne::inner_product(block_input_left1, eval_base, k);
+                    input_left[row][col + 1] = Mersenne::inner_product(block_input_left2, eval_base, k);
+                    input_left[row][col + 2] = Mersenne::inner_product(block_input_left3, eval_base, k);
+                    input_left[row][col + 3] = Mersenne::inner_product(block_input_left4, eval_base, k);
+
+                    input_right[row][col] = Mersenne::inner_product(block_input_right1, eval_base, k);
+                    input_right[row][col + 1] = Mersenne::inner_product(block_input_right2, eval_base, k);
+                    input_right[row][col + 2] = Mersenne::inner_product(block_input_right3, eval_base, k);
+                    input_right[row][col + 3] = Mersenne::inner_product(block_input_right4, eval_base, k);
+                }
+                index += 4;
             }
-        }
-        
-        for (int l = 0; l < BLOCK_SIZE; l++) {
-            int row = index / s;
-            int col = index % s;
-            if (index >= s0) {
-                input_left[row][col] = input_left[row][col + 1] = input_left[row][col + 2] = input_left[row][col + 3] = 0;
-                input_right[row][col] = input_right[row][col + 1] = input_right[row][col + 2] = input_right[row][col + 3] = 0;
-            } 
-            else {
-                input_left[row][col] = Mersenne::inner_product(block_input_left1, eval_base, k);
-                input_left[row][col + 1] = Mersenne::inner_product(block_input_left2, eval_base, k);
-                input_left[row][col + 2] = Mersenne::inner_product(block_input_left3, eval_base, k);
-                input_left[row][col + 3] = Mersenne::inner_product(block_input_left4, eval_base, k);
-
-                input_right[row][col] = Mersenne::inner_product(block_input_right1, eval_base, k);
-                input_right[row][col + 1] = Mersenne::inner_product(block_input_right2, eval_base, k);
-                input_right[row][col + 2] = Mersenne::inner_product(block_input_right3, eval_base, k);
-                input_right[row][col + 3] = Mersenne::inner_product(block_input_right4, eval_base, k);
-            }
-            index += 4;
         }
         cur_k_blocks += k;
     }
@@ -430,43 +425,42 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     for(uint64_t i = 0; i < k; i++) {
         input[i] = new Field[s];
     }
+
+    Field* block_input1 = new Field[k];
+    Field* block_input2 = new Field[k];
+    Field* block_input3 = new Field[k];
+    Field* block_input4 = new Field[k];
+
     if (prev_party) {
         for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
             memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
-            
-            Field* block_input1 = new Field[k];
-            Field* block_input2 = new Field[k];
-            Field* block_input3 = new Field[k];
-            Field* block_input4 = new Field[k];
     
             for(uint64_t i = 0; i < k; i++) {
                 for (int l = 0; l < BLOCK_SIZE; l++) {
-                    bool t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? neg_one : 1;
+                    int row = index / s;
+                    int col = index % s;
+                    if (index >= s0) {
+                        input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
+                    }
+                    else {
+                        bool t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? neg_one : 1;
 
-                    bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
-                    bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                        bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
+                        bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
 
-                    block_input1[i] = (x_first & y_first) ? t2 : 0;
-                    block_input2[i] = x_first ? t2 : 0;
-                    block_input3[i] = y_first ? t2 : 0;
-                    block_input4[i] = t2;
+                        block_input1[i] = (x_first & y_first) ? t2 : 0;
+                        block_input2[i] = x_first ? t2 : 0;
+                        block_input3[i] = y_first ? t2 : 0;
+                        block_input4[i] = t2;
+
+                        input[row][col] = Mersenne::inner_product(block_input1, eval_base, k);
+                        input[row][col + 1] = Mersenne::inner_product(block_input2, eval_base, k);
+                        input[row][col + 2] = Mersenne::inner_product(block_input3, eval_base, k);
+                        input[row][col + 3] = Mersenne::inner_product(block_input4, eval_base, k);
+                    }
+                    index += 4;
                 }
-            }
-            
-            for (int l = 0; l < BLOCK_SIZE; l++) {
-                int row = index / s;
-                int col = index % s;
-                if (index >= s0) {
-                    input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
-                } 
-                else {
-                    input[row][col] = Mersenne::inner_product(block_input1, eval_base, k);
-                    input[row][col + 1] = Mersenne::inner_product(block_input2, eval_base, k);
-                    input[row][col + 2] = Mersenne::inner_product(block_input3, eval_base, k);
-                    input[row][col + 3] = Mersenne::inner_product(block_input4, eval_base, k);
-                }
-                index += 4;
             }
             cur_k_blocks += k;
         }    
@@ -475,41 +469,35 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
             memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
-            
-            Field* block_input1 = new Field[k];
-            Field* block_input2 = new Field[k];
-            Field* block_input3 = new Field[k];
-            Field* block_input4 = new Field[k];
 
             for(uint64_t i = 0; i < k; i++) {
-                long temp_e = k_share_tuple_blocks[i].result.second ^ (k_share_tuple_blocks[i].result.second & k_share_tuple_blocks[i].input2.second) ^ k_share_tuple_blocks[i].rho.second;
                 for (int l = 0; l < BLOCK_SIZE; l++) {
-                    bool e = (temp_e >> l) & 1;
-                    bool t1 = e ? neg_one : 1;
+                    int row = index / s;
+                    int col = index % s;
+                    if (index >= s0) {
+                        input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
+                    } 
+                    else {
+                        long temp_e = k_share_tuple_blocks[i].result.second ^ (k_share_tuple_blocks[i].result.second & k_share_tuple_blocks[i].input2.second) ^ k_share_tuple_blocks[i].rho.second;
+                    
+                        bool e = (temp_e >> l) & 1;
+                        bool t1 = e ? neg_one : 1;
 
-                    bool x_second = (k_share_tuple_blocks[i].input1.second >> l) & 1;
-                    bool y_second = (k_share_tuple_blocks[i].input2.second >> l) & 1;
+                        bool x_second = (k_share_tuple_blocks[i].input1.second >> l) & 1;
+                        bool y_second = (k_share_tuple_blocks[i].input2.second >> l) & 1;
 
-                    block_input1[i] = (x_second & y_second) ? (e ? 2 : neg_two) : 0;
-                    block_input2[i] = y_second ? t1 : 0;
-                    block_input3[i] = x_second ? t1 : 0;
-                    block_input4[i] = e ? two_inverse : neg_two_inverse;
+                        block_input1[i] = (x_second & y_second) ? (e ? 2 : neg_two) : 0;
+                        block_input2[i] = y_second ? t1 : 0;
+                        block_input3[i] = x_second ? t1 : 0;
+                        block_input4[i] = e ? two_inverse : neg_two_inverse;
+               
+                        input[row][col] = Mersenne::inner_product(block_input1, eval_base, k);
+                        input[row][col + 1] = Mersenne::inner_product(block_input2, eval_base, k);
+                        input[row][col + 2] = Mersenne::inner_product(block_input3, eval_base, k);
+                        input[row][col + 3] = Mersenne::inner_product(block_input4, eval_base, k);
+                    }
+                    index += 4;
                 }
-            }
-            
-            for (int l = 0; l < BLOCK_SIZE; l++) {
-                int row = index / s;
-                int col = index % s;
-                if (index >= s0) {
-                    input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
-                } 
-                else {
-                    input[row][col] = Mersenne::inner_product(block_input1, eval_base, k);
-                    input[row][col + 1] = Mersenne::inner_product(block_input2, eval_base, k);
-                    input[row][col + 2] = Mersenne::inner_product(block_input3, eval_base, k);
-                    input[row][col + 3] = Mersenne::inner_product(block_input4, eval_base, k);
-                }
-                index += 4;
             }
             cur_k_blocks += k;
         }    
