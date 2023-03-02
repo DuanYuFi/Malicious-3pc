@@ -187,7 +187,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     bool x_second = (k_share_tuple_blocks[i].input1.first >> l) & 1;
                     bool y_second = (k_share_tuple_blocks[i].input2.first >> l) & 1;
 
-                    block_input_left1[i][] = (x_first & y_first) ? (e ? 2 : neg_two) : 0;
+                    block_input_left1[i] = (x_first & y_first) ? (e ? 2 : neg_two) : 0;
                     block_input_left2[i] = y_first ? t1 : 0;
                     block_input_left3[i] = x_first ? t1 : 0;
                     block_input_left4[i] = e ? two_inverse : neg_two_inverse;
