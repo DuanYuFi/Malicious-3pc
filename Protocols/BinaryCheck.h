@@ -3,12 +3,15 @@
 
 #include <vector>
 #include "Tools/Hash.h"
+#include "Math/mersenne.hpp"
 
 using namespace std;
 
-typedef unsigned __int128 uint128_t;
+#define BLOCK_SIZE 64
 
-// clock_t begin_time, finish_time;
+typedef unsigned __int128 uint128_t;
+typedef uint64_t Field;
+
 class LocalHash {
     octetStream buffer;
 public:
@@ -18,18 +21,43 @@ public:
         buffer.store(data);
     }
 
-    uint64_t final() {
+    Field final() {
         Hash hash;
         hash.reset();
         hash.update(buffer);
-        uint64_t result;
+        Field result;
         hash.final().get(result);
         return result;
+    }
+
+    void append_one_msg(Field msg) {
+        update(msg);
+    }
+
+    void append_msges(vector<Field> msges) {
+        for(Field msg: msges) {
+            update(msg);
+        }
+    }
+
+    Field get_challenge() {
+        Field r = final();
+        return r;
     }
 };
 
 struct DZKProof {
-    vector<vector<uint64_t>> p_evals_masked;
+    vector<vector<Field>> p_evals_masked;
+
+    void print_out() {
+        cout << "proof: ";
+        for(auto row: p_evals_masked) {
+            for(auto x: row) {
+                cout << x << " ";
+            }
+        }
+        cout << endl;
+    }
 
     size_t get_size() {
         size_t size = 0;
@@ -39,7 +67,7 @@ struct DZKProof {
         return size;
     }
 
-    uint64_t get_hash() {
+    Field get_hash() {
         LocalHash hash;
         for (auto p_eval : p_evals_masked) {
             for (auto each : p_eval) {
@@ -53,7 +81,7 @@ struct DZKProof {
         os.store(p_evals_masked.size());
         os.store(p_evals_masked[0].size());
         for (auto each: p_evals_masked) {
-            for (uint64_t each_eval: each) {
+            for (auto each_eval: each) {
                 os.store(each_eval);
             }
         }
@@ -73,49 +101,23 @@ struct DZKProof {
             }
         }
     }
-
-    void print_out() {
-        cout << "proof: ";
-        for(auto row: p_evals_masked) {
-            for(auto x: row) {
-                cout << x << " ";
-            }
-        }
-        cout << endl;
-    }
 };
 
 struct VerMsg {
-    // vector<uint64_t> p_eval_ksum_ss;
-    // vector<uint64_t> p_eval_r_ss;
-    vector<uint64_t> b_ss;
-    uint64_t final_input;
-    uint64_t final_result_ss;
+    vector<Field> b_ss;
+    Field final_input;
+    Field final_result_ss;
 
     VerMsg() {}
-    // VerMsg(vector<uint64_t> p_eval_ksum_ss, vector<uint64_t> p_eval_r_ss, uint64_t final_input, uint64_t final_result_ss) {
-    VerMsg(vector<uint64_t> b_ss, uint64_t final_input, uint64_t final_result_ss) {
-        // this->p_eval_ksum_ss = p_eval_ksum_ss;
-        // this->p_eval_r_ss = p_eval_r_ss;
+    VerMsg(vector<Field> b_ss, Field final_input, Field final_result_ss) {
         this->b_ss = b_ss;
         this->final_input = final_input;
         this->final_result_ss = final_result_ss;
     }
 
-    size_t get_size() {
-        // return p_eval_ksum_ss.size() + p_eval_r_ss.size() + 2;
-        return b_ss.size() + 2;
-    }
-
-    uint64_t get_hash() {
+    Field get_hash() {
         LocalHash hash;
-        // for (uint64_t each: p_eval_ksum_ss) {
-        //     hash.update(each);
-        // }
-        // for (uint64_t each: p_eval_r_ss) {
-        //     hash.update(each);
-        // }
-        for (uint64_t each: b_ss) {
+        for (Field each: b_ss) {
             hash.update(each);
         }
         hash.update(final_input);
@@ -124,14 +126,6 @@ struct VerMsg {
     }
 
     void pack(octetStream &os) {
-        // os.store(p_eval_ksum_ss.size());
-        // for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
-        //     os.store(p_eval_ksum_ss[i]);
-        // }
-        // os.store(p_eval_r_ss.size());
-        // for(uint64_t i = 0; i < p_eval_r_ss.size(); i++) {
-        //     os.store(p_eval_r_ss[i]);
-        // }
         os.store(b_ss.size());
         for(uint64_t i = 0; i < b_ss.size(); i++) {
             os.store(b_ss[i]);
@@ -142,16 +136,6 @@ struct VerMsg {
 
     void unpack(octetStream &os) {
         uint64_t size = 0;
-        // os.get(size);
-        // p_eval_ksum_ss.resize(size);
-        // for(uint64_t i = 0; i < size; i++) {
-        //     os.get(p_eval_ksum_ss[i]);
-        // }
-        // os.get(size);
-        // p_eval_r_ss.resize(size);
-        // for(uint64_t i = 0; i < size; i++) {
-        //     os.get(p_eval_r_ss[i]);
-        // }
         os.get(size);
         b_ss.resize(size);
         for(uint64_t i = 0; i < size; i++) {
@@ -162,12 +146,55 @@ struct VerMsg {
     }
 };
 
-uint64_t get_rand();
-uint64_t** get_bases(uint64_t n);
-uint64_t* evaluate_bases(uint64_t n, uint64_t r);
+class Langrange {
+public:
+    static void get_bases(uint64_t n, Field** result);
+    static void evaluate_bases(uint64_t n, Field r, Field* result);
+};
 
-void append_one_msg(LocalHash &hash, uint64_t msg);
-void append_msges(LocalHash &hash, vector<uint64_t> msges);
-uint64_t get_challenge(LocalHash &hash);
+inline void Langrange::get_bases(uint64_t n, Field** result) {
+    for (uint64_t i = 0; i < n - 1; i++) {
+        for(uint64_t j = 0; j < n; j++) {
+            result[i][j] = 0;
+            for(uint64_t l = 0; l < n; l++) {
+                if (l != j) {
+                    Field denominator, numerator;
+                    if (j > l) {
+                        denominator = j - l;
+                    }
+                    else {
+                        denominator = Mersenne::neg(l - j);
+                    }
+                    numerator = i + n - l;
+                    result[i][j] = Mersenne::mul(result[i][j], Mersenne::mul(Mersenne::inverse(denominator), numerator));
+                }
+            }
+        }
+    }
+}
+
+inline void Langrange::evaluate_bases(uint64_t n, Field r, Field* result) {
+    for(uint64_t i = 0; i < n; i++) {
+        result[i] = 0;
+        for(uint64_t j = 0; j < n; j++) {
+            if (j != i) {
+                Field denominator, numerator; 
+                if (i > j) { 
+                    denominator = i - j;
+                } 
+                else { 
+                    denominator = Mersenne::neg(j - i);
+                }
+                if (r > j) { 
+                    numerator = r - j; 
+                } 
+                else { 
+                    numerator = Mersenne::neg(j - r);
+                }
+                result[i] = Mersenne::mul(result[i], Mersenne::mul(Mersenne::inverse(denominator), numerator));
+            }
+        }
+    }
+}
 
 #endif

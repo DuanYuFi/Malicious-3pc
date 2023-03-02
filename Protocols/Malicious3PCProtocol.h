@@ -4,44 +4,29 @@
 #include "Replicated.h"
 #include "BinaryCheck.h"
 #include "Processor/Data_Files.h"
-#include "Math/mersenne.hpp"
 
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <fstream>
-
 #include <chrono>
 
-#define DO_CHECK
+#define USE_THREAD
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
 class Player;
 
-
 struct StatusData {
     DZKProof proof;
     int node_id;
-    uint64_t **mask_ss_prev, **mask_ss_next;
+    Field **mask_ss_prev, **mask_ss_next;
     int sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, int node_id, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
+    StatusData(DZKProof proof, int node_id, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
         proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
-};
-
-template <typename T1, typename T2>
-struct MyPair {
-public:
-    T1 first;
-    T2 second;
-
-    MyPair(): first(0), second(0) {}
-    MyPair(T1 a, T2 b): first(a), second(b) {}
 };
 
 class WaitSize {
@@ -106,15 +91,21 @@ public:
 
 };
 
-typedef MyPair<bool, bool> ShareType;
+template <typename T1, typename T2>
+struct MyPair {
+public:
+    T1 first;
+    T2 second;
 
-struct ShareTuple {
-    ShareType input1, input2, result, rho;
+    MyPair(): first(0), second(0) {}
+    MyPair(T1 a, T2 b): first(a), second(b) {}
 };
 
+typedef MyPair<long, long> ShareTypeBlock;
 
-// #define THREAD_NUM 5
-// #define MAX_STATUS 10
+struct ShareTupleBlock {
+    ShareTypeBlock input1, input2, result, rho;
+};
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -124,10 +115,15 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    ShareTuple *share_tuples;
+    ShareTupleBlock *share_tuple_blocks;
     size_t idx_input, idx_rho, idx_result;
-    size_t share_tuple_size;
+    size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
+
+    const Field two_inverse = Mersenne::inverse(2);
+    const Field neg_one = Mersenne::PR - 1;
+    const Field neg_two = Mersenne::PR - 2;
+    const Field neg_two_inverse = Mersenne::neg(two_inverse);
 
     StatusData *status_queue;
     vector<typename T::open_type> opened;
@@ -141,13 +137,9 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     WaitQueue<int> cv;
 
-    size_t local_counter, status_counter, status_pointer, round_counter, verify_counter;
+    size_t local_counter, status_counter, status_pointer;
     WaitSize wait_size;
-
-    uint64_t two_inverse = Mersenne::inverse(2);
-
-    // const static size_t MAX_STATUS = 100;
-    // const static short THREAD_NUM = 4;
+    Field sid;
 
     vector<std::thread> check_threads, verify_threads;
 
@@ -164,14 +156,11 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, false_type);
 
-    // const static int BATCH_SIZE = OnlineOptions::singleton.batch_size;
-
 public:
 
     static const bool uses_triples = false;
 
     array<PRNG, 2> shared_prngs;
-    // array<PRNG, 2> *check_prngs;
     vector<array<PRNG, 2> > check_prngs;
 
     PRNG global_prng;
@@ -182,8 +171,7 @@ public:
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
 
-#ifdef DO_CHECK
-    for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             cv.push(-1);
         }
         
@@ -203,25 +191,26 @@ public:
         }
         
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+            // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             verify_queue.push(0);
         }
 
+        cout << "Destroying threads." << endl;
         for (auto &each_thread: verify_threads) {
             each_thread.join();
         }
-#endif
 
-        // cout << "Binary mul rounds: " << this->rounds << endl;
-        // cout << "Verified times: " << this->verify_counter << endl;
-        // cout << "Total bit numbers: " << this->bit_counter << endl;
-        // cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
+        cout << "Destroyed." << endl;
+
+        // this->print_debug_info("Binary Part");
+        cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     
 
     static void assign(T& share, const typename T::clear& value, int my_num)
     {
         assert(T::vector_length == 2);
-        share.assign_zero();
+        share = 0;
         if (my_num < 2)
             share[my_num] = value;
     }
@@ -253,46 +242,48 @@ public:
         // return {P, shared_prngs, check_prngs};
     }
 
+    DZKProof _prove(
+        int node_id,
+        Field** masks,
+        uint64_t batch_size, 
+        uint64_t k, 
+        Field sid
+    );
+
+    VerMsg _gen_vermsg(
+        DZKProof proof, 
+        int node_id,
+        Field** masks_ss,
+        uint64_t batch_size, 
+        uint64_t k, 
+        Field sid,
+        uint64_t prover_ID,
+        uint64_t party_ID
+    );
+
+    bool _verify(
+        DZKProof proof, 
+        VerMsg other_vermsg, 
+        int node_id,
+        Field** masks_ss,
+        uint64_t batch_size, 
+        uint64_t k, 
+        Field sid,
+        uint64_t prover_ID,
+        uint64_t party_ID
+    );
+
     void check();
     void finalize_check();
     void Check_one(int node_id, int size = -1);
     void verify();
-    void thread_handler();
+    void thread_handler(int tid);
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 
     void verify_part1(int prev_number, int my_number);
     void verify_part2(int next_number, int my_number);
-    void verify_thread_handler();
-
-    DZKProof prove(
-        int node_id,
-        uint64_t batch_size, 
-        uint64_t k, 
-        uint64_t** masks
-    );
-
-    VerMsg gen_vermsg(
-        DZKProof proof, 
-        int node_id,
-        uint64_t batch_size, 
-        uint64_t k, 
-        uint64_t** masks_ss,
-        uint64_t prover_ID,
-        uint64_t party_ID,
-        bool is_verify = false
-    );
-
-    bool _verify(
-        DZKProof proof, 
-        int node_id,
-        VerMsg other_vermsg, 
-        uint64_t batch_size, 
-        uint64_t k, 
-        uint64_t** masks_ss,
-        uint64_t prover_ID,
-        uint64_t party_ID
-    );
+    void verify_thread_handler(int tid);
 
 };
 
