@@ -25,7 +25,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     // cout << "batch_size: " << T << ", s: " << s << endl;
 
     vector<vector<Field>> p_evals_masked;
-    uint64_t k_max = max(k, k2);
+    uint64_t k_max = k > k2 ? k : k2;
     // Evaluations of polynomial p(X)
     Field* eval_p_poly = new Field[2 * k_max - 1];  
 
@@ -183,35 +183,42 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             int row = index / s;
             int col = index % s;
 
-            // cout << "index: " << index << ", row: " << row << ", col: " << col << ", k: " << k << endl;
+            // cout << "index: " << index << ", row: " << row << ", col: " << col << endl;
 
             if (index >= s0) {
                 // cout << "cp 4" << endl;
-                input_left[row][col] = input_left[row][col + 1] = input_left[row][col + 2] = input_left[row][col + 3] = 0;
-                input_right[row][col] = input_right[row][col + 1] = input_right[row][col + 2] = input_right[row][col + 3] = 0;
+                if ((uint64_t)row == k2) {
+                    break;
+                }
+                else {
+                    input_left[row][col] = input_left[row][col + 1] = input_left[row][col + 2] = input_left[row][col + 3] = 0;
+                    input_right[row][col] = input_right[row][col + 1] = input_right[row][col + 2] = input_right[row][col + 3] = 0;
+                }
             } 
             else {
                 for(uint64_t i = 0; i < k; i++) {
                     long temp_e = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
+                    
+                    bool a = (k_share_tuple_blocks[i].input1.first >> l) & 1;
+                    bool c = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                    
+                    bool b = (k_share_tuple_blocks[i].input2.second >> l) & 1;
+                    bool d = (k_share_tuple_blocks[i].input1.second >> l) & 1;
+
                     bool e = (temp_e >> l) & 1;
+
                     Field t1 = e ? Mersenne::neg(eval_base[i]) : eval_base[i];
                     Field t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? Mersenne::neg(eval_base[i]) : eval_base[i];
 
-                    bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
-                    bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
-                    bool x_second = (k_share_tuple_blocks[i].input1.first >> l) & 1;
-                    bool y_second = (k_share_tuple_blocks[i].input2.first >> l) & 1;
-
-                    input_left[row][col] += (x_first & y_first) ? ((e ? 2 : neg_two) * eval_base[i]) : 0;
-                    input_left[row][col + 1] += y_first ? t1 : 0;
-                    input_left[row][col + 2] += x_first ? t1 : 0;
+                    input_left[row][col] += (a & c) ? ((e ? 2 : neg_two) * eval_base[i]) : 0;
+                    input_left[row][col + 1] += c ? t1 : 0;
+                    input_left[row][col + 2] += a ? t1 : 0;
                     input_left[row][col + 3] += (e ? two_inverse : neg_two_inverse) * eval_base[i];
                     
-                    input_right[row][col] += (y_second & x_second) ? t2 : 0;
-                    input_right[row][col + 1] += x_second ? t2 : 0;
-                    input_right[row][col + 2] += y_second ? t2 : 0;
+                    input_right[row][col] += (b & d) ? t2 : 0;
+                    input_right[row][col + 1] += d ? t2 : 0;
+                    input_right[row][col + 2] += b ? t2 : 0;
                     input_right[row][col + 3] += t2;
-
                 }
 
                 input_left[row][col] = Mersenne::modp(input_left[row][col]);
@@ -362,7 +369,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     uint64_t k = OnlineOptions::singleton.k_size;
     uint64_t k2 = OnlineOptions::singleton.k2_size;
 
-    uint64_t k_max = max(k, k2);
+    uint64_t k_max = k > k2 ? k : k2;
 
     Field* eval_base = new Field[k_max];
     Field* eval_base_2k = new Field[2 * k_max - 1];    
@@ -440,19 +447,22 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 int row = index / s;
                 int col = index % s;
                 if (index >= s0) {
-                    input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
+                    if ((uint64_t)row == k2) 
+                        break;
+                    else
+                        input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
                 } 
                 else {
                     for(uint64_t i = 0; i < k; i++) {
                     
                         Field t2 = ((k_share_tuple_blocks[i].rho.first >> l) & 1) ? Mersenne::neg(eval_base[i]) : eval_base[i];
 
-                        bool x_first = (k_share_tuple_blocks[i].input1.first >> l) & 1;
-                        bool y_first = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                        bool b = (k_share_tuple_blocks[i].input2.first >> l) & 1;
+                        bool d = (k_share_tuple_blocks[i].input1.first >> l) & 1;
 
-                        input[row][col] += (x_first & y_first) ? t2 : 0;
-                        input[row][col + 1] += x_first ? t2 : 0;
-                        input[row][col + 2] += y_first ? t2 : 0;
+                        input[row][col] += (b & d) ? t2 : 0;
+                        input[row][col + 1] += d ? t2 : 0;
+                        input[row][col + 2] += b ? t2 : 0;
                         input[row][col + 3] += t2;
                     }
                 
@@ -475,7 +485,10 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 int row = index / s;
                 int col = index % s;
                 if (index >= s0) {
-                    input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
+                    if ((uint64_t)row == k2) 
+                        break;
+                    else
+                        input[row][col] = input[row][col + 1] = input[row][col + 2] = input[row][col + 3] = 0;
                 } 
                 else {
                     for(uint64_t i = 0; i < k; i++) {
@@ -484,12 +497,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         bool e = (temp_e >> l) & 1;
                         Field t1 = e ? Mersenne::neg(eval_base[i]) : eval_base[i];
 
-                        bool x_second = (k_share_tuple_blocks[i].input1.second >> l) & 1;
-                        bool y_second = (k_share_tuple_blocks[i].input2.second >> l) & 1;
+                        bool a = (k_share_tuple_blocks[i].input1.second >> l) & 1;
+                        bool c = (k_share_tuple_blocks[i].input2.second >> l) & 1;
 
-                        input[row][col] += (x_second & y_second) ? ((e ? 2 : neg_two) * eval_base[i]) : 0;
-                        input[row][col + 1] += y_second ? t1 : 0;
-                        input[row][col + 2] += x_second ? t1 : 0;
+                        input[row][col] += (a & c) ? ((e ? 2 : neg_two) * eval_base[i]) : 0;
+                        input[row][col + 1] += c ? t1 : 0;
+                        input[row][col + 2] += a ? t1 : 0;
                         input[row][col + 3] += (e ? two_inverse : neg_two_inverse) * eval_base[i];
                    
                     }
