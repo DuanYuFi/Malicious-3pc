@@ -73,159 +73,163 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         // cout << "block_col_id: " << block_col_id << endl;
         // fetch k tuple_blocks
         memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
-        for(uint64_t i = 0; i < k; i++) { 
+        for(uint64_t i = 0; i < quarter_k; i++) { 
             // cout << "i:" << i << endl;
             // i = 0, ..., 31
             // group_id = 0, ..., 7
-            uint64_t row_group_id =  i / 4;
-            // entry_id = 0, ..., 3
-            uint64_t row_entry_id = i % 4;
-
-            ShareTupleBlock row_block = quarter_k_blocks[row_group_id];
             
-            for(uint64_t j = 0; j < k; j++) {  
+            // uint64_t row_group_id =  i / 4;
+            // entry_id = 0, ..., 3
+            // uint64_t row_entry_id = i % 4;
+
+            ShareTupleBlock row_block = quarter_k_blocks[i];
+            long a = row_block.input1.first;
+            long c = row_block.input2.first;
+            long e = (a & c) ^ row_block.result.first ^ row_block.rho.first;
+            
+            for(uint64_t j = 0; j < quarter_k; j++) {  
                 // cout << "j: " << j << endl;
 
-                uint64_t col_group_id =  j / 4;
-                uint64_t col_entry_id = j % 4;
+                // uint64_t col_group_id =  j / 4;
+                // uint64_t col_entry_id = j % 4;
 
-                if (cur_quarter_k_blocks_id + row_group_id >= total_blocks_num || cur_quarter_k_blocks_id + col_group_id >= total_blocks_num) {
+                if (cur_quarter_k_blocks_id + i >= total_blocks_num || cur_quarter_k_blocks_id + j >= total_blocks_num) {
                     // cout << "continue, > total_blocks_num " << j << endl;
                     continue;
                 }
 
-                ShareTupleBlock col_block = quarter_k_blocks[col_group_id];
-
-                long a = row_block.input1.first;
-                long c = row_block.input2.first;
-                long e = (a & c) ^ row_block.result.first ^ row_block.rho.first;
+                ShareTupleBlock col_block = quarter_k_blocks[j];
                     
                 long b = col_block.input2.second;
                 long d = col_block.input1.second;
                 long f = col_block.rho.second;
 
-                long tmp1, tmp2, tmp3, tmp4;
                 Field sum = 0;
 
-                switch(row_entry_id) {
-                    case 0: {
-                        switch(col_entry_id) {
-                            // g_1 * h_1 = -2abcd(1-2e)(1-2f) = -2abcd + 4abcde + 4abcdf - 8abcdef
-                            case 0:
-                                tmp1 = a & b & c & d;
+                for(uint64_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
+                    for(uint64_t col_entry_id = 0; col_entry_id < 4; col_entry_id++) {
+                    long tmp1 = 0, tmp2, tmp3, tmp4;
+                        switch(row_entry_id) {
+                            case 0: {
+                                switch(col_entry_id) {
+                                    // g_1 * h_1 = -2abcd(1-2e)(1-2f) = -2abcd + 4abcde + 4abcdf - 8abcdef
+                                    case 0:
+                                        tmp1 = a & b & c & d;
+                                        break;
+                                    // g_1 * h_2 = -2acd(1-2e)(1-2f) = -2acd + 4acde + 4acdf - 8acdef
+                                    case 1:
+                                        tmp1 = a & c & d;
+                                        break;
+                                    // g_1 * h_3 = -2abc(1-2e)(1-2f) = -2abc + 4abce + 4abcf - 8abcef
+                                    case 2:
+                                        tmp1 = a & b & c;
+                                        break; 
+                                    // g_1 * h_4 = -2ac(1-2e)(1-2f) = -2ac + 4ace + 4acf - 8acef
+                                    case 3:
+                                        tmp1 = a & c;
+                                        break; 
+                                } 
+                                tmp2 = tmp1 & e;
+                                tmp3 = tmp1 & f;
+                                tmp4 = tmp2 & f;
+                                sum = Mersenne::neg(2 * ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+                                sum += 4 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF));
+                                sum += 4 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF));
+                                sum += Mersenne::neg(8 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
                                 break;
-                            // g_1 * h_2 = -2acd(1-2e)(1-2f) = -2acd + 4acde + 4acdf - 8acdef
-                            case 1:
-                                tmp1 = a & c & d;
-                                break;
-                            // g_1 * h_3 = -2abc(1-2e)(1-2f) = -2abc + 4abce + 4abcf - 8abcef
-                            case 2:
-                                tmp1 = a & b & c;
-                                break; 
-                            // g_1 * h_4 = -2ac(1-2e)(1-2f) = -2ac + 4ace + 4acf - 8acef
-                            case 3:
-                                tmp1 = a & c;
-                                break; 
-                        } 
-                        tmp2 = tmp1 & e;
-                        tmp3 = tmp1 & f;
-                        tmp4 = tmp2 & f;
-                        sum = Mersenne::neg(2 * ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                        sum += 4 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF));
-                        sum += 4 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF));
-                        sum += Mersenne::neg(8 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                        break;
-                    }
+                            }
 
-                    case 1: {
-                        switch(col_entry_id) {
-                            // g_2 * h_1 = bcd(1−2e)(1−2f) = bcd - 2bcde - 2bcdf + 4bcdef
-                            case 0:
-                                tmp1 = b & c & d;
+                            case 1: {
+                                switch(col_entry_id) {
+                                    // g_2 * h_1 = bcd(1−2e)(1−2f) = bcd - 2bcde - 2bcdf + 4bcdef
+                                    case 0:
+                                        tmp1 = b & c & d;
+                                        break;
+                                    // g_2 * h_2 = cd(1−2e)(1−2f) = cd - 2cde - 2cdf + 4cdef
+                                    case 1:
+                                        tmp1 = c & d;
+                                        break; 
+                                    // g_2 * h_3 = bc(1−2e)(1−2f) = bc - 2bce - 2bcf + 4bcef
+                                    case 2:
+                                        tmp1 = b & c;
+                                        break; 
+                                    case 3:
+                                        // g_2 * h_3 = c(1−2e)(1−2f) = c - 2ce - 2cf + 4cef
+                                        tmp1 = c;
+                                        break; 
+                                } 
+                                tmp2 = tmp1 & e;
+                                tmp3 = tmp1 & f;
+                                tmp4 = tmp2 & f;
+                                sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
+                                sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
+                                sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
+                                sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
                                 break;
-                            // g_2 * h_2 = cd(1−2e)(1−2f) = cd - 2cde - 2cdf + 4cdef
-                            case 1:
-                                tmp1 = c & d;
-                                break; 
-                            // g_2 * h_3 = bc(1−2e)(1−2f) = bc - 2bce - 2bcf + 4bcef
-                            case 2:
-                                tmp1 = b & c;
-                                break; 
-                            case 3:
-                                // g_2 * h_3 = c(1−2e)(1−2f) = c - 2ce - 2cf + 4cef
-                                tmp1 = c;
-                                break; 
-                        } 
-                        tmp2 = tmp1 & e;
-                        tmp3 = tmp1 & f;
-                        tmp4 = tmp2 & f;
-                        sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
-                        sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
-                        sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
-                        sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
-                        break;
-                    }
+                            }
 
-                    case 2: {
-                        switch(col_entry_id) {
-                            // g_3 * h_1 = abd(1−2e)(1−2f) = abd - 2abde - 2abdf + 4abdef
-                            case 0:
-                                tmp1 = a & b;
+                            case 2: {
+                                switch(col_entry_id) {
+                                    // g_3 * h_1 = abd(1−2e)(1−2f) = abd - 2abde - 2abdf + 4abdef
+                                    case 0:
+                                        tmp1 = a & b;
+                                        break;
+                                    // g_3 * h_2 = ad(1−2e)(1−2f) = ad - 2ade - 2adf + 4adef
+                                    case 1:
+                                        tmp1 = a & d;
+                                        break; 
+                                    // g_3 * h_3 = ab(1−2e)(1−2f) = ab - 2abe - 2abf + 4abef
+                                    case 2:
+                                        tmp1 = a & b;
+                                        break; 
+                                    // g_3 * h_4 = a(1−2e)(1−2f) = a - 2ae - 2af + 4aef
+                                    case 3:
+                                        tmp1 = a;
+                                        break; 
+                                }
+                                break; 
+                                tmp2 = tmp1 & e;
+                                tmp3 = tmp1 & f;
+                                tmp4 = tmp2 & f;
+                                sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
+                                sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
+                                sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
+                                sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
                                 break;
-                            // g_3 * h_2 = ad(1−2e)(1−2f) = ad - 2ade - 2adf + 4adef
-                            case 1:
-                                tmp1 = a & d;
+                            }
+                                
+                            case 3: {
+                                switch(col_entry_id) {
+                                    // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (-1/2) * bd + bde + bdf - 2bdef
+                                    case 0:
+                                        tmp1 = a & b;
+                                        break;
+                                    // g_4 * h_2 = d(1−2e)(1−2f) * (-1/2) = (-1/2) * d + de + df - 2def
+                                    case 1:
+                                        tmp1 = d;
+                                        break; 
+                                    // g_4 * h_3 = b(1−2e)(1−2f) * (-1/2) = (-1/2) * b + be + bf - 2bef
+                                    case 2:
+                                        tmp1 = a & b;
+                                        break; 
+                                    // g_4 * h_4 = (1−2e)(1−2f) * (-1/2) = (-1/2) + e + f - 2ef
+                                    case 3:
+                                        tmp1 = 1;
+                                        break; 
+                                } 
+                                tmp2 = tmp1 & e;
+                                tmp3 = tmp1 & f;
+                                tmp4 = tmp2 & f;
+                                sum = Mersenne::mul(neg_two_inverse, ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+                                sum += (tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF);
+                                sum += (tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF);
+                                sum += Mersenne::neg(2 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
                                 break; 
-                            // g_3 * h_3 = ab(1−2e)(1−2f) = ab - 2abe - 2abf + 4abef
-                            case 2:
-                                tmp1 = a & b;
-                                break; 
-                            // g_3 * h_4 = a(1−2e)(1−2f) = a - 2ae - 2af + 4aef
-                            case 3:
-                                tmp1 = a;
-                                break; 
-                        }
-                        break; 
-                        tmp2 = tmp1 & e;
-                        tmp3 = tmp1 & f;
-                        tmp4 = tmp2 & f;
-                        sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
-                        sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
-                        sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
-                        sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
-                        break;
-                    }
-                        
-                    case 3: {
-                        switch(col_entry_id) {
-                            // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (-1/2) * bd + bde + bdf - 2bdef
-                            case 0:
-                                tmp1 = a & b;
-                                break;
-                            // g_4 * h_2 = d(1−2e)(1−2f) * (-1/2) = (-1/2) * d + de + df - 2def
-                            case 1:
-                                tmp1 = d;
-                                break; 
-                            // g_4 * h_3 = b(1−2e)(1−2f) * (-1/2) = (-1/2) * b + be + bf - 2bef
-                            case 2:
-                                tmp1 = a & b;
-                                break; 
-                            // g_4 * h_4 = (1−2e)(1−2f) * (-1/2) = (-1/2) + e + f - 2ef
-                            case 3:
-                                tmp1 = 1;
-                                break; 
+                            }
                         } 
-                        tmp2 = tmp1 & e;
-                        tmp3 = tmp1 & f;
-                        tmp4 = tmp2 & f;
-                        sum = Mersenne::mul(neg_two_inverse, ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                        sum += (tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF);
-                        sum += (tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF);
-                        sum += Mersenne::neg(2 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                        break; 
+                        eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id] = Mersenne::modp(sum);
                     }
-                } 
-                eval_result[i][j] = Mersenne::modp(sum);
+                }
             }
         }
         cur_quarter_k_blocks_id += quarter_k;
@@ -255,7 +259,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     }
 
     auto end = std::chrono::high_resolution_clock::now();
-    cout << "First round (compute p coeffs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    cout << "First round (compute p evals) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
     start = std::chrono::high_resolution_clock::now();
 
@@ -298,13 +302,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t index = 0;
     cur_quarter_k_blocks_id = 0;
 
-    // Batchsize = 640w, total_blocks_num = 640w/64 = 10w, fetching k/4 = 8 blocks per time, needs 12500 times
-    // k = 32, s = 640w/32 = 20w, block_cols_num = 20w/64 = 3125, totally 3125 cols of blocks, 3125 * 4 = 12500
-
     // new matrix: total size = s * 4 = 80w, number of rows: k2 = 8, number of cols: 80w / 8 = 10w
 
     // generate two lookup tables
     // uint64_t bits_num = quarter_k / 2 * 3;
+
     uint64_t table_size = 1 << (quarter_k / 2 * 3);
     Field* input_left_table1 = new Field[table_size]; 
     Field* input_left_table2 = new Field[table_size];
@@ -314,7 +316,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     for (uint64_t i = 0; i < table_size; i++) { 
         // i = 0, ..., 4095, 000000000000, ..., 111111111111, each i represents a combination of the 12 bits e^(4),c^(4),a^(4), ..., e^(1),c^(1),a^(1)
-        // 12 bits for e^(4),c^(4),a^(4), ..., e^(1),c^(1),a^(1)
+        // 12 bits for e^(4),e^(3),e^(2),e^(1), ..., a^(4),a^(3),a^(2),a^(1)
         // for (uint64_t j = 0; j < bits_num; j++) {
         //     ace_bits[j] = i & (1 << j);
         // }
@@ -325,9 +327,9 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             // j = 0, 1, 2, 3
             // (e, c, a) = (bits_num[j * 3 + 2], bits_num[j * 3 + 1], bits_num[j * 3])
             // the same for (f, d, b)
-            bool ab = i & (1 << (j * 3));
+            bool ab = i & (1 << j * 3);
             bool cd = i & (1 << (j * 3 + 1));
-            bool ef = i & (1 << (j * 3 + 2));
+            bool ef = i & (1 << (j + 3 + 2));
 
             // left_sum1 += (ab & cd) ? ((ef ? 2 : neg_two) * eval_base[left_id1++]) : 0;
             // left_sum1 += cd ? (ef ? Mersenne::neg(eval_base[left_id1++]) : eval_base[left_id1++]) : 0;
@@ -350,7 +352,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             // right_sum2 += ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++];
 
             left_sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]): 0;
-            right_sum1 = (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
+            right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
             id1++;
 
             tmp = cd ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
@@ -363,9 +365,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             right_sum1 += tmp;
             id1++;
 
-            tmp = (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-            left_sum1 += (ab & cd) ? (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1] : 0;
-            right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;;
+            left_sum1 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1];
+            right_sum1 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
             id1++;
 
             left_sum2 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
@@ -382,9 +383,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             right_sum2 += tmp;
             id2++;
 
-            tmp = (ab & cd) ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
-            left_sum2 += (ab & cd) ? ((ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id2]) : 0;
-            right_sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
+            left_sum2 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id2];
+            right_sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
             id2++;
         }
         input_left_table1[i] = Mersenne::modp_128(left_sum1);
@@ -392,6 +392,14 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         input_right_table1[i] = Mersenne::modp_128(right_sum1);
         input_right_table2[i] = Mersenne::modp_128(right_sum2);
     }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+
+    // Batchsize = 640w, total_blocks_num = 640w/64 = 10w, fetching k/4 = 8 blocks per time, needs 12500 times
+    // k = 32, s = 640w/32 = 20w, block_cols_num = 20w/64 = 3125, totally 3125 cols of blocks, 3125 * 4 = 12500
 
 
     for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
@@ -418,6 +426,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             } 
             else {
                 uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
+                
                 for(uint64_t i = 0; i < quarter_k / 2; i++) {
                     // i = 0, 1, 2, 3; i + quarter_k / 2 = 4, 5, 6, 7
 
@@ -437,13 +446,13 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     bool d = (cur_block.input1.second >> l) & 1;
                     bool f = (cur_block.rho.second >> l) & 1;
 
-                    if (a) left_id1 ^= a << (i * 3);
-                    if (c) left_id1 ^= c << (i * 3 + 1);
-                    if (e) left_id1 ^= e << (i * 3 + 2);
+                    if (a) left_id1 ^= 1 << (i * 3);
+                    if (c) left_id1 ^= 1 << (i * 3 + 1);
+                    if (e) left_id1 ^= 1 << (i * 3 + 2);
 
-                    if (b) right_id1 ^= b << (i * 3);
-                    if (d) right_id1 ^= d << (i * 3 + 1);
-                    if (f) right_id1 ^= f << (i * 3 + 2);
+                    if (b) right_id1 ^= 1 << (i * 3);
+                    if (d) right_id1 ^= 1 << (i * 3 + 1);
+                    if (f) right_id1 ^= 1 << (i * 3 + 2);
 
                     cur_block = quarter_k_blocks[i + quarter_k / 2];
                     
@@ -455,13 +464,13 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     d = (cur_block.input1.second >> l) & 1;
                     f = (cur_block.rho.second >> l) & 1;
 
-                    if (a) left_id2 ^= a << (i * 3);
-                    if (c) left_id2 ^= c << (i * 3 + 1);
-                    if (e) left_id2 ^= e << (i * 3 + 2);
+                    if (a) left_id2 ^= 1 << (i * 3);
+                    if (c) left_id2 ^= 1 << (i * 3 + 1);
+                    if (e) left_id2 ^= 1 << (i * 3 + 2);
 
-                    if (b) right_id2 ^= b << (i * 3);
-                    if (d) right_id2 ^= d << (i * 3 + 1);
-                    if (f) right_id2 ^= f << (i * 3 + 2);
+                    if (b) right_id2 ^= 1 << (i * 3);
+                    if (d) right_id2 ^= 1 << (i * 3 + 1);
+                    if (f) right_id2 ^= 1 << (i * 3 + 2);
                 }
                 input_left[row][col] = Mersenne::mul(Mersenne::add(input_left_table1[left_id1], input_left_table2[left_id2]), two_powers);
                 input_right[row][col] = Mersenne::mul(Mersenne::add(input_right_table1[right_id1], input_right_table2[right_id2]), two_powers);
@@ -681,6 +690,13 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     Field* input_table1 = new Field[table_size]; 
     Field* input_table2 = new Field[table_size];
 
+    auto start = std::chrono::high_resolution_clock::now(), end = start;
+
+    // uint32_t* shift_table = new uint32_t[quarter_k / 2 * 3];
+    // for (int i = 0; i < quarter_k / 2 * 3; i++) {
+    //     shift_table[i] = 1 << i;
+    // }
+
     if (prev_party) {
         for (uint64_t i = 0; i < table_size; i++) { 
             uint128_t sum1 = 0, sum2 = 0;
@@ -705,12 +721,18 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 id2++;
                 sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id1]) : 0;
                 id2++;
-                sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
+                sum2 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
                 id2++;
             }
             input_table1[i] = Mersenne::modp_128(sum1);
             input_table2[i] = Mersenne::modp_128(sum2);
         }
+
+        end = std::chrono::high_resolution_clock::now();
+        cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+        start = std::chrono::high_resolution_clock::now();
+
         for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
             // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
             memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
@@ -736,9 +758,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         bool c = (cur_block.input2.first >> l) & 1;
                         bool e = (a & c) ^ ((cur_block.result.first >> l) & 1) ^ ((cur_block.rho.first >> l) & 1);
                         
-                        if (a) id1 ^= a << (i * 3);
-                        if (c) id1 ^= c << (i * 3 + 1);
-                        if (e) id1 ^= e << (i * 3 + 2);
+                        if (a) id1 ^= 1 << (i * 3);
+                        if (c) id1 ^= 1 << (i * 3 + 1);
+                        if (e) id1 ^= 1 << (i * 3 + 2);
 
                         cur_block = quarter_k_blocks[i + quarter_k / 2];
 
@@ -746,9 +768,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         c = (cur_block.input2.first >> l) & 1;
                         e = (a & c) ^ ((cur_block.result.first >> l) & 1) ^ ((cur_block.rho.first >> l) & 1);
 
-                        if (a) id2 ^= a << (i * 3);
-                        if (c) id2 ^= c << (i * 3 + 1);
-                        if (e) id2 ^= e << (i * 3 + 2);
+                        if (a) id2 ^= 1 << (i * 3);
+                        if (c) id2 ^= 1 << (i * 3 + 1);
+                        if (e) id2 ^= 1 << (i * 3 + 2);
                     }
                     input[row][col] = Mersenne::mul(Mersenne::add(input_table1[id1], input_table2[id2]), two_powers);
                 }
@@ -758,7 +780,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
     }
     else {
-            for (uint64_t i = 0; i < table_size; i++) { 
+        for (uint64_t i = 0; i < table_size; i++) { 
             Field sum1 = 0, sum2 = 0;
             int id1 = 0, id2 = quarter_k / 2;
             for (uint64_t j = 0; j < quarter_k / 2; j++) {
@@ -781,12 +803,18 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 id2++;
                 sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id1]) : 0;
                 id2++;
-                sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
+                sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
                 id2++;
             }
             input_table1[i] = Mersenne::modp_128(sum1);
             input_table2[i] = Mersenne::modp_128(sum2);
         }
+
+        end = std::chrono::high_resolution_clock::now();
+        cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+        start = std::chrono::high_resolution_clock::now();
+
         for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
             // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
             memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
@@ -813,9 +841,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         bool d = (cur_block.input1.second >> l) & 1;
                         bool f = (cur_block.rho.second >> l) & 1;
                         
-                        if (b) id1 ^= b << (i * 3);
-                        if (d) id1 ^= d << (i * 3 + 1);
-                        if (f) id1 ^= f << (i * 3 + 2);
+                        if (b) id1 ^= 1 << (i * 3);
+                        if (d) id1 ^= 1 << (i * 3 + 1);
+                        if (f) id1 ^= 1 << (i * 3 + 2);
 
                         cur_block = quarter_k_blocks[i + quarter_k / 2];
 
@@ -823,9 +851,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         d = (cur_block.input1.second >> l) & 1;
                         f = (cur_block.rho.second >> l) & 1;
 
-                        if (b) id2 ^= b << (i * 3);
-                        if (d) id2 ^= d << (i * 3 + 1);
-                        if (f) id2 ^= f << (i * 3 + 2);
+                        if (b) id2 ^= 1 << (i * 3);
+                        if (d) id2 ^= 1 << (i * 3 + 1);
+                        if (f) id2 ^= 1 << (i * 3 + 2);
                     }
                     input[row][col] = Mersenne::mul(Mersenne::add(input_table1[id1], input_table2[id2]), two_powers);
                 }
@@ -834,6 +862,11 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
             cur_quarter_k_blocks_id += quarter_k;
         }
     }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
 
     // cout << "cp 4" << endl;
 
@@ -901,6 +934,10 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         cnt++;
     }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    
     // cout << "cp 5" << endl;
 
     // delete[] eval_base;
