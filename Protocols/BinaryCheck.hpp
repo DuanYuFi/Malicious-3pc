@@ -16,7 +16,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     uint64_t batch_size, 
     Field sid
 ) {
-    uint64_t k = OnlineOptions::singleton.k_size;
+    // uint64_t k = OnlineOptions::singleton.k_size;
+    uint64_t k = 16;
     uint64_t k2 = OnlineOptions::singleton.k2_size;
 
     // cout << "in _prove" << endl;
@@ -55,200 +56,185 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     // cout << "cp 1.5" << endl;
 
-    ShareTupleBlock quarter_k_blocks[k];
+
     // works for binary_batch_size % BLOCK_SIZE = 0
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
-    uint64_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
-    int cur_quarter_k_blocks_id = 0;
     uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
-    // assuming k % 4 = 0
-    uint64_t quarter_k = k / 4;
     uint64_t two_powers = (0xFFFF - 1) * 4;
-    // cout << "block_cols_num: " << block_cols_num << endl;
-    // cout << "total_blocks_num: " << total_blocks_num << endl;
 
-    for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-        // cout << "block_col_id: " << block_col_id << endl;
-        // fetch k tuple_blocks
-        memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
-        for(uint64_t i = 0; i < quarter_k; i++) { 
-            // cout << "i:" << i << endl;
-            // i = 0, ..., 3
+    ShareTupleBlock* cur_block = new ShareTupleBlock[1];
 
-            ShareTupleBlock row_block = quarter_k_blocks[i];
-            long a = row_block.input1.first;
-            long c = row_block.input2.first;
-            long e = (a & c) ^ row_block.result.first ^ row_block.rho.first;
-            
-            for(uint64_t j = 0; j < quarter_k; j++) {  
-                // cout << "j: " << j << endl;
+    for (uint64_t block_id = 0; block_id < total_blocks_num; block_id++) {
+        // cout << "block_id: " << block_id << endl;
+        // fetch 1 block
+        memcpy(cur_block, share_tuple_blocks + start_point + block_id, sizeof(ShareTupleBlock));
+        
+        long a_block = cur_block[0].input1.first;
+        long c_block = cur_block[0].input2.first;
+        long e_block = (a_block & c_block) ^ cur_block[0].result.first ^ cur_block[0].rho.first;
+                                            
+        long b_block = cur_block[0].input2.second;
+        long d_block = cur_block[0].input1.second;
+        long f_block = cur_block[0].rho.second;
 
-                // uint64_t col_group_id =  j / 4;
-                // uint64_t col_entry_id = j % 4;
+        for(uint64_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
+        
+            for (uint64_t rotation = 0; rotation < 4; rotation++) {
+                
+                if (rotation) {
+                    // rotate once
+                    // get higher 16 bits
+                    long tmp = b_block & 0xFFFF000000000000;
+                    b_block >>= 48;
+                    b_block ^= tmp;
 
-                if (cur_quarter_k_blocks_id + i >= total_blocks_num || cur_quarter_k_blocks_id + j >= total_blocks_num) {
-                    // cout << "continue, > total_blocks_num " << j << endl;
-                    continue;
+                    tmp = d_block & 0xFFFF000000000000;
+                    d_block >>= 48;
+                    f_block ^= tmp;
+
+                    tmp = f_block & 0xFFFF000000000000;
+                    d_block >>= 48;
+                    f_block ^= tmp;
                 }
 
-                ShareTupleBlock col_block = quarter_k_blocks[j];
-                    
-                long b = col_block.input2.second;
-                long d = col_block.input1.second;
-                long f = col_block.rho.second;
-                
-                // group_id = 0, 1, 2, 3
-                for(uint64_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
-                    for(uint64_t col_entry_id = 0; col_entry_id < 4; col_entry_id++) {
-                        Field sum = 0;
-                        long tmp1 = 0, tmp2, tmp3, tmp4;
-                        switch(row_entry_id) {
-                            case 0: {
-                                switch(col_entry_id) {
-                                    // g_1 * h_1 = -2abcd(1-2e)(1-2f) = -2abcd + 4abcde + 4abcdf - 8abcdef
-                                    case 0:
-                                        tmp1 = a & b & c & d;
-                                        break;
+                for(uint64_t col_entry_id = rotation; col_entry_id < 4 + rotation; col_entry_id++) {  
+
+                    long tmp1, tmp2, tmp3, tmp4;
+
+                    switch(row_entry_id) {
+
+                        case 0: {
+                            switch(col_entry_id % 4) {
+                                // g_1 * h_1 = -2abcd(1-2e)(1-2f) = -2abcd + 4abcde + 4abcdf - 8abcdef
+                                case 0:
+                                    tmp1 = a_block & b_block & c_block & d_block;
+                                    break;
                                     // g_1 * h_2 = -2acd(1-2e)(1-2f) = -2acd + 4acde + 4acdf - 8acdef
                                     case 1:
-                                        tmp1 = a & c & d;
+                                        tmp1 = a_block & c_block & d_block;
                                         break;
                                     // g_1 * h_3 = -2abc(1-2e)(1-2f) = -2abc + 4abce + 4abcf - 8abcef
                                     case 2:
-                                        tmp1 = a & b & c;
+                                        tmp1 = a_block & b_block & c_block;
                                         break; 
                                     // g_1 * h_4 = -2ac(1-2e)(1-2f) = -2ac + 4ace + 4acf - 8acef
                                     case 3:
-                                        tmp1 = a & c;
-                                        break; 
-                                } 
-                                tmp2 = tmp1 & e;
-                                tmp3 = tmp1 & f;
-                                tmp4 = tmp2 & f;
-                                for (int group_id = 0; group_id < 4; group_id++) {
-                                    // group_id * 16 = 0, 16, 32, 48
-                                    long mask = 0xFFFF << (group_id * 16);
-                                    sum += Mersenne::neg(2 * (tmp1 & mask));
-                                    sum += 4 * (tmp2 & mask);
-                                    sum += 4 * (tmp3 & mask);
-                                    sum += Mersenne::neg(8 * (tmp4 & mask));
-                                }
-                                break;
+                                        tmp1 = a_block & c_block;
+                                    break; 
                             }
-                            case 1: {
-                                switch(col_entry_id) {
-                                    // g_2 * h_1 = bcd(1−2e)(1−2f) = bcd - 2bcde - 2bcdf + 4bcdef
-                                    case 0:
-                                        tmp1 = b & c & d;
-                                        break;
-                                    // g_2 * h_2 = cd(1−2e)(1−2f) = cd - 2cde - 2cdf + 4cdef
-                                    case 1:
-                                        tmp1 = c & d;
-                                        break; 
-                                    // g_2 * h_3 = bc(1−2e)(1−2f) = bc - 2bce - 2bcf + 4bcef
-                                    case 2:
-                                        tmp1 = b & c;
-                                        break; 
-                                    case 3:
-                                        // g_2 * h_3 = c(1−2e)(1−2f) = c - 2ce - 2cf + 4cef
-                                        tmp1 = c;
-                                        break; 
-                                } 
-                                tmp2 = tmp1 & e;
-                                tmp3 = tmp1 & f;
-                                tmp4 = tmp2 & f;
-                                for (int group_id = 0; group_id < 4; group_id++) {
-                                    long mask = 0xFFFF << (group_id * 16);
-                                    sum += tmp1 & mask;
-                                    sum += Mersenne::neg(2 * (tmp2 & mask));
-                                    sum += Mersenne::neg(2 * (tmp3 & mask));
-                                    sum += 4 * (tmp4 & mask);
-                                }
-                                break;
+                            tmp2 = tmp1 & e_block;
+                            tmp3 = tmp1 & f_block;
+                            tmp4 = tmp2 & f_block;
+                            for (int group_id = 0; group_id < 4; group_id++) {  
+                                Field sum = Mersenne::neg(2 * ((tmp1 >> group_id * 16) & 0xFFFF));
+                                sum += 4 * ((tmp2 >> group_id * 16) & 0xFFFF);
+                                sum += 4 * ((tmp3 >> group_id * 16) & 0xFFFF);
+                                sum += Mersenne::neg(8 * (tmp4 >> group_id * 16) & 0xFFFF);
+                                eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
                             }
-                            case 2: {
-                                switch(col_entry_id) {
-                                    // g_3 * h_1 = abd(1−2e)(1−2f) = abd - 2abde - 2abdf + 4abdef
-                                    case 0:
-                                        tmp1 = a & b;
-                                        break;
-                                    // g_3 * h_2 = ad(1−2e)(1−2f) = ad - 2ade - 2adf + 4adef
-                                    case 1:
-                                        tmp1 = a & d;
-                                        break; 
-                                    // g_3 * h_3 = ab(1−2e)(1−2f) = ab - 2abe - 2abf + 4abef
-                                    case 2:
-                                        tmp1 = a & b;
-                                        break; 
-                                    // g_3 * h_4 = a(1−2e)(1−2f) = a - 2ae - 2af + 4aef
-                                    case 3:
-                                        tmp1 = a;
-                                        break; 
-                                }
-                                break; 
-                                tmp2 = tmp1 & e;
-                                tmp3 = tmp1 & f;
-                                tmp4 = tmp2 & f;
-                                for (int group_id = 0; group_id < 4; group_id++) {
-                                    long mask = 0xFFFF << (group_id * 16);
-                                    sum = tmp1 & mask;
-                                    sum += Mersenne::neg(2 * (tmp2 & mask));
-                                    sum += Mersenne::neg(2 * (tmp3 & mask));
-                                    sum += 4 * (tmp4 & mask);
-                                }
-                                break;
+                            break;
+                        }
+
+                        case 1: {
+                            switch(col_entry_id % 4) {
+                                // g_2 * h_1 = bcd(1−2e)(1−2f) = bcd - 2bcde - 2bcdf + 4bcdef
+                                case 0:
+                                    tmp1 = b_block & c_block & d_block;
+                                    break;
+                                // g_2 * h_2 = cd(1−2e)(1−2f) = cd - 2cde - 2cdf + 4cdef
+                                case 1:
+                                    tmp1 = c_block & d_block;
+                                    break; 
+                                // g_2 * h_3 = bc(1−2e)(1−2f) = bc - 2bce - 2bcf + 4bcef
+                                case 2:
+                                    tmp1 = b_block & c_block;
+                                    break; 
+                                case 3:
+                                    // g_2 * h_3 = c(1−2e)(1−2f) = c - 2ce - 2cf + 4cef
+                                    tmp1 = c_block;
+                                    break; 
                             }
-                                
-                            case 3: {
-                                switch(col_entry_id) {
-                                    // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (-1/2) * bd + bde + bdf - 2bdef
-                                    case 0:
-                                        tmp1 = a & b;
-                                        break;
-                                    // g_4 * h_2 = d(1−2e)(1−2f) * (-1/2) = (-1/2) * d + de + df - 2def
-                                    case 1:
-                                        tmp1 = d;
-                                        break; 
-                                    // g_4 * h_3 = b(1−2e)(1−2f) * (-1/2) = (-1/2) * b + be + bf - 2bef
-                                    case 2:
-                                        tmp1 = a & b;
-                                        break; 
-                                    // g_4 * h_4 = (1−2e)(1−2f) * (-1/2) = (-1/2) + e + f - 2ef
-                                    case 3:
-                                        tmp1 = 1;
-                                        break; 
-                                } 
-                                tmp2 = tmp1 & e;
-                                tmp3 = tmp1 & f;
-                                tmp4 = tmp2 & f;
-                                for (int group_id = 0; group_id < 4; group_id++) {
-                                    // TODO: see if using array to store masks will be better
-                                    long mask = 0xFFFF << (group_id * 16);
-                                    sum += Mersenne::mul(neg_two_inverse, (tmp1 & mask));
-                                    sum += tmp2 & mask;
-                                    sum += tmp3 & mask;
-                                    sum += Mersenne::neg(2 * (tmp4 & mask));
-                                }
-                                break; 
+                            tmp2 = tmp1 & e_block;
+                            tmp3 = tmp1 & f_block;
+                            tmp4 = tmp2 & f_block;
+                            for (int group_id = 0; group_id < 4; group_id++) {  
+                                Field sum = tmp1;
+                                sum += Mersenne::neg(2 * ((tmp2 >> group_id * 16) & 0xFFFF));
+                                sum += Mersenne::neg(2 * ((tmp3 >> group_id * 16) & 0xFFFF));
+                                sum += 4 * tmp4;
+                                eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
                             }
-                        } 
-                        eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id] += Mersenne::modp(sum);
-                        eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id] += Mersenne::modp(sum);
+                            break;
+                        }
+
+                        case 2: {
+                            switch(col_entry_id % 4) {
+                                // g_3 * h_1 = abd(1−2e)(1−2f) = abd - 2abde - 2abdf + 4abdef
+                                case 0:
+                                    tmp1 = a_block & b_block;
+                                    break;
+                                // g_3 * h_2 = ad(1−2e)(1−2f) = ad - 2ade - 2adf + 4adef
+                                case 1:
+                                    tmp1 = a_block & d_block;
+                                    break; 
+                                // g_3 * h_3 = ab(1−2e)(1−2f) = ab - 2abe - 2abf + 4abef
+                                case 2:
+                                    tmp1 = a_block & b_block;
+                                    break; 
+                                // g_3 * h_4 = a(1−2e)(1−2f) = a - 2ae - 2af + 4aef
+                                case 3:
+                                    tmp1 = a_block;
+                                    break; 
+                            }
+                            tmp2 = tmp1 & e_block;
+                            tmp3 = tmp1 & f_block;
+                            tmp4 = tmp2 & f_block;
+                            for (int group_id = 0; group_id < 4; group_id++) {  
+                                Field sum = tmp1;
+                                sum += Mersenne::neg(2 * ((tmp2 >> group_id * 16) & 0xFFFF));
+                                sum += Mersenne::neg(2 * ((tmp3 >> group_id * 16) & 0xFFFF));
+                                sum += 4 * tmp4;
+                                eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
+                            }
+                            break;
+                        }
+
+                        case 3: {
+                            switch(col_entry_id % 4) {
+                                // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (-1/2) * bd + bde + bdf - 2bdef
+                                case 0:
+                                    tmp1 = b_block & d_block;
+                                    break;
+                                // g_4 * h_2 = d(1−2e)(1−2f) * (-1/2) = (-1/2) * d + de + df - 2def
+                                case 1:
+                                    tmp1 = d_block;
+                                    break; 
+                                // g_4 * h_3 = b(1−2e)(1−2f) * (-1/2) = (-1/2) * b + be + bf - 2bef
+                                case 2:
+                                    tmp1 = b_block;
+                                    break; 
+                                // g_4 * h_4 = (1−2e)(1−2f) * (-1/2) = (-1/2) + e + f - 2ef
+                                case 3:
+                                    tmp1 = 1;
+                                    break; 
+                            }
+                            tmp2 = tmp1 & e_block;
+                            tmp3 = tmp1 & f_block;
+                            tmp4 = tmp2 & f_block;
+                            for (int group_id = 0; group_id < 4; group_id++) {  
+                                Field sum = neg_two_inverse;
+                                sum += (tmp2 >> group_id * 16) & 0xFFFF;
+                                sum += (tmp3 >> group_id * 16) & 0xFFFF;
+                                sum += Mersenne::neg(2 * tmp4);
+                                eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
+                            }
+                            break;
+                        }
                     }
-                }
-            }
-        }
-        cur_quarter_k_blocks_id += quarter_k;
+                } // end col_entry_id loop
+            } // end rotation loop
+        } // end row_entry_id loop
     }
-
-    // uint64_t two_powers = (0xFFFFFFFF - 1) * 2 * block_cols_num;
-    // Field extra_addition = Mersenne::mul(neg_two_inverse, two_powers);
-
-    // for(uint64_t i = 0; i < k; i++) {
-    //     for(uint64_t j = 0; j < k; j++) {
-    //         eval_result[i][j] = Mersenne::add(eval_result[i][j], extra_addition);
-    //     }
-    // }
 
     for(uint64_t i = 0; i < k; i++) {
         eval_p_poly[i] = eval_result[i][i];
@@ -306,97 +292,48 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     }
 
     size_t index = 0;
-    cur_quarter_k_blocks_id = 0;
 
     // new matrix: total size = s * 4 = 80w, number of rows: k2 = 8, number of cols: 80w / 8 = 10w
 
     // generate two lookup tables
     // uint64_t bits_num = quarter_k / 2 * 3;
 
-    uint64_t table_size = 1 << (quarter_k / 2 * 3);
-    Field* input_left_table1 = new Field[table_size]; 
-    Field* input_left_table2 = new Field[table_size];
-    Field* input_right_table1 = new Field[table_size]; 
-    Field* input_right_table2 = new Field[table_size];
+    // k = 16, still 12 bits deciding g_i or h_i, eval_base turns to be of size 16
+
+    uint64_t table_size = 1 << 12;
+    Field* input_left_table = new Field[table_size]; 
+    Field* input_right_table = new Field[table_size]; 
     // bool* ace_bits = new bool[bits_num];
 
     for (uint64_t i = 0; i < table_size; i++) { 
-        // i = 0, ..., 4095, 000000000000, ..., 111111111111, each i represents a combination of the 12 bits e^(4),c^(4),a^(4), ..., e^(1),c^(1),a^(1)
-        // 12 bits for e^(4),e^(3),e^(2),e^(1), ..., a^(4),a^(3),a^(2),a^(1)
-        // for (uint64_t j = 0; j < bits_num; j++) {
-        //     ace_bits[j] = i & (1 << j);
-        // }
-
-        uint128_t left_sum1 = 0, left_sum2 = 0, right_sum1 = 0, right_sum2 = 0, tmp;
-        int id1 = 0, id2 = quarter_k / 2;
-        for (uint64_t j = 0; j < quarter_k / 2; j++) {
-            // j = 0, 1, 2, 3
-            // (e, c, a) = (bits_num[j * 3 + 2], bits_num[j * 3 + 1], bits_num[j * 3])
-            // the same for (f, d, b)
+        // i = 000000000000, ..., 111111111111 
+        uint128_t left_sum = 0, right_sum = 0, tmp;
+        int id = 0;
+        for (uint64_t j = 0; j < 4; j++) {
             bool ab = i & (1 << j * 3);
             bool cd = i & (1 << (j * 3 + 1));
             bool ef = i & (1 << (j + 3 + 2));
 
-            // left_sum1 += (ab & cd) ? ((ef ? 2 : neg_two) * eval_base[left_id1++]) : 0;
-            // left_sum1 += cd ? (ef ? Mersenne::neg(eval_base[left_id1++]) : eval_base[left_id1++]) : 0;
-            // left_sum1 += ab ? (ef ? Mersenne::neg(eval_base[left_id1++]) : eval_base[left_id1++]) : 0;
-            // left_sum1 += (ef ? two_inverse : neg_two_inverse) * eval_base[left_id1++];
+            left_sum += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id]): 0;
+            right_sum += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;
+            id++;
 
-            // left_sum2 += (ab & cd) ? ((e ? 2 : neg_two) * eval_base[left_id2++]) : 0;
-            // left_sum2 += cd ? (ef ? Mersenne::neg(eval_base[left_id2++]) : eval_base[left_id2++]) : 0;
-            // left_sum2 += ab ? (ef ? Mersenne::neg(eval_base[left_id2++]) : eval_base[left_id2++]) : 0;
-            // left_sum2 += (ef ? two_inverse : neg_two_inverse) * eval_base[left_id2++];
+            tmp = cd ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;
+            left_sum += tmp;
+            right_sum += tmp;
+            id++;
 
-            // right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[right_id1++]) : eval_base[right_id1++]) : 0;
-            // right_sum1 += cd ? (ef ? Mersenne::neg(eval_base[right_id1++]) : eval_base[right_id1++]) : 0;
-            // right_sum1 += ab ? (ef ? Mersenne::neg(eval_base[right_id1++]) : eval_base[right_id1++]) : 0;
-            // right_sum1 += (ef ? two_inverse : neg_two_inverse) * eval_base[right_id1++];
+            tmp = ab ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;
+            left_sum += tmp;
+            right_sum += tmp;
+            id++;
 
-            // right_sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++]) : 0;
-            // right_sum2 += cd ? (ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++]) : 0;
-            // right_sum2 += ab ? (ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++]) : 0;
-            // right_sum2 += ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++];
-
-            left_sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]): 0;
-            right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-            id1++;
-
-            tmp = cd ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-            left_sum1 += tmp;
-            right_sum1 += tmp;
-            id1++;
-
-            tmp = ab ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-            left_sum1 += tmp;
-            right_sum1 += tmp;
-            id1++;
-
-            left_sum1 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1];
-            right_sum1 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
-            id1++;
-
-            left_sum2 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
-            right_sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
-            id2++;
-
-            tmp = cd ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
-            left_sum2 += tmp;
-            right_sum2 += tmp;
-            id2++;
-            
-            tmp = ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
-            left_sum2 += tmp;
-            right_sum2 += tmp;
-            id2++;
-
-            left_sum2 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id2];
-            right_sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
-            id2++;
+            left_sum += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id];
+            right_sum += ef ? Mersenne::neg(eval_base[id]) : eval_base[id];
+            id++;
         }
-        input_left_table1[i] = Mersenne::modp_128(left_sum1);
-        input_left_table2[i] = Mersenne::modp_128(left_sum2);
-        input_right_table1[i] = Mersenne::modp_128(right_sum1);
-        input_right_table2[i] = Mersenne::modp_128(right_sum2);
+        input_left_table[i] = Mersenne::modp_128(left_sum);
+        input_right_table[i] = Mersenne::modp_128(right_sum);
     }
 
     end = std::chrono::high_resolution_clock::now();
@@ -404,97 +341,68 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     start = std::chrono::high_resolution_clock::now();
 
-    // Batchsize = 640w, total_blocks_num = 640w/64 = 10w, fetching k/4 = 8 blocks per time, needs 12500 times
-    // k = 32, s = 640w/32 = 20w, block_cols_num = 20w/64 = 3125, totally 3125 cols of blocks, 3125 * 4  =  12500
+    // Asuming k = 16
 
-    for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-        // cout << "block_col_id: " << block_col_id << endl;
+    long* mask_table = new long[16];
+    for (int i = 0; i < 16; i++) {
+        long sum = 0;
+        sum += 1 << i;
+        sum += 1 << (i + 16);
+        sum += 1 << (i + 32);
+        sum += 1 << (i + 48);
+        mask_table[i] = sum;
+    }
 
-        // fetch k/4 tuple_blocks, containing k * BLOCKSIZE bit tuples
-        memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
+    for (uint64_t block_id = 0; block_id < total_blocks_num; block_id++) {
+        // cout << "block_id: " << block_id << endl;
+        // fetch 1 block, containing BLOCKSIZE bit tuples
+        memcpy(cur_block, share_tuple_blocks + start_point + block_id, sizeof(ShareTupleBlock));
+        
+        long a_block = cur_block[0].input1.first;
+        long c_block = cur_block[0].input2.first;
+        long e_block = (a_block & c_block) ^ cur_block[0].result.first ^ cur_block[0].rho.first;
+                                            
+        long b_block = cur_block[0].input2.second;
+        long d_block = cur_block[0].input1.second;
+        long f_block = cur_block[0].rho.second;
 
-        for (uint64_t i = 0; i < quarter_k / 2; i++) {
-            // i = 0, 1, 2, 3; i + quarter_k / 2 = 4, 5, 6, 7
-            // cout << "index: " << index << ", row: " << row << ", col: " << col << endl;                
-
-            uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
-            ShareTupleBlock cur_block1 = quarter_k_blocks[i];
-            ShareTupleBlock cur_block2 = quarter_k_blocks[i + quarter_k / 2];
-
-            long a_block1 = cur_block1.input1.first;
-            long c_block1 = cur_block1.input2.first;
-            long e_block1 = (a_block1 & c_block1) ^ cur_block1.result.first ^ cur_block1.rho.first;
-                                        
-            long b_block1 = cur_block1.input2.second;
-            long d_block1 = cur_block1.input1.second;
-            long f_block1 = cur_block1.rho.second;
-
-            long a_block2 = cur_block2.input1.first;
-            long c_block2 = cur_block2.input2.first;
-            long e_block2 = (a_block2 & c_block2) ^ cur_block2.result.first ^ cur_block2.rho.first;
-                                        
-            long b_block2 = cur_block2.input2.second;
-            long d_block2 = cur_block2.input1.second;
-            long f_block2 = cur_block2.rho.second;
-
-            for (int l = 0; l < BLOCK_SIZE / 4; l++) {
-                // l = 0, ..., 15
-                for (int group_id = 0; group_id < 4; group_id++) {
-                    // group_id = 0, 1, 2, 3
-
-                    int row = index / s;
-                    int col = index % s;
-
-                    if (index >= s0) {
-                    // cout << "cp 4" << endl;
-                        if ((uint64_t)row == k2) 
-                            break;
-                        else 
-                            input_left[row][col] = input_right[row][col] = 0;
-                    } 
-                    else {
-                        // group_id * 16  = 0, 16, 32, 48
-                        // group_id * 16 + l  = 0 - 15, 16 - 31, 32 - 47, 48 - 63
-                        bool a1 = a_block1 & (1 << (group_id * 16 + l));
-                        bool c1 = c_block1 & (1 << (group_id * 16 + l));
-                        bool e1 = e_block1 & (1 << (group_id * 16 + l));
-
-                        bool b1 = b_block1 & (1 << (group_id * 16 + l));
-                        bool d1 = d_block1 & (1 << (group_id * 16 + l));
-                        bool f1 = f_block1 & (1 << (group_id * 16 + l));
-
-                        if (a1) left_id1 ^= 1 << (i * 3);
-                        if (c1) left_id1 ^= 1 << (i * 3 + 1);
-                        if (e1) left_id1 ^= 1 << (i * 3 + 2);
-
-                        if (b1) right_id1 ^= 1 << (i * 3);
-                        if (d1) right_id1 ^= 1 << (i * 3 + 1);
-                        if (f1) right_id1 ^= 1 << (i * 3 + 2);
-                        
-                        bool a2 = a_block2 & (1 << (group_id * 16 + l));
-                        bool c2 = c_block2 & (1 << (group_id * 16 + l));
-                        bool e2 = e_block2 & (1 << (group_id * 16 + l));
-
-                        bool b2 = b_block2 & (1 << (group_id * 16 + l));
-                        bool d2 = d_block2 & (1 << (group_id * 16 + l));
-                        bool f2 = f_block2 & (1 << (group_id * 16 + l));
-
-                        if (a2) left_id2 ^= 1 << (i * 3);
-                        if (c2) left_id2 ^= 1 << (i * 3 + 1);
-                        if (e2) left_id2 ^= 1 << (i * 3 + 2);
-
-                        if (b2) right_id2 ^= 1 << (i * 3);
-                        if (d2) right_id2 ^= 1 << (i * 3 + 1);
-                        if (f2) right_id2 ^= 1 << (i * 3 + 2);
-
-                        input_left[row][col] = Mersenne::mul(Mersenne::add(input_left_table1[left_id1], input_left_table2[left_id2]), two_powers);
-                        input_right[row][col] = Mersenne::mul(Mersenne::add(input_right_table1[right_id1], input_right_table2[right_id2]), two_powers);
-                    }
-                    index++;
-                }
+        for (int l = 0; l < 16; l++) {
+            int row = index / s;
+            int col = index % s;
+            if (index >= s0) {
+                // cout << "cp 4" << endl;
+                if ((uint64_t)row == k2) 
+                    break;
+                else 
+                    input_left[row][col] = input_right[row][col] = 0;
             }
+            else {
+                uint64_t left_id = 0, right_id = 0;
+
+                long a_col = a_block & mask_table[l];
+                long c_col = c_block & mask_table[l];
+                long e_col = e_block & mask_table[l];
+
+                long b_col = b_block & mask_table[l];
+                long d_col = d_block & mask_table[l];
+                long f_col = f_block & mask_table[l];
+
+                for (int j = 0; j < 4; j++) {
+                    uint64_t mask = 1 << (l + j * 16);
+                    left_id ^= a_col & mask;
+                    left_id ^= c_col & mask;
+                    left_id ^= e_col & mask;
+
+                    right_id ^= b_col & mask;
+                    right_id ^= d_col & mask;
+                    right_id ^= f_col & mask;
+                }
+
+                input_left[row][col] = Mersenne::mul(input_left_table[left_id], two_powers);
+                input_right[row][col] = Mersenne::mul(input_right_table[left_id], two_powers);
+            }
+            index++;
         }
-        cur_quarter_k_blocks_id += quarter_k;
     }
 
     end = std::chrono::high_resolution_clock::now();
@@ -627,7 +535,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     uint64_t party_ID
 ) {
     // cout << "in _gen_vermsg " << endl;
-    uint64_t k = OnlineOptions::singleton.k_size;
+    // uint64_t k = OnlineOptions::singleton.k_size;
+    uint64_t k = 16;
     uint64_t k2 = OnlineOptions::singleton.k2_size;
 
     uint64_t k_max = k > k2 ? k : k2;
@@ -640,7 +549,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
     uint64_t len = log(4 * s) / log(k2) + 2;
-    uint64_t quarter_k = k / 4;
 
     vector<Field> b_ss(len);
     Field final_input = 0, final_result_ss = 0;
@@ -682,10 +590,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     Langrange::evaluate_bases(k, r, eval_base);
 
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
-    uint64_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
     uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
-    int cur_quarter_k_blocks_id = 0;
-    ShareTupleBlock quarter_k_blocks[k];
+
+    ShareTupleBlock* cur_block = new ShareTupleBlock[1];
 
     s *= 4;
     uint64_t s0 = s;
@@ -700,12 +607,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         input[i] = new Field[s];
     }
 
-    cur_quarter_k_blocks_id = 0;
-
     // generate two lookup tables
-    uint64_t table_size = 1 << (quarter_k / 2 * 3);
-    Field* input_table1 = new Field[table_size]; 
-    Field* input_table2 = new Field[table_size];
+    uint64_t table_size = 1 << 12;
+    Field* input_table = new Field[table_size]; 
 
     auto start = std::chrono::high_resolution_clock::now(), end = start;
 
@@ -714,35 +618,39 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     //     shift_table[i] = 1 << i;
     // }
 
+    long* mask_table = new long[16];
+    for (int i = 0; i < 16; i++) {
+        long sum = 0;
+        sum += 1 << i;
+        sum += 1 << (i + 16);
+        sum += 1 << (i + 32);
+        sum += 1 << (i + 48);
+        mask_table[i] = sum;
+    }
+
     if (prev_party) {
+        
         for (uint64_t i = 0; i < table_size; i++) { 
-            uint128_t sum1 = 0, sum2 = 0;
-            int id1 = 0, id2 = quarter_k / 2;
-            for (uint64_t j = 0; j < quarter_k / 2; j++) {
-                bool ab = i & (1 << (j * 3));
+            uint128_t left_sum = 0;
+            int id = 0;
+            for (uint64_t j = 0; j < 4; j++) {
+                bool ab = i & (1 << j * 3);
                 bool cd = i & (1 << (j * 3 + 1));
-                bool ef = i & (1 << (j * 3 + 2));
+                bool ef = i & (1 << (j + 3 + 2));
 
-                sum1 = (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]) : 0;
-                id1++;
-                sum1 += cd ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
-                sum1 += ab ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
-                sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
+                left_sum += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id]): 0;
+                id++;
 
-                sum2 = (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
-                id2++;
-                sum2 += cd ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
-                id2++;
-                sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id1]) : 0;
-                id2++;
-                sum2 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
-                id2++;
+                left_sum += cd ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;
+                id++;
+
+                left_sum += ab ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;;
+                id++;
+
+                left_sum += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id];
+                id++;
             }
-            input_table1[i] = Mersenne::modp_128(sum1);
-            input_table2[i] = Mersenne::modp_128(sum2);
+            input_table[i] = Mersenne::modp_128(left_sum);
         }
 
         end = std::chrono::high_resolution_clock::now();
@@ -750,100 +658,68 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         start = std::chrono::high_resolution_clock::now();
 
-        for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-        // cout << "block_col_id: " << block_col_id << endl;
+        for (uint64_t block_id = 0; block_id < total_blocks_num; block_id++) {
+            // cout << "block_id: " << block_id << endl;
+            // fetch 1 block, containing BLOCKSIZE bit tuples
+            memcpy(cur_block, share_tuple_blocks + start_point + block_id, sizeof(ShareTupleBlock));
+            
+            long a_block = cur_block[0].input1.first;
+            long c_block = cur_block[0].input2.first;
+            long e_block = (a_block & c_block) ^ cur_block[0].result.first ^ cur_block[0].rho.first;
 
-        // fetch k/4 tuple_blocks, containing k * BLOCKSIZE bit tuples
-            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
-
-            for (uint64_t i = 0; i < quarter_k / 2; i++) {
-                // i = 0, 1, 2, 3; i + quarter_k / 2 = 4, 5, 6, 7
-                // cout << "index: " << index << ", row: " << row << ", col: " << col << endl;                
-
-                uint64_t left_id1 = 0, left_id2 = 0;
-                ShareTupleBlock cur_block1 = quarter_k_blocks[i];
-                ShareTupleBlock cur_block2 = quarter_k_blocks[i + quarter_k / 2];
-
-                long a_block1 = cur_block1.input1.first;
-                long c_block1 = cur_block1.input2.first;
-                long e_block1 = (a_block1 & c_block1) ^ cur_block1.result.first ^ cur_block1.rho.first;
-
-                long a_block2 = cur_block2.input1.first;
-                long c_block2 = cur_block2.input2.first;
-                long e_block2 = (a_block2 & c_block2) ^ cur_block2.result.first ^ cur_block2.rho.first;
-
-                for (int l = 0; l < BLOCK_SIZE / 4; l++) {
-                    // l = 0, ..., 15
-                    for (int group_id = 0; group_id < 4; group_id++) {
-                        // group_id = 0, 1, 2, 3
-
-                        int row = index / s;
-                        int col = index % s;
-
-                        if (index >= s0) {
-                        // cout << "cp 4" << endl;
-                            if ((uint64_t)row == k2) 
-                                break;
-                            else 
-                                input[row][col] = 0;
-                        } 
-                        else {
-                            // group_id * 16  = 0, 16, 32, 48
-                            // group_id * 16 + l  = 0 - 15, 16 - 31, 32 - 47, 48 - 63
-                            bool a1 = a_block1 & (1 << (group_id * 16 + l));
-                            bool c1 = c_block1 & (1 << (group_id * 16 + l));
-                            bool e1 = e_block1 & (1 << (group_id * 16 + l));
-
-                            if (a1) left_id1 ^= 1 << (i * 3);
-                            if (c1) left_id1 ^= 1 << (i * 3 + 1);
-                            if (e1) left_id1 ^= 1 << (i * 3 + 2);
-                            
-                            bool a2 = a_block2 & (1 << (group_id * 16 + l));
-                            bool c2 = c_block2 & (1 << (group_id * 16 + l));
-                            bool e2 = e_block2 & (1 << (group_id * 16 + l));
-
-                            if (a2) left_id2 ^= 1 << (i * 3);
-                            if (c2) left_id2 ^= 1 << (i * 3 + 1);
-                            if (e2) left_id2 ^= 1 << (i * 3 + 2);
-
-                            input[row][col] = Mersenne::mul(Mersenne::add(input_table1[left_id1], input_table2[left_id2]), two_powers);
-                        }
-                        index++;
-                    }
+            for (int l = 0; l < 16; l++) {
+                int row = index / s;
+                int col = index % s;
+                if (index >= s0) {
+                    // cout << "cp 4" << endl;
+                    if ((uint64_t)row == k2) 
+                        break;
+                    else 
+                        input[row][col] = 0;
                 }
+                else {
+                    uint64_t left_id = 0;
+
+                    long a_col = a_block & mask_table[l];
+                    long c_col = c_block & mask_table[l];
+                    long e_col = e_block & mask_table[l];
+
+                    for (int j = 0; j < 4; j++) {
+                        uint64_t mask = 1 << (l + j * 16);
+                        left_id ^= a_col & mask;
+                        left_id ^= c_col & mask;
+                        left_id ^= e_col & mask;
+                    }
+
+                    input[row][col] = Mersenne::mul(input_table[left_id], two_powers);
+                }
+                index++;
             }
-            cur_quarter_k_blocks_id += quarter_k;
         }
     }
     else {
+
         for (uint64_t i = 0; i < table_size; i++) { 
-            Field sum1 = 0, sum2 = 0;
-            int id1 = 0, id2 = quarter_k / 2;
-            for (uint64_t j = 0; j < quarter_k / 2; j++) {
-                bool ab = i & (1 << (j * 3));
+            uint128_t right_sum = 0;
+            int id = 0;
+            for (uint64_t j = 0; j < 4; j++) {
+                bool ab = i & (1 << j * 3);
                 bool cd = i & (1 << (j * 3 + 1));
-                bool ef = i & (1 << (j * 3 + 2));
+                bool ef = i & (1 << (j + 3 + 2));
 
-                sum1 = (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
-                sum1 += cd ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
-                sum1 += ab ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
-                sum1 += (ab & cd) ? ((ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1]) : 0;
-                id1++;
+                right_sum += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;
+                id++;
 
-                sum2 = (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
-                id2++;
-                sum2 += cd ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
-                id2++;
-                sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id1]) : 0;
-                id2++;
-                sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
-                id2++;
+                right_sum += cd ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;
+                id++;
+
+                right_sum += ab ? (ef ? Mersenne::neg(eval_base[id]) : eval_base[id]) : 0;;
+                id++;
+
+                right_sum += ef ? Mersenne::neg(eval_base[id]) : eval_base[id];
+                id++;
             }
-            input_table1[i] = Mersenne::modp_128(sum1);
-            input_table2[i] = Mersenne::modp_128(sum2);
+            input_table[i] = Mersenne::modp_128(right_sum);
         }
 
         end = std::chrono::high_resolution_clock::now();
@@ -851,71 +727,45 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         start = std::chrono::high_resolution_clock::now();
 
-        for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-            // cout << "block_col_id: " << block_col_id << endl;
+        for (uint64_t block_id = 0; block_id < total_blocks_num; block_id++) {
+            // cout << "block_id: " << block_id << endl;
+            // fetch 1 block, containing BLOCKSIZE bit tuples
+            memcpy(cur_block, share_tuple_blocks + start_point + block_id, sizeof(ShareTupleBlock));
+            
+            long b_block = cur_block[0].input2.second;
+            long d_block = cur_block[0].input1.second;
+            long f_block = cur_block[0].rho.second;
 
-            // fetch k/4 tuple_blocks, containing k * BLOCKSIZE bit tuples
-            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
-
-            for (uint64_t i = 0; i < quarter_k / 2; i++) {
-                // i = 0, 1, 2, 3; i + quarter_k / 2 = 4, 5, 6, 7
-                // cout << "index: " << index << ", row: " << row << ", col: " << col << endl;                
-
-                uint64_t right_id1 = 0, right_id2 = 0;
-                ShareTupleBlock cur_block1 = quarter_k_blocks[i];
-                ShareTupleBlock cur_block2 = quarter_k_blocks[i + quarter_k / 2];
-                            
-                long b_block1 = cur_block1.input2.second;
-                long d_block1 = cur_block1.input1.second;
-                long f_block1 = cur_block1.rho.second;
-                             
-                long b_block2 = cur_block2.input2.second;
-                long d_block2 = cur_block2.input1.second;
-                long f_block2 = cur_block2.rho.second;
-
-                for (int l = 0; l < BLOCK_SIZE / 4; l++) {
-                    // l = 0, ..., 15
-                    for (int group_id = 0; group_id < 4; group_id++) {
-                        // group_id = 0, 1, 2, 3
-
-                        int row = index / s;
-                        int col = index % s;
-
-                        if (index >= s0) {
-                        // cout << "cp 4" << endl;
-                            if ((uint64_t)row == k2) 
-                                break;
-                            else 
-                                input[row][col] = 0;
-                        } 
-                        else {
-                            // group_id * 16  = 0, 16, 32, 48
-                            // group_id * 16 + l  = 0 - 15, 16 - 31, 32 - 47, 48 - 63
-                        
-                            bool b1 = b_block1 & (1 << (group_id * 16 + l));
-                            bool d1 = d_block1 & (1 << (group_id * 16 + l));
-                            bool f1 = f_block1 & (1 << (group_id * 16 + l));
-
-                            if (b1) right_id1 ^= 1 << (i * 3);
-                            if (d1) right_id1 ^= 1 << (i * 3 + 1);
-                            if (f1) right_id1 ^= 1 << (i * 3 + 2);
-                            
-                            bool b2 = b_block2 & (1 << (group_id * 16 + l));
-                            bool d2 = d_block2 & (1 << (group_id * 16 + l));
-                            bool f2 = f_block2 & (1 << (group_id * 16 + l));
-
-                            if (b2) right_id2 ^= 1 << (i * 3);
-                            if (d2) right_id2 ^= 1 << (i * 3 + 1);
-                            if (f2) right_id2 ^= 1 << (i * 3 + 2);
-
-                            input[row][col] = Mersenne::mul(Mersenne::add(input_table1[right_id1], input_table2[right_id2]), two_powers);
-                        }
-                        index++;
-                    }
+            for (int l = 0; l < 16; l++) {
+                int row = index / s;
+                int col = index % s;
+                if (index >= s0) {
+                    // cout << "cp 4" << endl;
+                    if ((uint64_t)row == k2) 
+                        break;
+                    else 
+                        input[row][col] = 0;
                 }
+                else {
+                    uint64_t right_id = 0;
+
+                    long b_col = b_block & mask_table[l];
+                    long d_col = d_block & mask_table[l];
+                    long f_col = f_block & mask_table[l];
+
+                    for (int j = 0; j < 4; j++) {
+                        uint64_t mask = 1 << (l + j * 16);
+                        right_id ^= b_col & mask;
+                        right_id ^= d_col & mask;
+                        right_id ^= f_col & mask;
+                    }
+
+                    input[row][col] = Mersenne::mul(input_table[right_id], two_powers);
+                }
+                index++;
             }
-            cur_quarter_k_blocks_id += quarter_k;
         }
+        
     }
 
     end = std::chrono::high_resolution_clock::now();
