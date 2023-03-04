@@ -63,7 +63,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
     // assuming k % 4 = 0
     uint64_t quarter_k = k / 4;
-    uint64_t two_powers = (0xFFFFFFFF - 1) * 2;
+    uint64_t two_powers = (0xFFFF - 1) * 4;
     // cout << "block_cols_num: " << block_cols_num << endl;
     // cout << "total_blocks_num: " << total_blocks_num << endl;
 
@@ -653,7 +653,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     Field out_ss = 0, sum_ss = 0;
 
     // recover proof
-    uint64_t two_powers = (0xFFFFFFFF - 1) * 2;
+    uint64_t two_powers = (0xFFFF - 1) * 4;
     bool prev_party = ((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0;
     if(prev_party) {
         out_ss = Mersenne::mul(neg_two_inverse, two_powers * batch_size);
@@ -751,47 +751,66 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         start = std::chrono::high_resolution_clock::now();
 
         for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-            // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
+        // cout << "block_col_id: " << block_col_id << endl;
+
+        // fetch k/4 tuple_blocks, containing k * BLOCKSIZE bit tuples
             memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
 
-            for (int l = 0; l < BLOCK_SIZE; l++) {
-                int row = index / s;
-                int col = index % s;
+            for (uint64_t i = 0; i < quarter_k / 2; i++) {
+                // i = 0, 1, 2, 3; i + quarter_k / 2 = 4, 5, 6, 7
+                // cout << "index: " << index << ", row: " << row << ", col: " << col << endl;                
 
-                if (index >= s0) {
-                    if ((uint64_t)row == k2) {
-                        break;
+                uint64_t left_id1 = 0, left_id2 = 0;
+                ShareTupleBlock cur_block1 = quarter_k_blocks[i];
+                ShareTupleBlock cur_block2 = quarter_k_blocks[i + quarter_k / 2];
+
+                long a_block1 = cur_block1.input1.first;
+                long c_block1 = cur_block1.input2.first;
+                long e_block1 = (a_block1 & c_block1) ^ cur_block1.result.first ^ cur_block1.rho.first;
+
+                long a_block2 = cur_block2.input1.first;
+                long c_block2 = cur_block2.input2.first;
+                long e_block2 = (a_block2 & c_block2) ^ cur_block2.result.first ^ cur_block2.rho.first;
+
+                for (int l = 0; l < BLOCK_SIZE / 4; l++) {
+                    // l = 0, ..., 15
+                    for (int group_id = 0; group_id < 4; group_id++) {
+                        // group_id = 0, 1, 2, 3
+
+                        int row = index / s;
+                        int col = index % s;
+
+                        if (index >= s0) {
+                        // cout << "cp 4" << endl;
+                            if ((uint64_t)row == k2) 
+                                break;
+                            else 
+                                input[row][col] = 0;
+                        } 
+                        else {
+                            // group_id * 16  = 0, 16, 32, 48
+                            // group_id * 16 + l  = 0 - 15, 16 - 31, 32 - 47, 48 - 63
+                            bool a1 = a_block1 & (1 << (group_id * 16 + l));
+                            bool c1 = c_block1 & (1 << (group_id * 16 + l));
+                            bool e1 = e_block1 & (1 << (group_id * 16 + l));
+
+                            if (a1) left_id1 ^= 1 << (i * 3);
+                            if (c1) left_id1 ^= 1 << (i * 3 + 1);
+                            if (e1) left_id1 ^= 1 << (i * 3 + 2);
+                            
+                            bool a2 = a_block2 & (1 << (group_id * 16 + l));
+                            bool c2 = c_block2 & (1 << (group_id * 16 + l));
+                            bool e2 = e_block2 & (1 << (group_id * 16 + l));
+
+                            if (a2) left_id2 ^= 1 << (i * 3);
+                            if (c2) left_id2 ^= 1 << (i * 3 + 1);
+                            if (e2) left_id2 ^= 1 << (i * 3 + 2);
+
+                            input[row][col] = Mersenne::mul(Mersenne::add(input_table1[left_id1], input_table2[left_id2]), two_powers);
+                        }
+                        index++;
                     }
-                    else {
-                        input[row][col] = 0;
-                    }
-                } 
-                else {
-                    uint64_t id1 = 0, id2 = 0;
-                    for(uint64_t i = 0; i < quarter_k / 2; i++) {
-
-                        ShareTupleBlock cur_block = quarter_k_blocks[i];
-                        bool a = (cur_block.input1.first >> l) & 1;
-                        bool c = (cur_block.input2.first >> l) & 1;
-                        bool e = (a & c) ^ ((cur_block.result.first >> l) & 1) ^ ((cur_block.rho.first >> l) & 1);
-                        
-                        if (a) id1 ^= 1 << (i * 3);
-                        if (c) id1 ^= 1 << (i * 3 + 1);
-                        if (e) id1 ^= 1 << (i * 3 + 2);
-
-                        cur_block = quarter_k_blocks[i + quarter_k / 2];
-
-                        a = (cur_block.input1.first >> l) & 1;
-                        c = (cur_block.input2.first >> l) & 1;
-                        e = (a & c) ^ ((cur_block.result.first >> l) & 1) ^ ((cur_block.rho.first >> l) & 1);
-
-                        if (a) id2 ^= 1 << (i * 3);
-                        if (c) id2 ^= 1 << (i * 3 + 1);
-                        if (e) id2 ^= 1 << (i * 3 + 2);
-                    }
-                    input[row][col] = Mersenne::mul(Mersenne::add(input_table1[id1], input_table2[id2]), two_powers);
                 }
-                index ++;
             }
             cur_quarter_k_blocks_id += quarter_k;
         }
@@ -833,48 +852,67 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         start = std::chrono::high_resolution_clock::now();
 
         for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-            // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
+            // cout << "block_col_id: " << block_col_id << endl;
+
+            // fetch k/4 tuple_blocks, containing k * BLOCKSIZE bit tuples
             memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
 
-            for (int l = 0; l < BLOCK_SIZE; l++) {
-                int row = index / s;
-                int col = index % s;
+            for (uint64_t i = 0; i < quarter_k / 2; i++) {
+                // i = 0, 1, 2, 3; i + quarter_k / 2 = 4, 5, 6, 7
+                // cout << "index: " << index << ", row: " << row << ", col: " << col << endl;                
 
-                if (index >= s0) {
-                    if ((uint64_t)row == k2) {
-                        break;
-                    }
-                    else {
-                        input[row][col] = 0;
-                    }
-                } 
-                else {
-                    uint64_t id1 = 0, id2 = 0;
-                    for(uint64_t i = 0; i < quarter_k / 2; i++) {
+                uint64_t right_id1 = 0, right_id2 = 0;
+                ShareTupleBlock cur_block1 = quarter_k_blocks[i];
+                ShareTupleBlock cur_block2 = quarter_k_blocks[i + quarter_k / 2];
+                            
+                long b_block1 = cur_block1.input2.second;
+                long d_block1 = cur_block1.input1.second;
+                long f_block1 = cur_block1.rho.second;
+                             
+                long b_block2 = cur_block2.input2.second;
+                long d_block2 = cur_block2.input1.second;
+                long f_block2 = cur_block2.rho.second;
 
-                        ShareTupleBlock cur_block = quarter_k_blocks[i];
+                for (int l = 0; l < BLOCK_SIZE / 4; l++) {
+                    // l = 0, ..., 15
+                    for (int group_id = 0; group_id < 4; group_id++) {
+                        // group_id = 0, 1, 2, 3
 
-                        bool b = (cur_block.input2.second >> l) & 1;
-                        bool d = (cur_block.input1.second >> l) & 1;
-                        bool f = (cur_block.rho.second >> l) & 1;
+                        int row = index / s;
+                        int col = index % s;
+
+                        if (index >= s0) {
+                        // cout << "cp 4" << endl;
+                            if ((uint64_t)row == k2) 
+                                break;
+                            else 
+                                input[row][col] = 0;
+                        } 
+                        else {
+                            // group_id * 16  = 0, 16, 32, 48
+                            // group_id * 16 + l  = 0 - 15, 16 - 31, 32 - 47, 48 - 63
                         
-                        if (b) id1 ^= 1 << (i * 3);
-                        if (d) id1 ^= 1 << (i * 3 + 1);
-                        if (f) id1 ^= 1 << (i * 3 + 2);
+                            bool b1 = b_block1 & (1 << (group_id * 16 + l));
+                            bool d1 = d_block1 & (1 << (group_id * 16 + l));
+                            bool f1 = f_block1 & (1 << (group_id * 16 + l));
 
-                        cur_block = quarter_k_blocks[i + quarter_k / 2];
+                            if (b1) right_id1 ^= 1 << (i * 3);
+                            if (d1) right_id1 ^= 1 << (i * 3 + 1);
+                            if (f1) right_id1 ^= 1 << (i * 3 + 2);
+                            
+                            bool b2 = b_block2 & (1 << (group_id * 16 + l));
+                            bool d2 = d_block2 & (1 << (group_id * 16 + l));
+                            bool f2 = f_block2 & (1 << (group_id * 16 + l));
 
-                        b = (cur_block.input2.second >> l) & 1;
-                        d = (cur_block.input1.second >> l) & 1;
-                        f = (cur_block.rho.second >> l) & 1;
+                            if (b2) right_id2 ^= 1 << (i * 3);
+                            if (d2) right_id2 ^= 1 << (i * 3 + 1);
+                            if (f2) right_id2 ^= 1 << (i * 3 + 2);
 
-                        if (b) id2 ^= 1 << (i * 3);
-                        if (d) id2 ^= 1 << (i * 3 + 1);
-                        if (f) id2 ^= 1 << (i * 3 + 2);
+                            input[row][col] = Mersenne::mul(Mersenne::add(input_table1[right_id1], input_table2[right_id2]), two_powers);
+                        }
+                        index++;
                     }
-                    input[row][col] = Mersenne::mul(Mersenne::add(input_table1[id1], input_table2[id2]), two_powers);
                 }
-                index ++;
             }
             cur_quarter_k_blocks_id += quarter_k;
         }
