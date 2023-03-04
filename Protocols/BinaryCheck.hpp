@@ -97,7 +97,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     f_block ^= tmp;
                 }
 
-                for(uint64_t col_entry_id = rotation; col_entry_id < 4 + rotation; col_entry_id++) {  
+                for(uint64_t col_entry_id = 4 * rotation; col_entry_id < 4 * rotation + 4; col_entry_id++) {  
 
                     long tmp1, tmp2, tmp3, tmp4;
 
