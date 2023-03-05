@@ -40,7 +40,9 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     // Vectors of masked evaluations of polynomial p(X)
     vector<vector<Field>> p_evals_masked;
-    uint64_t k_max = max(k, k2);
+    uint64_t k_max = k > k2 ? k : k2;
+    // cout << "k: " << k << ", k2: " << k2 << ", k_max: " << k_max << endl;
+
     // Evaluations of polynomial p(X)
     Field* eval_p_poly = new Field[2 * k_max - 1];  
 
@@ -50,7 +52,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     }
     
     Field** eval_result = new Field*[k_max];
-    for(uint64_t i = 0; i < k; i++) {
+    for(uint64_t i = 0; i < k_max; i++) {
         eval_result[i] = new Field[k_max];
     }
 
@@ -77,23 +79,23 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     ShareTupleBlock k_share_tuple_blocks[k];
     // works for binary_batch_size % BLOCK_SIZE = 0
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
-    uint64_t block_s = (s - 1) / BLOCK_SIZE + 1;
+    uint64_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
     int cur_k_blocks = 0;
-    uint64_t block_batch_size = (batch_size - 1) / BLOCK_SIZE + 1;
+    uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
 
-    // cout << "block_s: " << block_s << endl;
-    // cout << "block_batch_size: " << block_batch_size << endl;
+    // cout << "block_cols_num: " << block_cols_num << endl;
+    // cout << "total_blocks_num: " << total_blocks_num << endl;
 
-    for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+    for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
         // cout << "block_col: " << block_col << endl;
         // fetch k tuple_blocks
-        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         
         for(uint64_t i = 0; i < k; i++) { 
             ShareTupleBlock row_tuple_block = k_share_tuple_blocks[i];
             
             for(uint64_t j = 0; j < k; j++) {  
-                if (cur_k_blocks + i >= block_batch_size || cur_k_blocks + j >= block_batch_size) {
+                if (cur_k_blocks + i >= total_blocks_num || cur_k_blocks + j >= total_blocks_num) {
                     continue;
                 }
                 if (i == j) {
@@ -154,6 +156,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     // use k2 as the compression parameter from the second round
     s = (s - 1) / k2 + 1;
 
+    // cout << "s0: " << s0 << ", s: " << s << ", k2: " << k2 << endl;
+
     Field **input_left, **input_right;
     input_left = new Field*[k2];
     input_right = new Field*[k2];
@@ -166,39 +170,49 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t index = 0;
     cur_k_blocks = 0;
 
-    for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+    uint64_t table_size = 1 << k;
+    Field* input_table = new Field[table_size];
+
+    for (uint64_t i = 0; i < table_size; i++) {
+        Field sum = 0;
+        for (uint64_t j = 0; j < k; j++) {
+            if ((i >> j) & 1)
+                sum += eval_base[j];
+        }
+        input_table[i] = sum;
+    }
+
+    for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+        memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         
         for (int l = 0; l < BLOCK_SIZE; l++) {
             int row = index / s;
             int col = index % s;
             if (index >= s0) {
-                input_left[row][col] = 0;
-                input_left[row][col + 1] = 0;
-                input_right[row][col] = 0;
-                input_right[row][col + 1] = 0;
+                if ((uint64_t)row == k2) {
+                    break;
+                }
+                else {
+                    input_left[row][col] = input_left[row][col + 1] = 0;
+                    input_right[row][col] = input_right[row][col + 1] = 0;
+                    // cout << "row: " << row << ", col: " << col << endl;
+                }
             } 
             else {
-                Field sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0;
-                // linear combination
-                for(uint64_t i = 0; i < k; i++) { 
-                    if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
-                        sum1 += eval_base[i];
-                    
-                    if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
-                        sum2 += eval_base[i];
+                uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
 
-                    if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
-                        sum3 += eval_base[i];
-
-                    if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
-                        sum4 += eval_base[i];
+                for (uint64_t j = 0; j < k; j++) {
+                    if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << k;
+                    if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << k;
+                    if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << k;
+                    if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << k;
                 }
-                input_left[row][col] = sum1 * thetas[block_col * BLOCK_SIZE + l];
-                input_left[row][col + 1] = sum2 * thetas[block_col * BLOCK_SIZE + l];
-                input_right[row][col] = sum3;
-                input_right[row][col + 1] = sum4;
+
+                input_left[row][col] = input_table[left_id1] * thetas[block_col * BLOCK_SIZE + l];
+                input_left[row][col + 1] = input_table[left_id2] * thetas[block_col * BLOCK_SIZE + l];
+                input_right[row][col] = input_table[right_id1];
+                input_right[row][col + 1] = input_table[right_id2];
             }
             index += 2;
         }
@@ -212,16 +226,21 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     while(true){
         // auto start = std::chrono::high_resolution_clock::now();
+        // cout << "cp 1, s: " << s << ", k2: " << k2 << endl;
 
         for(uint64_t i = 0; i < k2; i++) {
             for(uint64_t j = 0; j < k2; j++) {
+                // cout << "cp 1.5, i: " << i << ", j: " << j << endl;
                 eval_result[i][j] = inner_product(input_left[i], input_right[j], s);
             }
         }
+        // cout << "cp 2" << endl;
 
         for(uint64_t i = 0; i < k2; i++) {
             eval_p_poly[i] = eval_result[i][i];
         }
+
+        // cout << "cp 3" << endl;
 
         for(uint64_t i = 0; i < k2 - 1; i++) {
             eval_p_poly[i + k2] = 0;
@@ -231,6 +250,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 }
             }
         }
+
+        // cout << "cp 4" << endl;
 
         vector<Field> ss(2 * k2 - 1);       
         for(uint64_t i = 0; i < 2 * k2 - 1; i++) {           
@@ -249,10 +270,13 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
         s0 = s;
         s = (s - 1) / k2 + 1;
+
+        // cout << "cp 5" << endl;
        
         for(uint64_t i = 0; i < k2; i++) {
             for(uint64_t j = 0; j < s; j++) {
                 index = i * s + j;
+                // cout << "cp 5.5, index: " << index << endl;
                
                 if (index < s0) {
                     Field temp_result;
@@ -274,6 +298,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 }
             }
         }
+        // cout << "cp 6" << endl;
         cnt++;
     }
 
@@ -328,7 +353,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     uint64_t k = OnlineOptions::singleton.k_size;
     uint64_t k2 = OnlineOptions::singleton.k2_size;
 
-    uint64_t k_max = max(k, k2);
+    uint64_t k_max = k > k2 ? k : k2;
 
     Field* eval_base = new Field[k_max];
     Field* eval_base_2k = new Field[2 * k_max - 1];    
@@ -382,18 +407,18 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     // cout << "cp 1" << endl;
 
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
-    uint64_t block_s = (s - 1) / BLOCK_SIZE + 1;
-    uint64_t block_batch_size = (batch_size - 1) / BLOCK_SIZE + 1;
+    uint64_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
+    uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
     int cur_k_blocks = 0;
     ShareTupleBlock k_share_tuple_blocks[k];
 
     if (prev_party) {
-        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+        for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
 
             for (uint64_t i = 0; i < k; i++) { 
-                if (cur_k_blocks + i >= block_batch_size) {
+                if (cur_k_blocks + i >= total_blocks_num) {
                     break;
                 }
                 long this_block_value = k_share_tuple_blocks[i].result.first ^ (k_share_tuple_blocks[i].result.first & k_share_tuple_blocks[i].input2.first) ^ k_share_tuple_blocks[i].rho.first;
@@ -407,12 +432,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
     }
     else {
-        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+        for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
 
             for (uint64_t i = 0; i < k; i++) { 
-                if (cur_k_blocks + i >= block_batch_size) {
+                if (cur_k_blocks + i >= total_blocks_num) {
                     break;
                 }
                 long this_block_value = k_share_tuple_blocks[i].rho.second;
@@ -450,30 +475,45 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     // cout << "cp 3" << endl;
     cur_k_blocks = 0;
 
+    uint64_t table_size = 1 << k;
+    Field* input_table = new Field[table_size];
+
+    for (uint64_t i = 0; i < table_size; i++) {
+        Field sum = 0;
+        for (uint64_t j = 0; j < k; j++) {
+            if ((i >> j) & 1)
+                sum += eval_base[j];
+        }
+        input_table[i] = sum;
+    }
+
     if (prev_party) {
-        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+
+        for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
             
             for (int l = 0; l < BLOCK_SIZE; l++) {
                 int row = index / s;
                 int col = index % s;
                 if (index >= s0) {
-                    input[row][col] = 0;
-                    input[row][col + 1] = 0;
+                    if ((uint64_t)row == k2) {
+                        break;
+                    }
+                    else {
+                        input[row][col] = input[row][col + 1] = 0;
+                    }
                 } 
                 else {
-                    Field sum1 = 0, sum2 = 0;
-                    // linear combination
-                    for(uint64_t i = 0; i < k; i++) { 
-                        if ((k_share_tuple_blocks[i].input1.first >> l) & 1)
-                            sum1 += eval_base[i];
-                        
-                        if ((k_share_tuple_blocks[i].input2.first >> l) & 1)
-                            sum2 += eval_base[i];
+                    uint64_t left_id1 = 0, left_id2 = 0;
+
+                    for (uint64_t j = 0; j < k; j++) {
+                        if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << k;
+                        if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << k;
                     }
-                    input[row][col] = sum1;
-                    input[row][col + 1] = sum2;
+
+                    input[row][col] = input_table[left_id1] * thetas[block_col * BLOCK_SIZE + l];
+                    input[row][col + 1] = input_table[left_id2] * thetas[block_col * BLOCK_SIZE + l];
                 }
                 index += 2;
             }
@@ -481,34 +521,37 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
     } 
     else {
-        for (uint64_t block_col = 0; block_col < block_s; block_col ++) {
+        for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, block_batch_size - cur_k_blocks));
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
             
             for (int l = 0; l < BLOCK_SIZE; l++) {
                 int row = index / s;
                 int col = index % s;
                 if (index >= s0) {
-                    input[row][col] = 0;
-                    input[row][col + 1] = 0;
+                    if ((uint64_t)row == k2) {
+                        break;
+                    }
+                    else {
+                        input[row][col] = input[row][col + 1] = 0;
+                    }
                 } 
                 else {
-                    Field sum1 = 0, sum2 = 0;
-                    // linear combination
-                    for(uint64_t i = 0; i < k; i++) { 
-                        if ((k_share_tuple_blocks[i].input1.second >> l) & 1)
-                            sum1 += eval_base[i];
-                        
-                        if ((k_share_tuple_blocks[i].input2.second >> l) & 1)
-                            sum2 += eval_base[i];
+                    uint64_t right_id1 = 0, right_id2 = 0;
+
+                    for (uint64_t j = 0; j < k; j++) {
+                        if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << k;
+                        if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << k;
                     }
-                    input[row][col] = sum1 * thetas[block_col * BLOCK_SIZE + l];
-                    input[row][col + 1] = sum2  * thetas[block_col * BLOCK_SIZE + l];
+
+                    input[row][col] = input_table[right_id1];
+                    input[row][col + 1] = input_table[right_id2];
                 }
                 index += 2;
             }
             cur_k_blocks += k;
         }
+        
     }
     // cout << "cp 4" << endl;
 
