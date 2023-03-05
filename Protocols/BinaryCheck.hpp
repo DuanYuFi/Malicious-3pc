@@ -83,18 +83,18 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 
                 if (rotation) {
                     // rotate once
-                    // get higher 16 bits
-                    long tmp = b_block & 0xFFFF000000000000;
-                    b_block >>= 48;
-                    b_block ^= tmp;
+                    // get lower 16 bits
+                    long tmp = b_block & 0x000000000000FFFF;
+                    b_block >>= 16;
+                    b_block ^= tmp << 48;
 
-                    tmp = d_block & 0xFFFF000000000000;
-                    d_block >>= 48;
-                    f_block ^= tmp;
+                    long tmp = d_block & 0x000000000000FFFF;
+                    d_block >>= 16;
+                    d_block ^= tmp << 48;
 
-                    tmp = f_block & 0xFFFF000000000000;
-                    d_block >>= 48;
-                    f_block ^= tmp;
+                    long tmp = f_block & 0x000000000000FFFF;
+                    f_block >>= 16;
+                    f_block ^= tmp << 48;
                 }
 
                 for(uint64_t col_entry_id = 4 * rotation; col_entry_id < 4 * rotation + 4; col_entry_id++) {  
