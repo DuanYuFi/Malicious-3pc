@@ -125,7 +125,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             eval_result[row_entry_id][col_entry_id] = Mersenne::modp((sum & 0xFFFFFFFF) + delta);
                             eval_result[row_entry_id + 8][(col_entry_id + 8) % 16] = Mersenne::modp((sum >> 32) + delta);
 
-                            sum = -2 * (tmp1 & 0xFFFF0000FFFF0000) + 4 * ((tmp2 & 0xFFFF0000FFFF0000) + (tmp3 & 0xFFFF0000FFFF0000)) - 8 * (tmp4 & 0xFFFF0000FFFF0000) + addition;
+                            sum = -2 * ((tmp1 >> 16) & 0x0000FFFF0000FFFF) + 4 * (((tmp2 >> 16) & 0x0000FFFF0000FFFF) + ((tmp3 >> 16) & 0x0000FFFF0000FFFF)) - 8 * ((tmp4 >> 16) & 0x0000FFFF0000FFFF) + addition;
                             eval_result[row_entry_id + 4][col_entry_id + 4] = Mersenne::modp((sum & 0xFFFFFFFF) + delta);
                             eval_result[row_entry_id + 12][(col_entry_id + 12) % 16] = Mersenne::modp((sum >> 32) + delta);
 
@@ -159,7 +159,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             eval_result[row_entry_id][col_entry_id] = Mersenne::modp((sum & 0xFFFFFFFF) + delta);
                             eval_result[row_entry_id + 8][(col_entry_id + 8) % 16] = Mersenne::modp((sum >> 32) + delta);
 
-                            sum = (tmp1 & 0xFFFF0000FFFF0000) - 2 * ((tmp2 & 0xFFFF0000FFFF0000) + (tmp3 & 0xFFFF0000FFFF0000)) + 4 * (tmp4 & 0xFFFF0000FFFF0000) + addition;
+                            sum = ((tmp1 >> 16) & 0x0000FFFF0000FFFF) - 2 * (((tmp2 >> 16) & 0x0000FFFF0000FFFF) + ((tmp3 >> 16) & 0x0000FFFF0000FFFF)) + 4 * ((tmp4 >> 16) & 0x0000FFFF0000FFFF) + addition;
                             eval_result[row_entry_id + 4][col_entry_id + 4] = Mersenne::modp((sum & 0xFFFFFFFF) + delta);
                             eval_result[row_entry_id + 12][(col_entry_id + 12) % 16] = Mersenne::modp((sum >> 32) + delta);
 
@@ -193,7 +193,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             eval_result[row_entry_id][col_entry_id] = Mersenne::modp((sum & 0xFFFFFFFF) + delta);
                             eval_result[row_entry_id + 8][(col_entry_id + 8) % 16] = Mersenne::modp((sum >> 32) + delta);
 
-                            sum = (tmp1 & 0xFFFF0000FFFF0000) - 2 * ((tmp2 & 0xFFFF0000FFFF0000) + (tmp3 & 0xFFFF0000FFFF0000)) + 4 * (tmp4 & 0xFFFF0000FFFF0000) + addition;
+                            sum = ((tmp1 >> 16) & 0x0000FFFF0000FFFF) - 2 * (((tmp2 >> 16) & 0x0000FFFF0000FFFF) + ((tmp3 >> 16) & 0x0000FFFF0000FFFF)) + 4 * ((tmp4 >> 16) & 0x0000FFFF0000FFFF) + addition;
                             eval_result[row_entry_id + 4][col_entry_id + 4] = Mersenne::modp((sum & 0xFFFFFFFF) + delta);
                             eval_result[row_entry_id + 12][(col_entry_id + 12) % 16] = Mersenne::modp((sum >> 32) + delta);
 
@@ -228,7 +228,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             eval_result[row_entry_id][col_entry_id] = Mersenne::mul(neg_two_inverse, Mersenne::modp((sum & 0xFFFFFFFF) + delta));
                             eval_result[row_entry_id + 8][(col_entry_id + 8) % 16] = Mersenne::mul(neg_two_inverse, Mersenne::modp((sum >> 32) + delta));
 
-                            sum = (tmp1 & 0xFFFF0000FFFF0000) - 2 * ((tmp2 & 0xFFFF0000FFFF0000) + (tmp3 & 0xFFFF0000FFFF0000)) + 4 * (tmp4 & 0xFFFF0000FFFF0000) + addition;
+                            sum = ((tmp1 >> 16) & 0x0000FFFF0000FFFF) - 2 * (((tmp2 >> 16) & 0x0000FFFF0000FFFF) + ((tmp3 >> 16) & 0x0000FFFF0000FFFF)) + 4 * ((tmp4 >> 16) & 0x0000FFFF0000FFFF) + addition;
                             eval_result[row_entry_id + 4][col_entry_id + 4] = Mersenne::mul(neg_two_inverse, Mersenne::modp((sum & 0xFFFFFFFF) + delta));
                             eval_result[row_entry_id + 12][(col_entry_id + 12) % 16] = Mersenne::mul(neg_two_inverse, Mersenne::modp((sum >> 32) + delta));
 
