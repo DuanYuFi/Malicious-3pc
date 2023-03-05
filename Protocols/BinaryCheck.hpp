@@ -88,11 +88,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     b_block >>= 16;
                     b_block ^= tmp << 48;
 
-                    long tmp = d_block & 0x000000000000FFFF;
+                    tmp = d_block & 0x000000000000FFFF;
                     d_block >>= 16;
                     d_block ^= tmp << 48;
 
-                    long tmp = f_block & 0x000000000000FFFF;
+                    tmp = f_block & 0x000000000000FFFF;
                     f_block >>= 16;
                     f_block ^= tmp << 48;
                 }
@@ -158,10 +158,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             tmp3 = tmp1 & f_block;
                             tmp4 = tmp2 & f_block;
                             for (int group_id = 0; group_id < 4; group_id++) {  
-                                Field sum = tmp1;
+                                Field sum = tmp1 >> (group_id * 16) & 0xFFFF;
                                 sum += Mersenne::neg(2 * ((tmp2 >> group_id * 16) & 0xFFFF));
                                 sum += Mersenne::neg(2 * ((tmp3 >> group_id * 16) & 0xFFFF));
-                                sum += 4 * tmp4;
+                                sum += 4 * ((tmp4 >> group_id * 16) & 0xFFFF);
                                 eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
                             }
                             break;
@@ -190,10 +190,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             tmp3 = tmp1 & f_block;
                             tmp4 = tmp2 & f_block;
                             for (int group_id = 0; group_id < 4; group_id++) {  
-                                Field sum = tmp1;
+                                Field sum = tmp1 >> (group_id * 16) & 0xFFFF;
                                 sum += Mersenne::neg(2 * ((tmp2 >> group_id * 16) & 0xFFFF));
                                 sum += Mersenne::neg(2 * ((tmp3 >> group_id * 16) & 0xFFFF));
-                                sum += 4 * tmp4;
+                                sum += 4 * ((tmp4 >> group_id * 16) & 0xFFFF);
                                 eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
                             }
                             break;
@@ -202,6 +202,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                         case 3: {
                             switch(col_entry_id % 4) {
                                 // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (-1/2) * bd + bde + bdf - 2bdef
+                                // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (bd - 2bde - 2bdf + 4bdef) * (-1/2)
                                 case 0:
                                     tmp1 = b_block & d_block;
                                     break;
@@ -222,10 +223,18 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                             tmp3 = tmp1 & f_block;
                             tmp4 = tmp2 & f_block;
                             for (int group_id = 0; group_id < 4; group_id++) {  
-                                Field sum = neg_two_inverse;
+
+                                Field sum = Mersenne::mul(neg_two_inverse, (tmp1 >> group_id * 16) & 0xFFFF);
                                 sum += (tmp2 >> group_id * 16) & 0xFFFF;
                                 sum += (tmp3 >> group_id * 16) & 0xFFFF;
-                                sum += Mersenne::neg(2 * tmp4);
+                                sum += Mersenne::neg(2 * ((tmp4 >> group_id * 16) & 0xFFFF));
+
+                                // Field sum = (tmp1 >> group_id * 16) & 0xFFFF;
+                                // sum += Mersenne::neg(2 * (tmp2 >> group_id * 16) & 0xFFFF);
+                                // sum += Mersenne::neg(2 * (tmp3 >> group_id * 16) & 0xFFFF);
+                                // sum += 4 * ((tmp4 >> group_id * 16) & 0xFFFF);
+                                // sum = Mersenne::mul(neg_two_inverse, sum);
+
                                 eval_result[row_entry_id + 4 * group_id][(col_entry_id + 4 * group_id) % 16] = sum;
                             }
                             break;
@@ -387,16 +396,37 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 long d_col = d_block & mask_table[l];
                 long f_col = f_block & mask_table[l];
 
+                
+
                 for (int j = 0; j < 4; j++) {
                     uint64_t mask = 1 << (l + j * 16);
-                    left_id ^= a_col & mask;
-                    left_id ^= c_col & mask;
-                    left_id ^= e_col & mask;
-
-                    right_id ^= b_col & mask;
-                    right_id ^= d_col & mask;
-                    right_id ^= f_col & mask;
+                    if (a_col & mask) left_id ^= 1 << (3 * j);
+                    if (c_col & mask) left_id ^= 1 << (3 * j + 1);
+                    if (e_col & mask) left_id ^= 1 << (3 * j + 2);
+                    
+                    if (b_col & mask) right_id ^= 1 << (3 * j);
+                    if (d_col & mask) right_id ^= 1 << (3 * j + 1);
+                    if (f_col & mask) right_id ^= 1 << (3 * j + 2);
                 }
+
+                // for (int j = 0; j < 4; j++) {
+                //     // uint64_t mask = 1 << (l + j * 16);
+                //     if (j == 0) {
+                //         left_id = a_col ^ (c_col << 1) ^ (e_col << 2);
+                //         right_id = b_col ^ (d_col << 1) ^ (f_col << 2);
+                //     }
+                //     else {
+                //         long tmp = a_col >> (l + j * 16);
+                //         tmp ^= (c_col >> (l + j * 16 - 1));
+                //         tmp ^= e_col >> (l + j * 16 - 2);
+                //         left_id ^= ((tmp & 0x7) << j);
+
+                //         tmp = b_col >> (l + j * 16);
+                //         tmp ^= d_col >> (l + j * 16 - 1);
+                //         tmp ^= f_col >> (l + j * 16 - 2);
+                //         right_id ^= ((tmp & 0x7) << j);
+                //     }
+                // }
 
                 input_left[row][col] = Mersenne::mul(input_left_table[left_id], two_powers);
                 input_right[row][col] = Mersenne::mul(input_right_table[left_id], two_powers);
