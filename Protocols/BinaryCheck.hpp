@@ -182,40 +182,73 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         input_table[i] = sum;
     }
 
+    long* bit_blocks_left1 = new long[k];
+    long* bit_blocks_left2 = new long[k];
+    long* bit_blocks_right1 = new long[k];
+    long* bit_blocks_right2 = new long[k];
+
+    int bits_num = k2;
+    int group_num = BLOCK_SIZE / k2;
+
     for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
         memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         
-        for (int l = 0; l < BLOCK_SIZE; l++) {
-            int row = index / s;
-            int col = index % s;
-            if (index >= s0) {
-                if ((uint64_t)row == k2) {
-                    break;
+        // 
+        for (uint64_t i = 0; i < k; i++) {
+
+            ShareTupleBlock cur_block = k_share_tuple_blocks[i];
+
+            bit_blocks_left1[i] = cur_block.input1.first;
+            bit_blocks_left2[i] = cur_block.input2.first;
+
+            bit_blocks_right1[i] = cur_block.input2.second;
+            bit_blocks_right2[i] = cur_block.input1.second;
+        }
+
+        // k = 8, bits_num = 8, group_num = 8
+        // bit_id = 0, 1, 2, ..., 7
+        for (int bit_id = 0; bit_id < bits_num; bit_id++) {
+            // group_id = 0, 1, 2, ..., 7
+            for (int group_id = 0; group_id < group_num; group_id++) {
+
+                // bit_id = 0:  overall_bit_id = 0, 8, 16, 24, 32, 40, 48, 56
+                // bit_id = 1:  overall_bit_id = 1, 9, 17, 25, 33, 41, 49, 57
+                // ......
+                // bit_id = 7:  overall_bit_id = 7, 15, 23, 31, 39, 47, 49, 63
+                int overall_bit_id = group_id * bits_num + bit_id;
+                int cur_index = index + overall_bit_id * 2;
+                int row = cur_index / s;
+                int col = cur_index % s;
+
+                if (index >= s0) {
+                    if ((uint64_t)row == k2) {
+                        break;
+                    }
+                    else {
+                        input_left[row][col] = input_left[row][col + 1] = 0;
+                        input_right[row][col] = input_right[row][col + 1] = 0;
+                        continue;
+                    }
                 }
-                else {
-                    input_left[row][col] = input_left[row][col + 1] = 0;
-                    input_right[row][col] = input_right[row][col + 1] = 0;
-                    // cout << "row: " << row << ", col: " << col << endl;
-                }
-            } 
-            else {
+
                 uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
 
-                for (uint64_t j = 0; j < k; j++) {
-                    if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << j;
-                    if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << j;
-                    if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << j;
-                    if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << j;
+                for (int j = 0; j < bits_num; j++) {
+                    left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
+                    left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
+                    right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
+                    right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
                 }
 
-                input_left[row][col] = input_table[left_id1] * thetas[block_col * BLOCK_SIZE + l];
-                input_left[row][col + 1] = input_table[left_id2] * thetas[block_col * BLOCK_SIZE + l];
-                input_right[row][col] = input_table[right_id1];
-                input_right[row][col + 1] = input_table[right_id2];
-            }
-            index += 2;
+                input_left[row][col] = input_table[left_id1 & 0xc] * thetas[block_col * BLOCK_SIZE + overall_bit_id];
+                input_left[row][col + 1] = input_table[left_id2 & 0xc] * thetas[block_col * BLOCK_SIZE + overall_bit_id];
+                input_right[row][col] = input_table[right_id1 & 0xc];
+                input_right[row][col + 1] = input_table[right_id2 & 0xc];
+            } 
         }
+        
+        index += BLOCK_SIZE * 2;
         cur_k_blocks += k;
     }
 
@@ -494,71 +527,127 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         input_table[i] = sum;
     }
 
+
+
+    int bits_num = k2;
+    int group_num = BLOCK_SIZE / k2;
+
     if (prev_party) {
+
+        long* bit_blocks_left1 = new long[k];
+        long* bit_blocks_left2 = new long[k];
 
         for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
             memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
             
-            for (int l = 0; l < BLOCK_SIZE; l++) {
-                int row = index / s;
-                int col = index % s;
-                if (index >= s0) {
-                    if ((uint64_t)row == k2) {
-                        break;
+            // 
+            for (uint64_t i = 0; i < k; i++) {
+
+                ShareTupleBlock cur_block = k_share_tuple_blocks[i];
+
+                bit_blocks_left1[i] = cur_block.input1.first;
+                bit_blocks_left2[i] = cur_block.input2.first;
+            }
+
+            // k = 8, bits_num = 8, group_num = 8
+            // bit_id = 0, 1, 2, ..., 7
+            for (int bit_id = 0; bit_id < bits_num; bit_id++) {
+                // group_id = 0, 1, 2, ..., 7
+                for (int group_id = 0; group_id < group_num; group_id++) {
+
+                    // bit_id = 0:  overall_bit_id = 0, 8, 16, 24, 32, 40, 48, 56
+                    // bit_id = 1:  overall_bit_id = 1, 9, 17, 25, 33, 41, 49, 57
+                    // ......
+                    // bit_id = 7:  overall_bit_id = 7, 15, 23, 31, 39, 47, 49, 63
+                    int overall_bit_id = group_id * bits_num + bit_id;
+                    int cur_index = index + overall_bit_id * 2;
+                    int row = cur_index / s;
+                    int col = cur_index % s;
+
+                    if (index >= s0) {
+                        if ((uint64_t)row == k2) {
+                            break;
+                        }
+                        else {
+                            input[row][col] = input[row][col + 1] = 0;
+                            continue;
+                        }
                     }
-                    else {
-                        input[row][col] = input[row][col + 1] = 0;
-                    }
-                } 
-                else {
+
                     uint64_t left_id1 = 0, left_id2 = 0;
 
-                    for (uint64_t j = 0; j < k; j++) {
-                        if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << j;
-                        if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << j;
+                    for (int j = 0; j < bits_num; j++) {
+                        left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
+                        left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
                     }
 
-                    input[row][col] = input_table[left_id1] * thetas[block_col * BLOCK_SIZE + l];
-                    input[row][col + 1] = input_table[left_id2] * thetas[block_col * BLOCK_SIZE + l];
-                }
-                index += 2;
+                    input[row][col] = input_table[left_id1 & 0xc] * thetas[block_col * BLOCK_SIZE + overall_bit_id];
+                    input[row][col + 1] = input_table[left_id2 & 0xc] * thetas[block_col * BLOCK_SIZE + overall_bit_id];
+                } 
             }
+            
+            index += BLOCK_SIZE * 2;
             cur_k_blocks += k;
         }
     } 
     else {
+
+        long* bit_blocks_right1 = new long[k];
+        long* bit_blocks_right2 = new long[k];
+
         for (uint64_t block_col = 0; block_col < block_cols_num; block_col ++) {
             // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
             memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
             
-            for (int l = 0; l < BLOCK_SIZE; l++) {
-                int row = index / s;
-                int col = index % s;
-                if (index >= s0) {
-                    if ((uint64_t)row == k2) {
-                        break;
+            for (uint64_t i = 0; i < k; i++) {
+
+                ShareTupleBlock cur_block = k_share_tuple_blocks[i];
+
+                bit_blocks_right1[i] = cur_block.input2.second;
+                bit_blocks_right2[i] = cur_block.input1.second;
+            }
+
+            // k = 8, bits_num = 8, group_num = 8
+            // bit_id = 0, 1, 2, ..., 7
+            for (int bit_id = 0; bit_id < bits_num; bit_id++) {
+                // group_id = 0, 1, 2, ..., 7
+                for (int group_id = 0; group_id < group_num; group_id++) {
+
+                    // bit_id = 0:  overall_bit_id = 0, 8, 16, 24, 32, 40, 48, 56
+                    // bit_id = 1:  overall_bit_id = 1, 9, 17, 25, 33, 41, 49, 57
+                    // ......
+                    // bit_id = 7:  overall_bit_id = 7, 15, 23, 31, 39, 47, 49, 63
+                    int overall_bit_id = group_id * bits_num + bit_id;
+                    int cur_index = index + overall_bit_id * 2;
+                    int row = cur_index / s;
+                    int col = cur_index % s;
+
+                    if (index >= s0) {
+                        if ((uint64_t)row == k2) {
+                            break;
+                        }
+                        else {
+                            input[row][col] = input[row][col + 1] = 0;
+                            continue;
+                        }
                     }
-                    else {
-                        input[row][col] = input[row][col + 1] = 0;
-                    }
-                } 
-                else {
+
                     uint64_t right_id1 = 0, right_id2 = 0;
 
-                    for (uint64_t j = 0; j < k; j++) {
-                        if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << j;
-                        if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << j;
+                    for (int j = 0; j < bits_num; j++) {
+                        right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
+                        right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
                     }
 
-                    input[row][col] = input_table[right_id1];
-                    input[row][col + 1] = input_table[right_id2];
-                }
-                index += 2;
+                    input[row][col] = input_table[right_id1 & 0xc];
+                    input[row][col + 1] = input_table[right_id2 & 0xc];
+                } 
             }
+            
+            index += BLOCK_SIZE * 2;
             cur_k_blocks += k;
         }
-        
     }
     // cout << "cp 4" << endl;
 
