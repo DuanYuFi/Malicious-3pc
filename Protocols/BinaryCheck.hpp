@@ -65,7 +65,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
     // assuming k % 4 = 0
     uint64_t quarter_k = k / 4;
-    uint64_t two_powers = (0xFFFFFFFF - 1) * 2;
     // cout << "block_cols_num: " << block_cols_num << endl;
     // cout << "total_blocks_num: " << total_blocks_num << endl;
 
@@ -104,7 +103,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 long d = col_block.input1.second;
                 long f = col_block.rho.second;
 
-                Field sum = 0;
+                Field sum1, sum2, sum = 0;
 
                 for(uint64_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
                     for(uint64_t col_entry_id = 0; col_entry_id < 4; col_entry_id++) {
@@ -129,13 +128,15 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                         tmp1 = a & c;
                                         break; 
                                 } 
+
                                 tmp2 = tmp1 & e;
                                 tmp3 = tmp1 & f;
                                 tmp4 = tmp2 & f;
-                                sum = Mersenne::neg(2 * ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                                sum += 4 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF));
-                                sum += 4 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF));
-                                sum += Mersenne::neg(8 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+
+                                sum1 = -2 * (tmp1 >> 32) + 4 * ((tmp2 >> 32) + (tmp3 >> 32)) - 8 * (tmp4 >> 32) + Mersenne::PR;
+                                sum2 = -2 * (tmp1 & 0xFFFFFFFF) + 4 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) - 8 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
+                                sum = Mersenne::modp(sum1 + sum2);
+                                
                                 break;
                             }
 
@@ -161,10 +162,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 tmp2 = tmp1 & e;
                                 tmp3 = tmp1 & f;
                                 tmp4 = tmp2 & f;
-                                sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
-                                sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
-                                sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
-                                sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
+
+                                sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
+                                sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
+                                sum = Mersenne::modp(sum1 + sum2);
+                                
                                 break;
                             }
 
@@ -191,16 +193,18 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 tmp2 = tmp1 & e;
                                 tmp3 = tmp1 & f;
                                 tmp4 = tmp2 & f;
-                                sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
-                                sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
-                                sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
-                                sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
+                               
+                                sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
+                                sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
+                                sum = Mersenne::modp(sum1 + sum2);
+                                
                                 break;
                             }
                                 
                             case 3: {
                                 switch(col_entry_id) {
                                     // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (-1/2) * bd + bde + bdf - 2bdef
+                                    // g_4 * h_1 = bd(1−2e)(1−2f) * (-1/2) = (bd - 2bde - 2bdf + 4bdef) * (-1/2)
                                     case 0:
                                         tmp1 = a & b;
                                         break;
@@ -220,29 +224,21 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 tmp2 = tmp1 & e;
                                 tmp3 = tmp1 & f;
                                 tmp4 = tmp2 & f;
-                                sum = Mersenne::mul(neg_two_inverse, ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                                sum += (tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF);
-                                sum += (tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF);
-                                sum += Mersenne::neg(2 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+                                
+                                sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
+                                sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
+                                sum = Mersenne::mul(neg_two_inverse, Mersenne::modp(sum1 + sum2));
+                                
                                 break; 
                             }
                         } 
-                        eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id] = Mersenne::modp(sum);
+                        eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id] = Mersenne::add(eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id], sum);
                     }
                 }
             }
         }
         cur_quarter_k_blocks_id += quarter_k;
     }
-
-    // uint64_t two_powers = (0xFFFFFFFF - 1) * 2 * block_cols_num;
-    // Field extra_addition = Mersenne::mul(neg_two_inverse, two_powers);
-
-    // for(uint64_t i = 0; i < k; i++) {
-    //     for(uint64_t j = 0; j < k; j++) {
-    //         eval_result[i][j] = Mersenne::add(eval_result[i][j], extra_addition);
-    //     }
-    // }
 
     for(uint64_t i = 0; i < k; i++) {
         eval_p_poly[i] = eval_result[i][i];
@@ -307,6 +303,8 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     // generate two lookup tables
     // uint64_t bits_num = quarter_k / 2 * 3;
 
+    uint64_t two_powers;
+
     uint64_t table_size = 1 << (quarter_k / 2 * 3);
     Field* input_left_table1 = new Field[table_size]; 
     Field* input_left_table2 = new Field[table_size];
@@ -330,26 +328,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             bool ab = i & (1 << j * 3);
             bool cd = i & (1 << (j * 3 + 1));
             bool ef = i & (1 << (j + 3 + 2));
-
-            // left_sum1 += (ab & cd) ? ((ef ? 2 : neg_two) * eval_base[left_id1++]) : 0;
-            // left_sum1 += cd ? (ef ? Mersenne::neg(eval_base[left_id1++]) : eval_base[left_id1++]) : 0;
-            // left_sum1 += ab ? (ef ? Mersenne::neg(eval_base[left_id1++]) : eval_base[left_id1++]) : 0;
-            // left_sum1 += (ef ? two_inverse : neg_two_inverse) * eval_base[left_id1++];
-
-            // left_sum2 += (ab & cd) ? ((e ? 2 : neg_two) * eval_base[left_id2++]) : 0;
-            // left_sum2 += cd ? (ef ? Mersenne::neg(eval_base[left_id2++]) : eval_base[left_id2++]) : 0;
-            // left_sum2 += ab ? (ef ? Mersenne::neg(eval_base[left_id2++]) : eval_base[left_id2++]) : 0;
-            // left_sum2 += (ef ? two_inverse : neg_two_inverse) * eval_base[left_id2++];
-
-            // right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[right_id1++]) : eval_base[right_id1++]) : 0;
-            // right_sum1 += cd ? (ef ? Mersenne::neg(eval_base[right_id1++]) : eval_base[right_id1++]) : 0;
-            // right_sum1 += ab ? (ef ? Mersenne::neg(eval_base[right_id1++]) : eval_base[right_id1++]) : 0;
-            // right_sum1 += (ef ? two_inverse : neg_two_inverse) * eval_base[right_id1++];
-
-            // right_sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++]) : 0;
-            // right_sum2 += cd ? (ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++]) : 0;
-            // right_sum2 += ab ? (ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++]) : 0;
-            // right_sum2 += ef ? Mersenne::neg(eval_base[right_id2++]) : eval_base[right_id2++];
 
             left_sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]): 0;
             right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
@@ -477,7 +455,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
                     right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
                 }
-                
+                two_powers = (uint64_t)1 << (overall_bit_id % 32);
                 input_left[row][col] = Mersenne::mul(Mersenne::add(input_left_table1[left_id1 & 0xc], input_left_table2[left_id2 & 0xc]), two_powers);
                 input_right[row][col] = Mersenne::mul(Mersenne::add(input_right_table1[right_id1 & 0xc], input_right_table2[right_id2 & 0xc]), two_powers);   
             }
@@ -804,7 +782,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
                         left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
                     }
-                    
+
+                    two_powers = (uint64_t)1 << (overall_bit_id % 32);
                     input[row][col] = Mersenne::mul(Mersenne::add(input_table1[left_id1 & 0xc], input_table2[left_id2 & 0xc]), two_powers);
                 }
             }
@@ -914,6 +893,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
                     }
                     
+                    two_powers = (uint64_t)1 << (overall_bit_id % 32);
                     input[row][col] = Mersenne::mul(Mersenne::add(input_table1[right_id1 & 0xc], input_table2[right_id2 & 0xc]), two_powers);   
                 }
             }
