@@ -35,7 +35,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     uint64_t k = OnlineOptions::singleton.k_size;
     uint64_t k2 = OnlineOptions::singleton.k2_size;
 
-    // cout << "in _prove" << endl;
+    cout << "in prove, using lookup table" << endl;
     // cout << "batch_size: " << T << ", s: " << s << endl;
 
     // Vectors of masked evaluations of polynomial p(X)
@@ -203,10 +203,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
 
                 for (uint64_t j = 0; j < k; j++) {
-                    if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << k;
-                    if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << k;
-                    if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << k;
-                    if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << k;
+                    if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << j;
+                    if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << j;
+                    if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << j;
+                    if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << j;
                 }
 
                 input_left[row][col] = input_table[left_id1] * thetas[block_col * BLOCK_SIZE + l];
@@ -360,6 +360,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
     // ===============================  First Round  ===============================
     
+    auto start = std::chrono::high_resolution_clock::now();
+
     uint64_t T = ((batch_size - 1) / k + 1) * k;
     uint64_t s = (T - 1) / k + 1;
     uint64_t len = log(2 * s) / log(k2) + 2;
@@ -456,6 +458,11 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     b_ss[cnt] = sum_ss - out_ss;
     cnt++;
 
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute p coeffs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+
     // new evaluations at random point r
     transcript_hash.append_msges(proof.p_evals_masked[cnt]);
     Field r = transcript_hash.get_challenge();
@@ -508,8 +515,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     uint64_t left_id1 = 0, left_id2 = 0;
 
                     for (uint64_t j = 0; j < k; j++) {
-                        if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << k;
-                        if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << k;
+                        if ((k_share_tuple_blocks[j].input1.first >> l) & 1) left_id1 ^= 1 << j;
+                        if ((k_share_tuple_blocks[j].input2.first >> l) & 1) left_id2 ^= 1 << j;
                     }
 
                     input[row][col] = input_table[left_id1] * thetas[block_col * BLOCK_SIZE + l];
@@ -540,8 +547,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     uint64_t right_id1 = 0, right_id2 = 0;
 
                     for (uint64_t j = 0; j < k; j++) {
-                        if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << k;
-                        if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << k;
+                        if ((k_share_tuple_blocks[j].input2.second >> l) & 1) right_id1 ^= 1 << j;
+                        if ((k_share_tuple_blocks[j].input1.second >> l) & 1) right_id1 ^= 1 << j;
                     }
 
                     input[row][col] = input_table[right_id1];
@@ -554,6 +561,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         
     }
     // cout << "cp 4" << endl;
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    
 
     while(true)
     {
@@ -575,10 +588,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         r = transcript_hash.get_challenge();
         Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
-        out_ss = 0;
-        for(uint64_t i = 0; i < 2 * k2 - 1; i++) {
-            out_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
-        }
+
+        // for(uint64_t i = 0; i < 2 * k2 - 1; i++) {
+            // out_ss += eval_base_2k[i] * proof.p_evals_masked[cnt][i];
+        // }
+        out_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
+
 
         b_ss[cnt] = sum_ss - out_ss;
 
@@ -618,6 +633,10 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         cnt++;
     }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
     // cout << "cp 5" << endl;
 
     // delete[] eval_base;

@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cmath>
 #include <iostream>
+#include "Tools/random.h"
 
 using namespace std;
 
@@ -21,9 +22,13 @@ class Mersenne {
         static uint64_t sub(uint64_t, uint64_t);
         static uint64_t mul(uint64_t, uint64_t);
         static uint64_t inverse(uint64_t a);
-        static uint64_t inner_product(uint64_t*, uint64_t*, uint64_t);
         static uint64_t batch_sum(uint64_t*, uint64_t);
         static uint64_t batch_add(uint64_t*, uint64_t*, uint64_t);
+        static uint64_t inner_product(uint64_t*, uint64_t*, uint64_t);
+        static uint64_t inner_product(uint64_t**, uint64_t**, uint64_t, uint64_t);
+        static uint64_t inner_product(uint64_t*, vector<uint64_t>, uint64_t);
+        static uint64_t inner_product(uint64_t**, uint64_t*, uint64_t, uint64_t);
+        static uint64_t randomize(PRNG& G);
 };
 
 inline uint64_t Mersenne::modp(uint64_t a) {
@@ -100,28 +105,6 @@ inline uint64_t Mersenne::inverse(uint64_t a) {
     return u;
 }
 
-inline uint64_t Mersenne::inner_product(uint64_t* a, uint64_t* b, uint64_t size) {
-    uint128_t result = 0;
-    uint64_t bound = 63;
-    uint64_t start, end;
-    start = 0;
-    while(true) {
-        if (start + bound < size) {
-            end = start + bound;
-        }
-        else {
-            end = size;
-        }
-        for(uint64_t i = start; i < end; i++) {
-            result += ((uint128_t)a[i]) * ((uint128_t)b[i]);
-        }
-        result = modp_128(result);
-        start = end;
-        if (start == size) break;
-    }
-    return result;
-}
-
 inline uint64_t Mersenne::batch_add(uint64_t* a, uint64_t* b, uint64_t size) {
     uint128_t result = 0;
     uint64_t bound = 63;
@@ -144,7 +127,7 @@ inline uint64_t Mersenne::batch_add(uint64_t* a, uint64_t* b, uint64_t size) {
     return result;
 }
 
-inline uint64_t Mersenne::batch_sum(uint64_t* a, uint64_t size) {
+inline uint64_t Mersenne::inner_product(uint64_t* a, uint64_t* b, uint64_t size) {
     uint128_t result = 0;
     uint64_t bound = 63;
     uint64_t start, end;
@@ -157,13 +140,89 @@ inline uint64_t Mersenne::batch_sum(uint64_t* a, uint64_t size) {
             end = size;
         }
         for(uint64_t i = start; i < end; i++) {
-            result += (uint128_t)a[i];
+            result += ((uint128_t)a[i]) * ((uint128_t)b[i]);
         }
         result = modp_128(result);
         start = end;
         if (start == size) break;
     }
     return result;
+}
+
+inline uint64_t Mersenne::inner_product(uint64_t* a, vector<uint64_t> b, uint64_t size) {
+    uint128_t result = 0;
+    uint64_t bound = 63;
+    uint64_t start, end;
+    start = 0;
+    while(true) {
+        if (start + bound < size) {
+            end = start + bound;
+        }
+        else {
+            end = size;
+        }
+        for(uint64_t i = start; i < end; i++) {
+            result += ((uint128_t)a[i]) * ((uint128_t)b[i]);
+        }
+        result = modp_128(result);
+        start = end;
+        if (start == size) break;
+    }
+    return result;
+}
+
+inline uint64_t Mersenne::inner_product(uint64_t** a, uint64_t** b, uint64_t rows, uint64_t cols) {
+    uint128_t result = 0;
+    uint64_t bound = 63;
+    uint64_t start, end;
+    uint64_t size = rows * cols;
+    start = 0;
+    while(true) {
+        if (start + bound < size) {
+            end = start + bound;
+        }
+        else {
+            end = size;
+        }
+        for(uint64_t i = start; i < end; i++) {
+            result += ((uint128_t)(a+i) * ((uint128_t)(b+i)));
+        }
+        result = modp_128(result);
+        start = end;
+        if (start == size) break;
+    }
+    return result;
+}
+
+inline uint64_t Mersenne::inner_product(uint64_t** a, uint64_t* b, uint64_t rows, uint64_t cols) {
+    uint128_t result = 0;
+    uint64_t bound = 63;
+    uint64_t size = cols;
+
+    uint64_t start, end;
+    for(uint64_t row = 0; row < rows; row++) {
+        start = 0;
+        while(true) {
+            if (start + bound < size) {
+                end = start + bound;
+            }
+            else {
+                end = size;
+            }
+            for(uint64_t i = start; i < end; i++) {
+                result += ((uint128_t)a[row][i]) * ((uint128_t)b[i]);
+            }
+            result = modp_128(result);
+            start = end;
+            if (start == size) break;
+        }
+    }
+    return result;
+}
+
+inline uint64_t Mersenne::randomize(PRNG& G) {
+    uint64_t r = G.get_word();
+    return r & PR;
 }
 
 #endif

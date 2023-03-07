@@ -170,7 +170,7 @@ inline void Langrange::get_bases(uint64_t n, Field** result) {
 
 inline void Langrange::evaluate_bases(uint64_t n, Field r, Field* result) {
     for(uint64_t i = 0; i < n; i++) {
-        result[i] = 0;
+        result[i] = 1;
         for(uint64_t j = 0; j < n; j++) {
             if (j != i) {
                 Field denominator, numerator; 
