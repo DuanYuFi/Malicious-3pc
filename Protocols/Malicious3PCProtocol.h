@@ -19,12 +19,12 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    int node_id;
+    size_t node_id;
     Field **mask_ss_prev, **mask_ss_next;
-    int sz;
+    size_t sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, int node_id, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
+    StatusData(DZKProof proof, size_t node_id, Field **mask_ss_prev, Field **mask_ss_next, size_t sz) : 
         proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
@@ -104,7 +104,10 @@ public:
 typedef MyPair<long, long> ShareTypeBlock;
 
 struct ShareTupleBlock {
+public:
     ShareTypeBlock input1, input2, result, rho;
+
+    ShareTupleBlock(): input1(), input2(), result(), rho() {}
 };
 
 /**
@@ -119,6 +122,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     size_t idx_input, idx_rho, idx_result;
     size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
+
+    size_t MAX_LAYER_SIZE = 64000000; // 6400w
 
     StatusData *status_queue;
     vector<typename T::open_type> opened;
@@ -166,6 +171,9 @@ public:
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
 
+#ifdef DEBUG_BGIN19
+    cout << "in ~Malicious3PCProtocol" << endl;
+#endif
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             cv.push(-1);
         }
@@ -196,6 +204,10 @@ public:
         }
 
         cout << "Destroyed." << endl;
+
+        if (!check_passed) {
+            cout << "Check failed" << endl;
+        }
 
         // this->print_debug_info("Binary Part");
         cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
@@ -238,47 +250,51 @@ public:
     }
 
     DZKProof _prove(
-        int node_id,
+        size_t node_id,
         Field** masks,
-        uint64_t batch_size, 
+        size_t batch_size, 
         Field sid,
         PRNG prng
     );
 
     VerMsg _gen_vermsg(
         DZKProof proof, 
-        int node_id,
+        size_t node_id,
         Field** masks_ss,
-        uint64_t batch_size, 
+        size_t batch_size, 
         Field sid,
-        uint64_t prover_ID,
-        uint64_t party_ID,
+        size_t prover_ID,
+        size_t party_ID,
         PRNG prng
     );
 
     bool _verify(
         DZKProof proof, 
         VerMsg other_vermsg, 
-        int node_id,
+        size_t node_id,
         Field** masks_ss,
-        uint64_t batch_size, 
+        size_t batch_size, 
         Field sid,
-        uint64_t prover_ID,
-        uint64_t party_ID,
+        size_t prover_ID,
+        size_t party_ID,
         PRNG prng
     );
 
     void check();
     void finalize_check();
-    void Check_one(int node_id, int size = -1);
+    void Check_one(size_t node_id, int size = -1);
     void verify();
-    void thread_handler(int tid);
-    // void maybe_check();
-    int get_n_relevant_players() { return P.num_players() - 1; }
+    #ifdef TIMING
+    void thread_handler(size_t tid);
+    void verify_thread_handler(size_t tid);
+    #else
+    void thread_handler();
+    void verify_thread_handler();
+    #endif
 
+    size_t get_n_relevant_players() { return P.num_players() - 1; }
     void verify_part1(int prev_number, int my_number);
     void verify_part2(int next_number, int my_number);
-    void verify_thread_handler(int tid);
 
 };
 

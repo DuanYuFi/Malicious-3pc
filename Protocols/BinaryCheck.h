@@ -127,7 +127,7 @@ struct VerMsg {
 
     void pack(octetStream &os) {
         os.store(b_ss.size());
-        for(uint64_t i = 0; i < b_ss.size(); i++) {
+        for(size_t i = 0; i < b_ss.size(); i++) {
             os.store(b_ss[i]);
         }
         os.store(final_input);
@@ -135,10 +135,10 @@ struct VerMsg {
     }
 
     void unpack(octetStream &os) {
-        uint64_t size = 0;
+        size_t size = 0;
         os.get(size);
         b_ss.resize(size);
-        for(uint64_t i = 0; i < size; i++) {
+        for(size_t i = 0; i < size; i++) {
             os.get(b_ss[i]);
         }
         os.get(final_input);
@@ -148,15 +148,15 @@ struct VerMsg {
 
 class Langrange {
 public:
-    static void get_bases(uint64_t n, Field** result);
-    static void evaluate_bases(uint64_t n, Field r, Field* result);
+    static void get_bases(size_t n, Field** result);
+    static void evaluate_bases(size_t n, Field r, Field* result);
 };
 
-inline void Langrange::get_bases(uint64_t n, Field** result) {
-    for (uint64_t i = 0; i < n - 1; i++) {
-        for(uint64_t j = 0; j < n; j++) {
-            result[i][j] = 0;
-            for(uint64_t l = 0; l < n; l++) {
+inline void Langrange::get_bases(size_t n, Field** result) {
+    for (size_t i = 0; i < n - 1; i++) {
+        for(size_t j = 0; j < n; j++) {
+            result[i][j] = 1;
+            for(size_t l = 0; l < n; l++) {
                 if (l != j) {
                     Field denominator, numerator;
                     denominator = Field(j) - Field(l);
@@ -168,10 +168,10 @@ inline void Langrange::get_bases(uint64_t n, Field** result) {
     }
 }
 
-inline void Langrange::evaluate_bases(uint64_t n, Field r, Field* result) {
-    for(uint64_t i = 0; i < n; i++) {
+inline void Langrange::evaluate_bases(size_t n, Field r, Field* result) {
+    for(size_t i = 0; i < n; i++) {
         result[i] = 1;
-        for(uint64_t j = 0; j < n; j++) {
+        for(size_t j = 0; j < n; j++) {
             if (j != i) {
                 Field denominator, numerator; 
                 denominator = Field(i) - Field(j);

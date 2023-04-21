@@ -34,6 +34,8 @@ public:
     typedef ::PrivateOutput<This> PrivateOutput;
 
     typedef GC::MaliciousRepSecret bit_type;
+    // typedef GC::SemiHonestRepSecret bit_type;
+
 
     static const int LENGTH = K;
     static const int SECURITY = S;
