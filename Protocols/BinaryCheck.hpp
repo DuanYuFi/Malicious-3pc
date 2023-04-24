@@ -9,33 +9,43 @@
 
 using namespace std;
 
-#define BOUND 63
+void print_uint128(uint128_t x) {
+    if (x > 9) print_uint128(x / 10);
+    putchar(x % 10 + '0');
+}
+
+#define show_uint128(value) \
+    cout << #value << " = "; \
+    print_uint128(value); \
+    cout << endl; 
 
 template <class _T>
 DZKProof Malicious3PCProtocol<_T>::_prove(
     int node_id,
     Field** masks,
-    uint64_t batch_size, 
+    size_t batch_size, 
     Field sid
 ) {
-    uint64_t k = OnlineOptions::singleton.k_size;
-    uint64_t k2 = OnlineOptions::singleton.k2_size;
+    size_t k = OnlineOptions::singleton.k_size; 
+    size_t k2 = OnlineOptions::singleton.k2_size;
 
-    // cout << "in _prove" << endl;
-    // cout << "batch_size: " << T << ", s: " << s << endl;
+    #ifdef DEBUG_OURS
+        cout << "in _prove" << endl;
+        // cout << "batch_size: " << T << ", s: " << s << endl;
+    #endif
 
     vector<vector<Field>> p_evals_masked;
-    uint64_t k_max = k > k2 ? k : k2;
+    size_t k_max = k > k2 ? k : k2;
     // Evaluations of polynomial p(X)
     Field* eval_p_poly = new Field[2 * k_max - 1];  
 
     Field** base = new Field*[k_max - 1];
-    for (uint64_t i = 0; i < k_max - 1; i++) {
+    for (size_t i = 0; i < k_max - 1; i++) {
         base[i] = new Field[k_max];
     }
 
     Field** eval_result = new Field*[k_max];
-    for(uint64_t i = 0; i < k_max; i++) {
+    for(size_t i = 0; i < k_max; i++) {
         eval_result[i] = new Field[k_max];
     }
 
@@ -43,59 +53,55 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     // ===============================  First Round  ===============================
 
-    auto start = std::chrono::high_resolution_clock::now();
+    #ifdef TIMING
+        auto start = std::chrono::high_resolution_clock::now();
+    #endif
 
     // Vectors of masked evaluations of polynomial p(X)
-    uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t s = (T - 1) / k + 1;
+    size_t T = ((batch_size - 1) / k + 1) * k;
+    size_t s = (T - 1) / k + 1;
 
     // Transcript
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
-
-    Langrange::get_bases(k, base);
 
     // cout << "cp 1.5" << endl;
 
     ShareTupleBlock quarter_k_blocks[k];
     // works for binary_batch_size % BLOCK_SIZE = 0
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
-    uint64_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
-    int cur_quarter_k_blocks_id = 0;
-    uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
+    size_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
+    size_t cur_quarter_k_blocks_id = 0;
+    size_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
     // assuming k % 4 = 0
-    uint64_t quarter_k = k / 4;
+    size_t quarter_k = k / 4;
     // cout << "block_cols_num: " << block_cols_num << endl;
     // cout << "total_blocks_num: " << total_blocks_num << endl;
 
-    for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-        // cout << "block_col_id: " << block_col_id << endl;
-        // fetch k tuple_blocks
-        memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
-        for(uint64_t i = 0; i < quarter_k; i++) { 
+    size_t padded_s = block_cols_num * BLOCK_SIZE;
+    s = padded_s;
+
+    for (size_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
+
+        // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
+        if (block_col_id == block_cols_num * 4 - 1 && total_blocks_num - cur_quarter_k_blocks_id < quarter_k) {
+            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * (total_blocks_num - cur_quarter_k_blocks_id));
+            for (size_t i = total_blocks_num - cur_quarter_k_blocks_id ; i < quarter_k; i++)
+                quarter_k_blocks[i] = ShareTupleBlock();
+        }
+        else {
+            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * quarter_k);
+        }
+        
+        for(size_t i = 0; i < quarter_k; i++) { 
             // cout << "i:" << i << endl;
-            // i = 0, ..., 31
-            // group_id = 0, ..., 7
-            
-            // uint64_t row_group_id =  i / 4;
-            // entry_id = 0, ..., 3
-            // uint64_t row_entry_id = i % 4;
 
             ShareTupleBlock row_block = quarter_k_blocks[i];
             long a = row_block.input1.first;
             long c = row_block.input2.first;
             long e = (a & c) ^ row_block.result.first ^ row_block.rho.first;
             
-            for(uint64_t j = 0; j < quarter_k; j++) {  
-                // cout << "j: " << j << endl;
-
-                // uint64_t col_group_id =  j / 4;
-                // uint64_t col_entry_id = j % 4;
-
-                if (cur_quarter_k_blocks_id + i >= total_blocks_num || cur_quarter_k_blocks_id + j >= total_blocks_num) {
-                    // cout << "continue, > total_blocks_num " << j << endl;
-                    continue;
-                }
+            for(size_t j = 0; j < quarter_k; j++) {  
 
                 ShareTupleBlock col_block = quarter_k_blocks[j];
                     
@@ -104,9 +110,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 long f = col_block.rho.second;
 
                 Field sum1, sum2, sum = 0;
+                // Field sum = 0;
 
-                for(uint64_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
-                    for(uint64_t col_entry_id = 0; col_entry_id < 4; col_entry_id++) {
+                for(size_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
+                    for(size_t col_entry_id = 0; col_entry_id < 4; col_entry_id++) {
                     long tmp1 = 0, tmp2, tmp3, tmp4;
                         switch(row_entry_id) {
                             case 0: {
@@ -136,6 +143,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = -2 * (tmp1 >> 32) + 4 * ((tmp2 >> 32) + (tmp3 >> 32)) - 8 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = -2 * (tmp1 & 0xFFFFFFFF) + 4 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) - 8 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::modp(sum1 + sum2);
+
+                                // sum = Mersenne::neg(2 * ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+                                // sum += 4 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF));
+                                // sum += 4 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF));
+                                // sum += Mersenne::neg(8 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
                                 
                                 break;
                             }
@@ -166,6 +178,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::modp(sum1 + sum2);
+
+                                // sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
+                                // sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
+                                // sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
+                                // sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
                                 
                                 break;
                             }
@@ -197,6 +214,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::modp(sum1 + sum2);
+
+                                // sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
+                                // sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
+                                // sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
+                                // sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
                                 
                                 break;
                             }
@@ -229,9 +251,15 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::mul(neg_two_inverse, Mersenne::modp(sum1 + sum2));
                                 
+                                // sum = Mersenne::mul(neg_two_inverse, ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+                                // sum += (tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF);
+                                // sum += (tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF);
+                                // sum += Mersenne::neg(2 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
+
                                 break; 
                             }
-                        } 
+                        }
+                        
                         eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id] = Mersenne::add(eval_result[i * 4 + row_entry_id][j * 4 + col_entry_id], sum);
                     }
                 }
@@ -240,36 +268,35 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         cur_quarter_k_blocks_id += quarter_k;
     }
 
-    for(uint64_t i = 0; i < k; i++) {
+    for(size_t i = 0; i < k; i++) {
         eval_p_poly[i] = eval_result[i][i];
     }
 
-    for(uint64_t i = 0; i < k - 1; i++) {
+    for(size_t i = 0; i < k - 1; i++) {
         eval_p_poly[i + k] = 0;
-        for(uint64_t j = 0; j < k; j++) {
-            for (uint64_t l = 0; l < k; l++) {
+        for(size_t j = 0; j < k; j++) {
+            for (size_t l = 0; l < k; l++) {
                 // eval_p_poly[i + k] += base[i][j] * eval_result[j][l] * base[i][l];
                 eval_p_poly[i + k] = Mersenne::add(eval_p_poly[i + k], Mersenne::mul(base[i][j], Mersenne::mul(eval_result[j][l], base[i][l])));
             }
         }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    cout << "First round (compute p evals) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    #ifdef TIMING
+        auto end = std::chrono::high_resolution_clock::now();
+        cout << "First round (compute p evals) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
-    start = std::chrono::high_resolution_clock::now();
+        start = std::chrono::high_resolution_clock::now();
+    #endif
 
     uint16_t cnt = 0;
 
-    // cout << "cp 1" << endl;
-
     vector<Field> ss(2 * k - 1);       
-    for(uint64_t i = 0; i < 2 * k - 1; i++) {           
+    for(size_t i = 0; i < 2 * k - 1; i++) {           
         // ss[i] = eval_p_poly[i] - masks[cnt][i];
         ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt][i]);
     }
     p_evals_masked.push_back(ss);
-    cnt++;
 
     // cout << "cp 2" << endl;
 
@@ -279,7 +306,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     Langrange::evaluate_bases(k, r, eval_base);
 
     s *= 4;
-    uint64_t s0 = s;
+    size_t s0 = s;
     // use k2 as the compression parameter from the second round
     s = (s - 1) / k2 + 1;
 
@@ -290,7 +317,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     input_left = new Field*[k2];
     input_right = new Field*[k2];
 
-    for(uint64_t i = 0; i < k2; i++) {
+    for(size_t i = 0; i < k2; i++) {
         input_left[i] = new Field[s];
         input_right[i] = new Field[s];
     }
@@ -301,35 +328,32 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     // new matrix: total size = s * 4 = 80w, number of rows: k2 = 8, number of cols: 80w / 8 = 10w
 
     // generate two lookup tables
-    // uint64_t bits_num = quarter_k / 2 * 3;
+    // size_t bits_num = quarter_k / 2 * 3;
 
-    uint64_t two_powers;
+    size_t two_powers;
 
-    uint64_t table_size = 1 << (quarter_k / 2 * 3);
+    size_t table_size = 1 << (quarter_k / 2 * 3);
     Field* input_left_table1 = new Field[table_size]; 
     Field* input_left_table2 = new Field[table_size];
     Field* input_right_table1 = new Field[table_size]; 
     Field* input_right_table2 = new Field[table_size];
     // bool* ace_bits = new bool[bits_num];
 
-    for (uint64_t i = 0; i < table_size; i++) { 
+    for (size_t i = 0; i < table_size; i++) { 
         // i = 0, ..., 4095, 000000000000, ..., 111111111111, each i represents a combination of the 12 bits e^(4),c^(4),a^(4), ..., e^(1),c^(1),a^(1)
         // 12 bits for e^(4),e^(3),e^(2),e^(1), ..., a^(4),a^(3),a^(2),a^(1)
-        // for (uint64_t j = 0; j < bits_num; j++) {
-        //     ace_bits[j] = i & (1 << j);
-        // }
 
         uint128_t left_sum1 = 0, left_sum2 = 0, right_sum1 = 0, right_sum2 = 0, tmp;
-        int id1 = 0, id2 = quarter_k / 2;
-        for (uint64_t j = 0; j < quarter_k / 2; j++) {
+        size_t id1 = 0, id2 = quarter_k / 2;
+        for (size_t j = 0; j < quarter_k / 2; j++) {
             // j = 0, 1, 2, 3
             // (e, c, a) = (bits_num[j * 3 + 2], bits_num[j * 3 + 1], bits_num[j * 3])
             // the same for (f, d, b)
-            bool ab = i & (1 << j * 3);
+            bool ab = i & (1 << (j * 3)); // bug: 1 << j * 3
             bool cd = i & (1 << (j * 3 + 1));
-            bool ef = i & (1 << (j + 3 + 2));
+            bool ef = i & (1 << (j * 3 + 2)); // bug: j + 3 + 2
 
-            left_sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]): 0;
+            left_sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]) : 0;
             right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
             id1++;
 
@@ -345,7 +369,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
             left_sum1 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1];
             right_sum1 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
-            id1++;
 
             left_sum2 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
             right_sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
@@ -363,7 +386,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
             left_sum2 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id2];
             right_sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
-            id2++;
         }
         input_left_table1[i] = Mersenne::modp_128(left_sum1);
         input_left_table2[i] = Mersenne::modp_128(left_sum2);
@@ -371,29 +393,37 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         input_right_table2[i] = Mersenne::modp_128(right_sum2);
     }
 
-    end = std::chrono::high_resolution_clock::now();
-    cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    #ifdef TIMING
+        end = std::chrono::high_resolution_clock::now();
+        cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
-    start = std::chrono::high_resolution_clock::now();
+        start = std::chrono::high_resolution_clock::now();
+    #endif
 
     // Batchsize = 640w, total_blocks_num = 640w/64 = 10w, fetching k/4 = 8 blocks per time, needs 12500 times
     // k = 32, s = 640w/32 = 20w, block_cols_num = 20w/64 = 3125, totally 3125 cols of blocks, 3125 * 4 = 12500
 
     // 12
-    int bits_num = quarter_k / 2 * 3;
+    size_t bits_num = quarter_k / 2 * 3;
     long* bit_blocks_left1 = new long[bits_num];
     long* bit_blocks_left2 = new long[bits_num];
     long* bit_blocks_right1 = new long[bits_num];
     long* bit_blocks_right2 = new long[bits_num];
 
-    for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-        // cout << "block_col_id: " << block_col_id << endl;
+    for (size_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
 
         // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
-        memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
+        if (block_col_id == block_cols_num * 4 - 1 && total_blocks_num - cur_quarter_k_blocks_id < quarter_k) {
+            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * (total_blocks_num - cur_quarter_k_blocks_id));
+            for (size_t i = total_blocks_num - cur_quarter_k_blocks_id ; i < quarter_k; i++)
+                quarter_k_blocks[i] = ShareTupleBlock();
+        }
+        else {
+            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * quarter_k);
+        }
 
         // i = 0, 1, 2, 3
-        for (uint64_t i = 0; i < quarter_k / 2; i++) {
+        for (size_t i = 0; i < quarter_k / 2; i++) {
             ShareTupleBlock cur_block = quarter_k_blocks[i];
 
             bit_blocks_left1[i * 3] = cur_block.input1.first;
@@ -404,6 +434,11 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             bit_blocks_right1[i * 3 + 1] = cur_block.input1.second;
             bit_blocks_right1[i * 3 + 2] = cur_block.rho.second;
             
+            #ifdef DEBUG_OURS_CORRECTNESS_DATA
+                cout << "cur_block.input1.first (left): " << cur_block.input1.first << endl;
+                cout << "cur_block.input2.second (right): " << cur_block.input2.second << endl;
+            #endif
+
             cur_block = quarter_k_blocks[i + quarter_k / 2];
 
             bit_blocks_left2[i * 3] = cur_block.input1.first;
@@ -415,31 +450,31 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             bit_blocks_right2[i * 3 + 2] = cur_block.rho.second;
         }
 
-        int group_num = 5;
+        size_t group_num = 5;
 
         // bit_id = 0,1, ..., 12
-        for (int bit_id = 0; bit_id < 13; bit_id++) {
+        for (size_t bit_id = 0; bit_id < 13; bit_id++) {
 
             // last group
             if (bit_id == 12) 
                 group_num = 4;
 
             // group_id = 0-4 or 0-3 (for the last group)
-            for (int group_id = 0; group_id < group_num; group_id++) {
+            for (size_t group_id = 0; group_id < group_num; group_id++) {
 
                 // bit_id = 0:  overall_bit_id = 0, 13, 26, 39, 52
                 // bit_id = 1:  overall_bit_id = 1, 14, 27, 40, 53
                 // ......
                 // bit_id = 11: overall_bit_id = 11, 24, 37, 50, 63
                 // bit_id = 12: overall_bit_id = 12, 25, 38, 51
-                int overall_bit_id = group_id * 13 + bit_id;
-                int cur_index = index + overall_bit_id;
-                int row = cur_index / s;
-                int col = cur_index % s;
+                size_t overall_bit_id = group_id * 13 + bit_id;
+                size_t cur_index = index + overall_bit_id;
+                size_t row = cur_index / s;
+                size_t col = cur_index % s;
 
-                if (index >= s0) {
+                if (cur_index >= s0) {
                     // cout << "cp 4" << endl;
-                    if ((uint64_t)row == k2)
+                    if (row >= k2)
                         break;
                     else {
                         input_left[row][col] = input_right[row][col] = 0;
@@ -447,57 +482,62 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                     }
                 }
 
-                uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
+                size_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
 
-                for (int j = 0; j < bits_num; j++) {
+                for (size_t j = 0; j < bits_num; j++) {
                     left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
                     left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
                     right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
-                    right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
+                    right_id2 ^= ((bit_blocks_right2[j] >> overall_bit_id) << j);
                 }
+
+                // bit index in the 32-bit integer number, representing 2^(overall_bit_id % 32)
                 two_powers = (uint64_t)1 << (overall_bit_id % 32);
-                input_left[row][col] = Mersenne::mul(Mersenne::add(input_left_table1[left_id1 & 0xc], input_left_table2[left_id2 & 0xc]), two_powers);
-                input_right[row][col] = Mersenne::mul(Mersenne::add(input_right_table1[right_id1 & 0xc], input_right_table2[right_id2 & 0xc]), two_powers);   
+                input_left[row][col] = Mersenne::mul(Mersenne::add(input_left_table1[left_id1 & 0xC], input_left_table2[left_id2 & 0xC]), two_powers);
+                input_right[row][col] = Mersenne::mul(Mersenne::add(input_right_table1[right_id1 & 0xC], input_right_table2[right_id2 & 0xC]), two_powers);   
             }
         }
 
-        index += 64;
+        index += BLOCK_SIZE;
         cur_quarter_k_blocks_id += quarter_k;
     }
 
-    end = std::chrono::high_resolution_clock::now();
-    cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    cnt++;
 
-    start = std::chrono::high_resolution_clock::now();
+    #ifdef TIMING
+        end = std::chrono::high_resolution_clock::now();
+        cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+        start = std::chrono::high_resolution_clock::now();
+    #endif
+
+    Langrange::get_bases(k2, base);
 
     while(true){
         // auto start = std::chrono::high_resolution_clock::now();
-        // cout << "s: " << s << endl;
 
-        for(uint64_t i = 0; i < k2; i++) {
-            for(uint64_t j = 0; j < k2; j++) {
+        for(size_t i = 0; i < k2; i++) {
+            for(size_t j = 0; j < k2; j++) {
                 eval_result[i][j] = Mersenne::inner_product(input_left[i], input_right[j], s);
             }
         }
-        // cout << "cp 1" << endl;
 
-        for(uint64_t i = 0; i < k2; i++) {
+        for(size_t i = 0; i < k2; i++) {
             eval_p_poly[i] = eval_result[i][i];
         }
 
-        for(uint64_t i = 0; i < k2 - 1; i++) {
+        for(size_t i = 0; i < k2 - 1; i++) {
             eval_p_poly[i + k2] = 0;
-            for(uint64_t j = 0; j < k2; j++) {
-                for (uint64_t l = 0; l < k2; l++) {
+            for(size_t j = 0; j < k2; j++) {
+                for (size_t l = 0; l < k2; l++) {
                     // eval_p_poly[i + k] += base[i][j] * eval_result[j][l] * base[i][l];
                     eval_p_poly[i + k2] = Mersenne::add(eval_p_poly[i + k2], Mersenne::mul(base[i][j], Mersenne::mul(eval_result[j][l], base[i][l])));
                 }
             }
         }
-        // cout << "cp 2" << endl;
 
         vector<Field> ss(2 * k2 - 1);       
-        for(uint64_t i = 0; i < 2 * k2 - 1; i++) {           
+        for(size_t i = 0; i < 2 * k2 - 1; i++) {           
             // ss[i] = eval_p_poly[i] - masks[cnt][i];
             // cout << "i" << i << endl;
             ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt][i]);
@@ -518,20 +558,20 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         s = (s - 1) / k2 + 1;
         // cout << "cp 3, s: " << s << endl;
        
-        for(uint64_t i = 0; i < k2; i++) {
-            for(uint64_t j = 0; j < s; j++) {
+        for(size_t i = 0; i < k2; i++) {
+            for(size_t j = 0; j < s; j++) {
                 index = i * s + j;
-               
+
                 if (index < s0) {
                     uint128_t temp_result = 0;
-                    for(uint64_t l = 0; l < k2; l++) {
+                    for(size_t l = 0; l < k2; l++) {
                         // temp_result += eval_base[l] * input_left[l][index];
                         temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
                     }
                     input_left[i][j] = Mersenne::modp_128(temp_result);
 
                     temp_result = 0;
-                    for(uint64_t l = 0; l < k2; l++) {
+                    for(size_t l = 0; l < k2; l++) {
                         // temp_result += eval_base[l] * input_right[l][index];
                         temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
                     }
@@ -548,24 +588,26 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         cnt++;
     }
 
-    end = std::chrono::high_resolution_clock::now();
-    cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    #ifdef TIMING
+        end = std::chrono::high_resolution_clock::now();
+        cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    #endif
 
     // cout << "cp 3" << endl;
 
-    // for(uint64_t i = 0; i < k; i++) {
+    // for(size_t i = 0; i < k; i++) {
     //     delete[] eval_result[i];
     // }
     // delete[] eval_result;
     // delete[] eval_p_poly;
 
-    // for (uint64_t i = 0; i < k - 1; i++) {
+    // for (size_t i = 0; i < k - 1; i++) {
     //     delete[] base[i];
     // }
     // delete[] base;
     // delete[] eval_base;
 
-    // for(uint64_t i = 0; i < k; i++) {
+    // for(size_t i = 0; i < k; i++) {
     //     delete[] input_left[i];
     //     delete[] input_right[i];
     // }
@@ -573,7 +615,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     // delete[] input_left;
     // delete[] input_right;
 
-    // for (uint64_t j = 0; j < cnt; j ++) {
+    // for (size_t j = 0; j < cnt; j ++) {
     //     delete[] masks[j];
     // }
     // delete[] masks;
@@ -589,74 +631,86 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     DZKProof proof, 
     int node_id,
     Field** masks_ss,
-    uint64_t batch_size, 
+    size_t batch_size, 
     Field sid,
-    uint64_t prover_ID,
-    uint64_t party_ID
+    size_t prover_ID,
+    size_t party_ID
 ) {
     // cout << "in _gen_vermsg " << endl;
-    uint64_t k = OnlineOptions::singleton.k_size;
-    uint64_t k2 = OnlineOptions::singleton.k2_size;
+    size_t k = OnlineOptions::singleton.k_size;
+    size_t k2 = OnlineOptions::singleton.k2_size;
 
-    uint64_t k_max = k > k2 ? k : k2;
+    size_t k_max = k > k2 ? k : k2;
 
     Field* eval_base = new Field[k_max];
     Field* eval_base_2k = new Field[2 * k_max - 1];    
 
     // ===============================  First Round  ===============================
 
-    uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t s = (T - 1) / k + 1;
-    uint64_t len = log(4 * s) / log(k2) + 2;
-    uint64_t quarter_k = k / 4;
+    size_t T = ((batch_size - 1) / k + 1) * k;
+    size_t s = (T - 1) / k + 1;
+    size_t len = log(4 * s) / log(k2) + 2;
+    size_t quarter_k = k / 4;
 
     vector<Field> b_ss(len);
     Field final_input = 0, final_result_ss = 0;
+
+    size_t cnt = 0;
 
     // Transcript
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
 
-    uint64_t cnt = 0;
+    transcript_hash.append_msges(proof.p_evals_masked[cnt]);
+
     Field out_ss = 0, sum_ss = 0;
 
     // recover proof
-    uint64_t two_powers = (0xFFFFFFFF - 1) * 2;
+    // two 32-bit integers per 64 bits
+    size_t two_powers = ((unsigned long)0xFFFFFFFF - 1) * 2;
+
     bool prev_party = ((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0;
-    if(prev_party) {
+
+    #ifdef DEBUG_OURS_CORRECTNESS
+        if (prev_party) cout << endl << "prev_party" << endl;
+        else cout << endl << "next_party" << endl;
+    #endif 
+
+    if (prev_party) {
         out_ss = Mersenne::mul(neg_two_inverse, two_powers * batch_size);
-        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+        for(size_t i = 0; i < 2 * k - 1; i++) { 
             proof.p_evals_masked[cnt][i] = Mersenne::add(proof.p_evals_masked[cnt][i], masks_ss[cnt][i]);
         } 
     } else {
         out_ss = 0;
-        for(uint64_t i = 0; i < 2 * k - 1; i++) { 
+        for(size_t i = 0; i < 2 * k - 1; i++) { 
             proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
         }
     }
 
     // compute random linear combination on the first k outputs using betas
-    for(uint64_t j = 0; j < k; j++) { 
+    for (size_t j = 0; j < k; j++) { 
         sum_ss += proof.p_evals_masked[cnt][j];
     }
 
     b_ss[cnt] = Mersenne::sub(sum_ss, out_ss);
-    cnt++;
-
+    
     // new evaluations at random point r
 
-    transcript_hash.append_msges(proof.p_evals_masked[cnt]);
     Field r = transcript_hash.get_challenge();
     Langrange::evaluate_bases(k, r, eval_base);
 
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
-    uint64_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
-    uint64_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
-    int cur_quarter_k_blocks_id = 0;
+    size_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
+    size_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
+    size_t cur_quarter_k_blocks_id = 0;
     ShareTupleBlock quarter_k_blocks[k];
 
+    size_t padded_s = block_cols_num * BLOCK_SIZE;
+    s = padded_s;
+
     s *= 4;
-    uint64_t s0 = s;
+    size_t s0 = s;
     // use k2 as the compression parameter from the second round
     s = (s - 1) / k2 + 1;
     size_t index = 0;
@@ -664,111 +718,121 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     // cout << "cp 3" << endl;
 
     Field **input = new Field*[k2];
-    for(uint64_t i = 0; i < k2; i++) {
+    for(size_t i = 0; i < k2; i++) {
         input[i] = new Field[s];
     }
 
     cur_quarter_k_blocks_id = 0;
 
     // generate two lookup tables
-    uint64_t table_size = 1 << (quarter_k / 2 * 3);
+    size_t table_size = 1 << (quarter_k / 2 * 3);
     Field* input_table1 = new Field[table_size]; 
     Field* input_table2 = new Field[table_size];
 
-    auto start = std::chrono::high_resolution_clock::now(), end = start;
+    #ifdef TIMING
+        auto start = std::chrono::high_resolution_clock::now(), end = start;
+    #endif
 
     // uint32_t* shift_table = new uint32_t[quarter_k / 2 * 3];
-    // for (int i = 0; i < quarter_k / 2 * 3; i++) {
+    // for (size_t i = 0; i < quarter_k / 2 * 3; i++) {
     //     shift_table[i] = 1 << i;
     // }
 
     if (prev_party) {
-        for (uint64_t i = 0; i < table_size; i++) { 
+        // Right Part
+        for (size_t i = 0; i < table_size; i++) { 
             uint128_t sum1 = 0, sum2 = 0;
-            int id1 = 0, id2 = quarter_k / 2;
-            for (uint64_t j = 0; j < quarter_k / 2; j++) {
+            size_t id1 = 0, id2 = quarter_k / 2;
+            for (size_t j = 0; j < quarter_k / 2; j++) {
                 bool ab = i & (1 << (j * 3));
                 bool cd = i & (1 << (j * 3 + 1));
                 bool ef = i & (1 << (j * 3 + 2));
 
-                sum1 = (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]) : 0;
+                sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
                 id1++;
                 sum1 += cd ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
                 id1++;
                 sum1 += ab ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
                 id1++;
-                sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
-                id1++;
+                sum1 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
 
-                sum2 = (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
+                sum2 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
                 id2++;
                 sum2 += cd ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
                 id2++;
-                sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id1]) : 0;
+                sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
                 id2++;
-                sum2 += ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1];
-                id2++;
+                sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
             }
             input_table1[i] = Mersenne::modp_128(sum1);
             input_table2[i] = Mersenne::modp_128(sum2);
         }
 
-        end = std::chrono::high_resolution_clock::now();
-        cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+        #ifdef TIMING
+                end = std::chrono::high_resolution_clock::now();
+                cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
-        start = std::chrono::high_resolution_clock::now();
+                start = std::chrono::high_resolution_clock::now();
+        #endif
 
-        int bits_num = quarter_k / 2 * 3;
+        size_t bits_num = quarter_k / 2 * 3;
         
-        long* bit_blocks_left1 = new long[bits_num];
-        long* bit_blocks_left2 = new long[bits_num];
+        long* bit_blocks_right1 = new long[bits_num];
+        long* bit_blocks_right2 = new long[bits_num];
 
-        for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
+        for (size_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
             // cout << "block_col_id: " << block_col_id << endl;
 
             // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
-            memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
+            if (block_col_id == block_cols_num * 4 - 1 && total_blocks_num - cur_quarter_k_blocks_id < quarter_k) {
+                memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * (total_blocks_num - cur_quarter_k_blocks_id));
+                for (size_t i = total_blocks_num - cur_quarter_k_blocks_id ; i < quarter_k; i++)
+                    quarter_k_blocks[i] = ShareTupleBlock();
+            }
+            else {
+                memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * quarter_k);
+            }
 
             // i = 0, 1, 2, 3
-            for (uint64_t i = 0; i < quarter_k / 2; i++) {
+            for (size_t i = 0; i < quarter_k / 2; i++) {
                 ShareTupleBlock cur_block = quarter_k_blocks[i];
 
-                bit_blocks_left1[i * 3] = cur_block.input1.first;
-                bit_blocks_left1[i * 3 + 1] = cur_block.input2.first;
-                bit_blocks_left1[i * 3 + 2] = (cur_block.input1.first & cur_block.input2.first) ^ (cur_block.result.first) ^ (cur_block.rho.first);
+                bit_blocks_right1[i * 3] = cur_block.input2.first;
+                bit_blocks_right1[i * 3 + 1] = cur_block.input1.first;
+                bit_blocks_right1[i * 3 + 2] = cur_block.rho.first;
 
                 cur_block = quarter_k_blocks[i + quarter_k / 2];
 
-                bit_blocks_left2[i * 3] = cur_block.input1.first;
-                bit_blocks_left2[i * 3 + 1] = cur_block.input2.first;
-                bit_blocks_left2[i * 3 + 2] = (cur_block.input1.first & cur_block.input2.first) ^ (cur_block.result.first) ^ (cur_block.rho.first);
+                bit_blocks_right2[i * 3] = cur_block.input2.first;
+                bit_blocks_right2[i * 3 + 1] = cur_block.input1.first;
+                bit_blocks_right2[i * 3 + 2] = cur_block.rho.first;
             }
 
-            int group_num = 5;
+            size_t group_num = 5;
 
             // bit_id = 0,1, ..., 12
-            for (int bit_id = 0; bit_id < 13; bit_id++) {
+            for (size_t bit_id = 0; bit_id < 13; bit_id++) {
 
                 // last group
                 if (bit_id == 12) 
                     group_num = 4;
 
                 // group_id = 0-4 or 0-3 (for the last group)
-                for (int group_id = 0; group_id < group_num; group_id++) {
+                for (size_t group_id = 0; group_id < group_num; group_id++) {
 
                     // bit_id = 0:  overall_bit_id = 0, 13, 26, 39, 52
                     // bit_id = 1:  overall_bit_id = 1, 14, 27, 40, 53
                     // ......
                     // bit_id = 11: overall_bit_id = 11, 24, 37, 50, 63
                     // bit_id = 12: overall_bit_id = 12, 25, 38, 51
-                    int overall_bit_id = group_id * 13 + bit_id;
-                    int cur_index = index + overall_bit_id;
-                    int row = cur_index / s;
-                    int col = cur_index % s;
+                    size_t overall_bit_id = group_id * 13 + bit_id;
+                    size_t cur_index = index + overall_bit_id;
+                    size_t row = cur_index / s;
+                    size_t col = cur_index % s;
 
-                    if (index >= s0) {
+                    if (cur_index >= s0) {
                         // cout << "cp 4" << endl;
-                        if ((uint64_t)row == k2)
+                        if (row >= k2)
                             break;
                         else {
                             input[row][col] = 0;
@@ -776,15 +840,16 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         }
                     }
 
-                    uint64_t left_id1 = 0, left_id2 = 0;
+                    size_t right_id1 = 0, right_id2 = 0;
 
-                    for (int j = 0; j < bits_num; j++) {
-                        left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
-                        left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
+                    for (size_t j = 0; j < bits_num; j++) {
+                        right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
+                        right_id2 ^= ((bit_blocks_right2[j] >> overall_bit_id) << j);
                     }
 
                     two_powers = (uint64_t)1 << (overall_bit_id % 32);
-                    input[row][col] = Mersenne::mul(Mersenne::add(input_table1[left_id1 & 0xc], input_table2[left_id2 & 0xc]), two_powers);
+                    input[row][col] = Mersenne::mul(Mersenne::add(input_table1[right_id1 & 0xC], input_table2[right_id2 & 0xC]), two_powers);   
+        
                 }
             }
 
@@ -793,92 +858,93 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
     }
     else {
-        for (uint64_t i = 0; i < table_size; i++) { 
-            Field sum1 = 0, sum2 = 0;
-            int id1 = 0, id2 = quarter_k / 2;
-            for (uint64_t j = 0; j < quarter_k / 2; j++) {
+        // Left Part
+        for (size_t i = 0; i < table_size; i++) { 
+            uint128_t sum1 = 0, sum2 = 0;
+            size_t id1 = 0, id2 = quarter_k / 2;
+            for (size_t j = 0; j < quarter_k / 2; j++) {
                 bool ab = i & (1 << (j * 3));
                 bool cd = i & (1 << (j * 3 + 1));
                 bool ef = i & (1 << (j * 3 + 2));
 
-                sum1 = (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
+                sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]) : 0;
                 id1++;
                 sum1 += cd ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
                 id1++;
                 sum1 += ab ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
                 id1++;
-                sum1 += (ab & cd) ? ((ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1]) : 0;
-                id1++;
+                sum1 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id1];
 
-                sum2 = (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
+                sum2 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id2]) : 0;
                 id2++;
                 sum2 += cd ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
                 id2++;
-                sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id1]) : 0;
+                sum2 += ab ? (ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2]) : 0;
                 id2++;
-                sum2 += ef ? Mersenne::neg(eval_base[id2]) : eval_base[id2];
-                id2++;
+                sum2 += (ef ? (uint128_t)two_inverse : (uint128_t)neg_two_inverse) * eval_base[id2];
             }
             input_table1[i] = Mersenne::modp_128(sum1);
             input_table2[i] = Mersenne::modp_128(sum2);
         }
 
-        end = std::chrono::high_resolution_clock::now();
-        cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+        #ifdef TIMING
+                end = std::chrono::high_resolution_clock::now();
+                cout << "First round (generate lookup tables) uses: " << (end - start).count() / 1e6 << " ms" << endl;
 
-        start = std::chrono::high_resolution_clock::now();
+                start = std::chrono::high_resolution_clock::now();
+        #endif
 
-        int bits_num = quarter_k / 2 * 3;
+        size_t bits_num = quarter_k / 2 * 3;
 
-        long* bit_blocks_right1 = new long[bits_num];
-        long* bit_blocks_right2 = new long[bits_num];
+        long* bit_blocks_left1 = new long[bits_num];
+        long* bit_blocks_left2 = new long[bits_num];
 
-        for (uint64_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
+        for (size_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
             // cout << "block_col_id: " << block_col_id << endl;
 
             // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
             memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
 
             // i = 0, 1, 2, 3
-            for (uint64_t i = 0; i < quarter_k / 2; i++) {
+            for (size_t i = 0; i < quarter_k / 2; i++) {
                 ShareTupleBlock cur_block = quarter_k_blocks[i];
 
-                bit_blocks_right1[i * 3] = cur_block.input2.second;
-                bit_blocks_right1[i * 3 + 1] = cur_block.input1.second;
-                bit_blocks_right1[i * 3 + 2] = cur_block.rho.second;
-                
+                bit_blocks_left1[i * 3] = cur_block.input1.second;
+                bit_blocks_left1[i * 3 + 1] = cur_block.input2.second;
+                bit_blocks_left1[i * 3 + 2] = (cur_block.input1.second & cur_block.input2.second) ^ (cur_block.result.second) ^ (cur_block.rho.second);
+
                 cur_block = quarter_k_blocks[i + quarter_k / 2];
 
-                bit_blocks_right2[i * 3] = cur_block.input2.second;
-                bit_blocks_right2[i * 3 + 1] = cur_block.input1.second;
-                bit_blocks_right2[i * 3 + 2] = cur_block.rho.second;
+                bit_blocks_left2[i * 3] = cur_block.input1.second;
+                bit_blocks_left2[i * 3 + 1] = cur_block.input2.second;
+                bit_blocks_left2[i * 3 + 2] = (cur_block.input1.second & cur_block.input2.second) ^ (cur_block.result.second) ^ (cur_block.rho.second);
             }
 
-            int group_num = 5;
+            size_t group_num = 5;
 
             // bit_id = 0,1, ..., 12
-            for (int bit_id = 0; bit_id < 13; bit_id++) {
+            for (size_t bit_id = 0; bit_id < 13; bit_id++) {
 
                 // last group
                 if (bit_id == 12) 
                     group_num = 4;
 
                 // group_id = 0-4 or 0-3 (for the last group)
-                for (int group_id = 0; group_id < group_num; group_id++) {
+                for (size_t group_id = 0; group_id < group_num; group_id++) {
 
                     // bit_id = 0:  overall_bit_id = 0, 13, 26, 39, 52
                     // bit_id = 1:  overall_bit_id = 1, 14, 27, 40, 53
                     // ......
                     // bit_id = 11: overall_bit_id = 11, 24, 37, 50, 63
                     // bit_id = 12: overall_bit_id = 12, 25, 38, 51
-                    int overall_bit_id = group_id * 13 + bit_id;
-                    int cur_index = index + overall_bit_id;
-                    int row = cur_index / s;
-                    int col = cur_index % s;
+                    size_t overall_bit_id = group_id * 13 + bit_id;
+                    size_t cur_index = index + overall_bit_id;
+                    size_t row = cur_index / s;
+                    size_t col = cur_index % s;
 
-                    if (index >= s0) {
+                    if (cur_index >= s0) {
                         // cout << "cp 4" << endl;
-                        if ((uint64_t)row == k2)
+                        if (row >= k2)
                             break;
                         else {
                             input[row][col] = 0;
@@ -886,15 +952,15 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                         }
                     }
 
-                    uint64_t right_id1 = 0, right_id2 = 0;
+                    size_t left_id1 = 0, left_id2 = 0;
 
-                    for (int j = 0; j < bits_num; j++) {
-                        right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
-                        right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
+                    for (size_t j = 0; j < bits_num; j++) {
+                        left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
+                        left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
                     }
                     
                     two_powers = (uint64_t)1 << (overall_bit_id % 32);
-                    input[row][col] = Mersenne::mul(Mersenne::add(input_table1[right_id1 & 0xc], input_table2[right_id2 & 0xc]), two_powers);   
+                    input[row][col] = Mersenne::mul(Mersenne::add(input_table1[left_id1 & 0xC], input_table2[left_id2 & 0xC]), two_powers);   
                 }
             }
 
@@ -903,10 +969,14 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
     }
 
-    end = std::chrono::high_resolution_clock::now();
-    cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    cnt++;
 
-    start = std::chrono::high_resolution_clock::now();
+    #ifdef TIMING
+        end = std::chrono::high_resolution_clock::now();
+        cout << "First round (compute new inputs) uses: " << (end - start).count() / 1e6 << " ms" << endl;
+
+        start = std::chrono::high_resolution_clock::now();
+    #endif
 
     // cout << "cp 4" << endl;
 
@@ -915,23 +985,23 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         transcript_hash.append_msges(proof.p_evals_masked[cnt]);
 
         if(prev_party) {
-            for(uint64_t i = 0; i < 2 * k2 - 1; i++) { 
+            for(size_t i = 0; i < 2 * k2 - 1; i++) { 
                 proof.p_evals_masked[cnt][i] = Mersenne::add(proof.p_evals_masked[cnt][i], masks_ss[cnt][i]);
             } 
         } else {
-            for(uint64_t i = 0; i < 2 * k2 - 1; i++) { 
+            for(size_t i = 0; i < 2 * k2 - 1; i++) { 
                 proof.p_evals_masked[cnt][i] = masks_ss[cnt][i];
             }
         }
         sum_ss = 0;
-        for(uint64_t j = 0; j < k2; j++) { 
+        for(size_t j = 0; j < k2; j++) { 
             sum_ss += proof.p_evals_masked[cnt][j];
         }
 
         r = transcript_hash.get_challenge();
         Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
         uint128_t temp_result = 0;
-        for(uint64_t i = 0; i < 2 * k2 - 1; i++) {
+        for(size_t i = 0; i < 2 * k2 - 1; i++) {
             temp_result += (uint128_t)eval_base_2k[i] * (uint128_t)proof.p_evals_masked[cnt][i];
         }
         out_ss = Mersenne::modp_128(temp_result);
@@ -943,7 +1013,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
             r = transcript_hash.get_challenge();
             Langrange::evaluate_bases(k2, r, eval_base);
             
-            for(uint64_t i = 0; i < k2; i++) {
+            for(size_t i = 0; i < k2; i++) {
                 final_input += eval_base[i] * input[i][0];
             }
             Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
@@ -956,12 +1026,12 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         Langrange::evaluate_bases(k2, r, eval_base);
         s0 = s;
         s = (s - 1) / k2 + 1;
-        for(uint64_t i = 0; i < k2; i++) {
-            for(uint64_t j = 0; j < s; j++) {
+        for(size_t i = 0; i < k2; i++) {
+            for(size_t j = 0; j < s; j++) {
                 index = i * s + j;
                 if (index < s0) {
                     uint128_t temp_result = 0;
-                    for(uint64_t l = 0; l < k2; l++) {
+                    for(size_t l = 0; l < k2; l++) {
                         temp_result += (uint128_t)eval_base[l] * (uint128_t)input[l][index];
                     }
                     input[i][j] = Mersenne::modp_128(temp_result);
@@ -975,23 +1045,19 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         cnt++;
     }
 
-    end = std::chrono::high_resolution_clock::now();
-    cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
-    
+    #ifdef TIMING
+        end = std::chrono::high_resolution_clock::now();
+        cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
+    #endif
+
     // cout << "cp 5" << endl;
 
     // delete[] eval_base;
     // delete[] eval_base_2k;
 
-    // for(uint64_t i = 0; i < k; i++) {
-    //     delete[] input_mono[i];
-    //     delete[] input_mono[i];
-    // }
-
     // delete[] input;
-    // delete[] input_mono;
 
-    // for (uint64_t j = 0; j < cnt; j ++) {
+    // for (size_t j = 0; j < cnt; j ++) {
     //     delete[] masks_ss[j];
     // }
     // delete[] masks_ss;
@@ -1012,29 +1078,28 @@ bool Malicious3PCProtocol<_T>::_verify(
     VerMsg other_vermsg, 
     int node_id,
     Field** masks_ss,
-    uint64_t batch_size, 
+    size_t batch_size, 
     Field sid,
-    uint64_t prover_ID,
-    uint64_t party_ID
+    size_t prover_ID,
+    size_t party_ID
 ) {
     // cout << "in _verify..." << endl;
-    uint64_t k = OnlineOptions::singleton.k_size;
-    uint64_t k2 = OnlineOptions::singleton.k2_size;
+    size_t k = OnlineOptions::singleton.k_size;
+    size_t k2 = OnlineOptions::singleton.k2_size;
     
-    uint64_t T = ((batch_size - 1) / k + 1) * k;
-    uint64_t s = (T - 1) / k + 1;
-    uint64_t len = log(4 * s) / log(k2) + 2;
+    size_t T = ((batch_size - 1) / k + 1) * k;
+    size_t s = (T - 1) / k + 1;
+    size_t len = log(4 * s) / log(k2) + 2;
     
     VerMsg self_vermsg = _gen_vermsg(proof, node_id, masks_ss, batch_size, sid, prover_ID, party_ID);
 
     Field b;
     // cout << "in _verify, cp 1" << endl;
-    for(uint64_t i = 0; i < len; i++) {
+    for(size_t i = 0; i < len; i++) {
         // b = self_vermsg.b_ss[i] + other_vermsg.b_ss[i];
         b = Mersenne::add(self_vermsg.b_ss[i], other_vermsg.b_ss[i]);
         
-        if(!b) {    
-            // cout << "b != 0 at index " << i << endl; 
+        if(b != 0) {    
             return false;
         }
     }
@@ -1046,11 +1111,9 @@ bool Malicious3PCProtocol<_T>::_verify(
     Field p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
     
     if(res != p_eval_r) {   
-        // cout << "res != p_eval_r" << endl;
         return false;
     } 
 
-    // cout << "out of _verify..." << endl;
     return true;
 }
 

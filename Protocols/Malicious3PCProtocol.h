@@ -120,6 +120,8 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
 
+    size_t MAX_LAYER_SIZE = 64000000;
+
     const Field two_inverse = Mersenne::inverse(2);
     const Field neg_one = Mersenne::PR - 1;
     const Field neg_two = Mersenne::PR - 2;
@@ -181,12 +183,14 @@ public:
 
         if (local_counter > 0) {
             // cout << "local_counter = " << local_counter << endl;
+            // cout << "this->bit_counter_aligned = " << this->bit_counter_aligned << endl;
+            // cout << "this->bit_counter = " << this->bit_counter << endl;
             Check_one(status_pointer, local_counter);
             status_counter ++;
         }
 
         if (status_counter > 0) {
-            // cout << "status_counter = " << status_counter << endl;
+            cout << "status_counter = " << status_counter << endl;
             verify();
         }
         
@@ -201,6 +205,11 @@ public:
         }
 
         cout << "Destroyed." << endl;
+
+        if (!check_passed) {
+            // throw mac_fail("Check failed");
+            cout << "Check failed" << endl;
+        }
 
         // this->print_debug_info("Binary Part");
         cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
@@ -245,7 +254,7 @@ public:
     DZKProof _prove(
         int node_id,
         Field** masks,
-        uint64_t batch_size, 
+        size_t batch_size, 
         Field sid
     );
 
@@ -253,10 +262,10 @@ public:
         DZKProof proof, 
         int node_id,
         Field** masks_ss,
-        uint64_t batch_size, 
+        size_t batch_size, 
         Field sid,
-        uint64_t prover_ID,
-        uint64_t party_ID
+        size_t prover_ID,
+        size_t party_ID
     );
 
     bool _verify(
@@ -264,23 +273,30 @@ public:
         VerMsg other_vermsg, 
         int node_id,
         Field** masks_ss,
-        uint64_t batch_size, 
+        size_t batch_size, 
         Field sid,
-        uint64_t prover_ID,
-        uint64_t party_ID
+        size_t prover_ID,
+        size_t party_ID
     );
 
     void check();
     void finalize_check();
     void Check_one(int node_id, int size = -1);
     void verify();
+
+    #ifdef TIMING
     void thread_handler(int tid);
+    void verify_thread_handler(int tid);
+    #else
+    void thread_handler();
+    void verify_thread_handler();
+    #endif
+
     // void maybe_check();
     int get_n_relevant_players() { return P.num_players() - 1; }
 
-    void verify_part1(int prev_number, int my_number);
-    void verify_part2(int next_number, int my_number);
-    void verify_thread_handler(int tid);
+    void verify_part1(size_t prev_number, size_t my_number);
+    void verify_part2(size_t next_number, size_t my_number);
 
 };
 

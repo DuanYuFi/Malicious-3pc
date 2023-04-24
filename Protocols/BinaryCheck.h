@@ -155,7 +155,7 @@ public:
 inline void Langrange::get_bases(uint64_t n, Field** result) {
     for (uint64_t i = 0; i < n - 1; i++) {
         for(uint64_t j = 0; j < n; j++) {
-            result[i][j] = 0;
+            result[i][j] = 1;
             for(uint64_t l = 0; l < n; l++) {
                 if (l != j) {
                     Field denominator, numerator;
