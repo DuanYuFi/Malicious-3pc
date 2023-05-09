@@ -193,14 +193,14 @@ void Malicious3PCProtocol<T>::thread_handler() {
 #endif
 
 template <class T>
-void Malicious3PCProtocol<T>::verify_part1(size_t prev_number, size_t my_number) {
+void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     DZKProof proof;
     verify_lock.lock();
     int i = verify_index ++;
     proof.unpack(proof_os[1]);
     verify_lock.unlock();
 
-    int sz = status_queue[i].sz;
+    size_t sz = status_queue[i].sz;
     // int k = OnlineOptions::singleton.k_size;
     // int cnt = log(4 * sz) / log(k) + 1;
 
@@ -219,7 +219,7 @@ void Malicious3PCProtocol<T>::verify_part1(size_t prev_number, size_t my_number)
     
 }
 template <class T>
-void Malicious3PCProtocol<T>::verify_part2(size_t next_number, size_t my_number) {
+void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     
     VerMsg received_vermsg;
     DZKProof proof;
@@ -230,7 +230,7 @@ void Malicious3PCProtocol<T>::verify_part2(size_t next_number, size_t my_number)
     int i = verify_index ++;
     verify_lock.unlock();
 
-    int sz = status_queue[i].sz;
+    size_t sz = status_queue[i].sz;
     // int k = OnlineOptions::singleton.k_size;
 
     // int cnt = log(4 * sz) / log(k) + 1;
@@ -296,8 +296,8 @@ template <class T>
 void Malicious3PCProtocol<T>::verify_thread_handler() {
     u_char data = 0;
     int my_number = P.my_real_num();
-    size_t prev_number = my_number == 0 ? 2 : my_number - 1;
-    size_t next_number = my_number == 2 ? 0 : my_number + 1;
+    int prev_number = my_number == 0 ? 2 : my_number - 1;
+    int next_number = my_number == 2 ? 0 : my_number + 1;
 
     while (true) { 
         if (!verify_queue.pop_dont_stop(data)) {
@@ -340,7 +340,7 @@ void Malicious3PCProtocol<T>::verify() {
         o.clear();
     }
 
-    int size = status_counter;
+    size_t size = status_counter;
 
     // outfile << "Verify with size " << size << endl;
 
@@ -351,7 +351,7 @@ void Malicious3PCProtocol<T>::verify() {
 
     // auto cp0 = std::chrono::high_resolution_clock::now();
     
-    for (int i = 0; i < size; i ++) {
+    for (size_t i = 0; i < size; i ++) {
         DZKProof proof = status_queue[i].proof;   
         proof.pack(proof_os[0]);
     }
@@ -362,7 +362,7 @@ void Malicious3PCProtocol<T>::verify() {
     // auto cp1 = std::chrono::high_resolution_clock::now();
     // outfile << "Exchange proof1 uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
 
-    for (int i = 0; i < size; i ++) {
+    for (size_t i = 0; i < size; i ++) {
         verify_queue.push(1);
     }
 
@@ -373,7 +373,7 @@ void Malicious3PCProtocol<T>::verify() {
     // auto cp2 = std::chrono::high_resolution_clock::now();
     // outfile << "Gen vermsg uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
 
-    for (int i = 0; i < size; i ++) {
+    for (size_t i = 0; i < size; i ++) {
         vermsgs[i].pack(vermsg_os[0]);
     }
 
@@ -388,7 +388,7 @@ void Malicious3PCProtocol<T>::verify() {
     // auto cp3 = std::chrono::high_resolution_clock::now();
     // outfile << "Exchange vermsg uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
 
-    for (int i = 0; i < size; i ++) {
+    for (size_t i = 0; i < size; i ++) {
         verify_queue.push(2);
     }
 
@@ -406,7 +406,7 @@ void Malicious3PCProtocol<T>::verify() {
 }
 
 template <class T>
-void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
+void Malicious3PCProtocol<T>::Check_one(size_t node_id, int size) {
 
     // ofstream outfile;
     // outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
@@ -418,17 +418,17 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
     // cout << "in Check_one" << node_id << endl;
 
     if (size == 0)  return ;
-    int ms = OnlineOptions::singleton.max_status;
+    size_t ms = OnlineOptions::singleton.max_status;
 
     // size_t start = (node_id % (ZOOM_RATE * ms)) * OnlineOptions::singleton.binary_batch_size;
     if (size == -1) size = OnlineOptions::singleton.binary_batch_size;
 
-    int sz = size;
-    int k = OnlineOptions::singleton.k_size;
-    int k2 = OnlineOptions::singleton.k2_size;
-    int _T = ((sz - 1) / k + 1) * k;
-    int s = (_T - 1) / k + 1;
-    int cnt = log(4 * s) / log(k2) + 3;
+    size_t sz = size;
+    size_t k = OnlineOptions::singleton.k_size;
+    size_t k2 = OnlineOptions::singleton.k2_size;
+    size_t _T = ((sz - 1) / k + 1) * k;
+    size_t s = (_T - 1) / k + 1;
+    size_t cnt = log(4 * s) / log(k2) + 3;
 
     #ifdef DEBUG_OURS_CORRECTNESS_SF
         cout << "cnt in Protocol: " << cnt << endl;
@@ -465,18 +465,18 @@ void Malicious3PCProtocol<T>::Check_one(int node_id, int size) {
             }
         }
     #else
-        for (int j = 0; j < 2 * k - 1; j ++) {
+        for (size_t j = 0; j < 2 * k - 1; j ++) {
             mask_ss_next[0][j] = Mersenne::randomize(check_prngs[node_id % ms][1]);
             mask_ss_prev[0][j] = Mersenne::randomize(check_prngs[node_id % ms][0]);
             masks[0][j] = Mersenne::add(mask_ss_next[0][j], mask_ss_prev[0][j]);
         }
         
-        for (int i = 1; i < cnt; i++) {
-            masks[i] = new Field[2 * k - 1];
-            mask_ss_next[i] = new Field[2 * k - 1];
-            mask_ss_prev[i] = new Field[2 * k - 1];
+        for (size_t i = 1; i < cnt; i++) {
+            masks[i] = new Field[2 * k2 - 1];
+            mask_ss_next[i] = new Field[2 * k2 - 1];
+            mask_ss_prev[i] = new Field[2 * k2 - 1];
 
-            for (int j = 0; j < 2 * k - 1; j ++) {
+            for (size_t j = 0; j < 2 * k2 - 1; j ++) {
                 mask_ss_next[i][j] = Mersenne::randomize(check_prngs[node_id % ms][1]);
                 mask_ss_prev[i][j] = Mersenne::randomize(check_prngs[node_id % ms][0]);
                 masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
