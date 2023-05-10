@@ -19,12 +19,12 @@ class Player;
 
 struct StatusData {
     DZKProof proof;
-    int node_id;
+    size_t node_id;
     Field **mask_ss_prev, **mask_ss_next;
-    int sz;
+    size_t sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, int node_id, Field **mask_ss_prev, Field **mask_ss_next, int sz) : 
+    StatusData(DZKProof proof, size_t node_id, Field **mask_ss_prev, Field **mask_ss_next, size_t sz) : 
         proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
@@ -104,7 +104,10 @@ public:
 typedef MyPair<long, long> ShareTypeBlock;
 
 struct ShareTupleBlock {
+public:
     ShareTypeBlock input1, input2, result, rho;
+
+    ShareTupleBlock(): input1(), input2(), result(), rho() {}
 };
 
 /**
@@ -252,7 +255,7 @@ public:
     }
 
     DZKProof _prove(
-        int node_id,
+        size_t node_id,
         Field** masks,
         size_t batch_size, 
         Field sid
@@ -260,7 +263,7 @@ public:
 
     VerMsg _gen_vermsg(
         DZKProof proof, 
-        int node_id,
+        size_t node_id,
         Field** masks_ss,
         size_t batch_size, 
         Field sid,
@@ -271,7 +274,7 @@ public:
     bool _verify(
         DZKProof proof, 
         VerMsg other_vermsg, 
-        int node_id,
+        size_t node_id,
         Field** masks_ss,
         size_t batch_size, 
         Field sid,
@@ -281,22 +284,22 @@ public:
 
     void check();
     void finalize_check();
-    void Check_one(int node_id, int size = -1);
+    void Check_one(size_t node_id, int size = -1);
     void verify();
 
     #ifdef TIMING
-    void thread_handler(int tid);
-    void verify_thread_handler(int tid);
+    void thread_handler(size_t tid);
+    void verify_thread_handler(size_t tid);
     #else
     void thread_handler();
     void verify_thread_handler();
     #endif
 
     // void maybe_check();
-    int get_n_relevant_players() { return P.num_players() - 1; }
+    size_t get_n_relevant_players() { return P.num_players() - 1; }
 
-    void verify_part1(size_t prev_number, size_t my_number);
-    void verify_part2(size_t next_number, size_t my_number);
+    void verify_part1(int prev_number, int my_number);
+    void verify_part2(int next_number, int my_number);
 
 };
 
