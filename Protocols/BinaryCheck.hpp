@@ -21,7 +21,7 @@ void print_uint128(uint128_t x) {
 
 template <class _T>
 DZKProof Malicious3PCProtocol<_T>::_prove(
-    int node_id,
+    size_t node_id,
     Field** masks,
     size_t batch_size, 
     Field sid
@@ -629,7 +629,7 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 template <class _T>
 VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     DZKProof proof, 
-    int node_id,
+    size_t node_id,
     Field** masks_ss,
     size_t batch_size, 
     Field sid,
@@ -1076,7 +1076,7 @@ template <class _T>
 bool Malicious3PCProtocol<_T>::_verify(
     DZKProof proof, 
     VerMsg other_vermsg, 
-    int node_id,
+    size_t node_id,
     Field** masks_ss,
     size_t batch_size, 
     Field sid,
