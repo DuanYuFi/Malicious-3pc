@@ -101,7 +101,7 @@ public:
     MyPair(T1 a, T2 b): first(a), second(b) {}
 };
 
-typedef MyPair<long, long> ShareTypeBlock;
+typedef MyPair<Field, Field> ShareTypeBlock;
 
 struct ShareTupleBlock {
 public:

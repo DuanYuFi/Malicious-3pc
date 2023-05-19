@@ -8,6 +8,49 @@
 #include <ctime>
 #include <chrono>
 
+// ============================================================
+
+
+Field inner_product(Field* x, Field* y, size_t length) {
+  Field answer = 0;
+  for (size_t i = 0; i < length; ++i) {
+    answer += x[i] * y[i]; 
+  }
+
+  return answer;
+}
+
+Field inner_product(Field* x, vector<Field> y, size_t length) {
+  Field answer = 0;
+  for (size_t i = 0; i < length; ++i) {
+    answer += x[i] * y[i]; 
+  }
+
+  return answer;
+}
+
+Field inner_product(Field** x, Field** y, size_t rows, size_t cols) {
+  Field answer = 0;
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      answer += x[i][j] * y[i][j];
+    }
+  }
+
+  return answer;
+}
+
+Field inner_product(Field** x, Field* y, size_t rows, size_t cols) {
+  Field answer = 0;
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      answer += x[i][j] * y[j];
+    }
+  }
+
+  return answer;
+}
+
 template <class _T>
 DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t node_id,
@@ -95,10 +138,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 ShareTupleBlock col_tuple_block = k_share_tuple_blocks[j];
 
                 // x_i * y_{i-1} + y_i * x_{i-1}
-                long this_value_block = (row_tuple_block.input1.first & col_tuple_block.input2.second) ^ (row_tuple_block.input2.first & col_tuple_block.input1.second);
+                Field this_value_block = (row_tuple_block.input1.first & col_tuple_block.input2.second) ^ (row_tuple_block.input2.first & col_tuple_block.input1.second);
 
                 for(size_t l = 0; l < BLOCK_SIZE; l++) {
-                    if ((this_value_block >> l) & (uint64_t)1) {
+                    if (((this_value_block >> l) & Field(1)).is_one()) {
                         eval_result[i][j] += thetas[block_col * BLOCK_SIZE + l];
                     }
                 }
@@ -177,10 +220,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         input_table[i] = sum;
     }
 
-    long* bit_blocks_left1 = new long[k];
-    long* bit_blocks_left2 = new long[k];
-    long* bit_blocks_right1 = new long[k];
-    long* bit_blocks_right2 = new long[k];
+    Field* bit_blocks_left1 = new Field[k];
+    Field* bit_blocks_left2 = new Field[k];
+    Field* bit_blocks_right1 = new Field[k];
+    Field* bit_blocks_right2 = new Field[k];
 
     int bits_num = k2;
     int group_num = BLOCK_SIZE / k2;
@@ -238,10 +281,10 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 uint64_t left_id1 = 0, left_id2 = 0, right_id1 = 0, right_id2 = 0;
 
                 for (int j = 0; j < bits_num; j++) {
-                    left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
-                    left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
-                    right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
-                    right_id2 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
+                    left_id1  ^= ((bit_blocks_left1[j] >> Field(overall_bit_id)) << j).debug();
+                    left_id2  ^= ((bit_blocks_left2[j] >> Field(overall_bit_id)) << j).debug();
+                    right_id1 ^= ((bit_blocks_right1[j] >> Field(overall_bit_id)) << j).debug();
+                    right_id2 ^= ((bit_blocks_right1[j] >> Field(overall_bit_id)) << j).debug();
                 }
 
                 input_left[row][col] = input_table[left_id1 & 0xc] * thetas[block_col * BLOCK_SIZE + overall_bit_id];
@@ -440,9 +483,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
             for (size_t i = 0; i < k; i++) { 
 
-                long this_block_value = k_share_tuple_blocks[i].rho.first;
+                Field this_block_value = k_share_tuple_blocks[i].rho.first;
                 for(size_t l = 0; l < BLOCK_SIZE; l++) {
-                    if ((this_block_value >> l) & (uint64_t)1) {
+                    if (((this_block_value >> l) & Field(1)).is_one()) {
                         out_ss += thetas[block_col * BLOCK_SIZE + l];
                     }
                 }
@@ -462,9 +505,9 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
             }
 
             for (size_t i = 0; i < k; i++) { 
-                long this_block_value = k_share_tuple_blocks[i].result.second ^ (k_share_tuple_blocks[i].input1.second & k_share_tuple_blocks[i].input2.second) ^ k_share_tuple_blocks[i].rho.second;
+                Field this_block_value = k_share_tuple_blocks[i].result.second ^ (k_share_tuple_blocks[i].input1.second & k_share_tuple_blocks[i].input2.second) ^ k_share_tuple_blocks[i].rho.second;
                 for(size_t l = 0; l < BLOCK_SIZE; l++) {
-                    if ((this_block_value >> l) & (uint64_t)1) {
+                    if (((this_block_value >> l) & Field(1)).is_one()) {
                         out_ss += thetas[block_col * BLOCK_SIZE + l];
                     }
                 }
@@ -522,8 +565,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
     if (prev_party) {
 
-        long* bit_blocks_left1 = new long[k];
-        long* bit_blocks_left2 = new long[k];
+        Field* bit_blocks_left1 = new Field[k];
+        Field* bit_blocks_left2 = new Field[k];
 
         for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
             if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
@@ -571,8 +614,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     uint64_t left_id1 = 0, left_id2 = 0;
 
                     for (int j = 0; j < bits_num; j++) {
-                        left_id1 ^= ((bit_blocks_left1[j] >> overall_bit_id) << j);
-                        left_id2 ^= ((bit_blocks_left2[j] >> overall_bit_id) << j);
+                        left_id1 ^= ((bit_blocks_left1[j] >> Field(overall_bit_id)) << j).debug();
+                        left_id2 ^= ((bit_blocks_left2[j] >> Field(overall_bit_id)) << j).debug();
                     }
 
                     input[row][col] = input_table[left_id1 & 0xc] * thetas[block_col * BLOCK_SIZE + overall_bit_id];
@@ -585,8 +628,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
     } 
     else {
-        long* bit_blocks_right1 = new long[k];
-        long* bit_blocks_right2 = new long[k];
+        Field* bit_blocks_right1 = new Field[k];
+        Field* bit_blocks_right2 = new Field[k];
 
         for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
 
@@ -627,8 +670,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     uint64_t right_id1 = 0, right_id2 = 0;
 
                     for (int j = 0; j < bits_num; j++) {
-                        right_id1 ^= ((bit_blocks_right1[j] >> overall_bit_id) << j);
-                        right_id2 ^= ((bit_blocks_right2[j] >> overall_bit_id) << j);
+                        right_id1 ^= ((bit_blocks_right1[j] >> Field(overall_bit_id)) << j).debug();
+                        right_id2 ^= ((bit_blocks_right2[j] >> Field(overall_bit_id)) << j).debug();
                     }
 
                     input[row][col] = input_table[right_id1 & 0xc];

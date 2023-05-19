@@ -14,8 +14,7 @@
 template <class T>
 Malicious3PCProtocol<T>::Malicious3PCProtocol(Player& P) : P(P) {
 
-    Field::reset();
-    Field::init_field(64);
+    Field::init_field(2305843009213693951, true);
 
     cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
 
@@ -526,8 +525,8 @@ void Malicious3PCProtocol<T>::prepare_mul(const T& x,
 
     // int this_size = (n == -1 ? T::value_type::length() : n);
 
-    share_tuple_blocks[idx_input].input1 = ShareTypeBlock(x[0].get(), x[1].get());
-    share_tuple_blocks[idx_input].input2 = ShareTypeBlock(y[0].get(), y[1].get());
+    share_tuple_blocks[idx_input].input1 = ShareTypeBlock(x[0], x[1]);
+    share_tuple_blocks[idx_input].input2 = ShareTypeBlock(y[0], y[1]);
     idx_input ++;
     if (idx_input == share_tuple_block_size) {
         idx_input = 0;
@@ -547,7 +546,7 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
 
     // shared_prngs[0]: next, rho_i
     // shared_prngs[1]: prev, rho_{i-1}
-    share_tuple_blocks[idx_rho].rho = ShareTypeBlock(tmp[0].get(), tmp[1].get());
+    share_tuple_blocks[idx_rho].rho = ShareTypeBlock(tmp[0], tmp[1]);
     idx_rho ++;
     if (idx_rho == share_tuple_block_size) {
         idx_rho = 0;
@@ -597,7 +596,7 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
 
-    share_tuple_blocks[idx_result].result = ShareTypeBlock(result[0].get(), result[1].get());
+    share_tuple_blocks[idx_result].result = ShareTypeBlock(result[0], result[1]);
     
     idx_result ++;
     if (idx_result == share_tuple_block_size) {

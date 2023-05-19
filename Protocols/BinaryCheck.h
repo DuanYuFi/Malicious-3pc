@@ -3,14 +3,14 @@
 
 #include <vector>
 #include "Tools/Hash.h"
-#include "Math/gf2n.h"
+#include "Math/gfp.h"
 
 using namespace std;
 
 #define BLOCK_SIZE 64
 
 typedef unsigned __int128 uint128_t;
-typedef gf2n_short Field;
+typedef gfp_<0, 1> Field;
 
 class LocalHash {
     octetStream buffer;
@@ -82,7 +82,7 @@ struct DZKProof {
         for (auto each: p_evals_masked) {
             os.store(each.size());
             for (auto each_eval: each) {
-                os.store(each_eval);
+                each_eval.pack(os);
             }
         }
     }
@@ -97,7 +97,7 @@ struct DZKProof {
             os.get(num_p_evals_masked_each);
             p_evals_masked[i].resize(num_p_evals_masked_each);
             for (size_t j = 0; j < num_p_evals_masked_each; j++) {
-                os.get(p_evals_masked[i][j]);
+                p_evals_masked[i][j].unpack(os);
             }
         }
     }
@@ -128,10 +128,11 @@ struct VerMsg {
     void pack(octetStream &os) {
         os.store(b_ss.size());
         for(size_t i = 0; i < b_ss.size(); i++) {
-            os.store(b_ss[i]);
+            b_ss[i].pack(os);
         }
-        os.store(final_input);
-        os.store(final_result_ss);
+
+        final_input.pack(os);
+        final_result_ss.pack(os);
     }
 
     void unpack(octetStream &os) {
@@ -139,10 +140,11 @@ struct VerMsg {
         os.get(size);
         b_ss.resize(size);
         for(size_t i = 0; i < size; i++) {
-            os.get(b_ss[i]);
+            b_ss[i].unpack(os);
         }
-        os.get(final_input);
-        os.get(final_result_ss);
+
+        final_input.unpack(os);
+        final_result_ss.unpack(os);
     }
 };
 

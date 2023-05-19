@@ -8,6 +8,7 @@
 
 #include "SemiRingShare.h"
 #include "SemiRingProtocol.h"
+#include "Rep3Share2k.h"
 #include "SpdzWiseShare.h"
 #include "SpdzWise.h"
 #include "Math/Z2k.h"
@@ -43,8 +44,8 @@ public:
     typedef T random_type;
     typedef This Scalar;
 
-    // typedef GC::Malicious3PCSecret bit_type;
-    typedef GC::SemiHonestRepSecret bit_type;
+    typedef GC::Malicious3PCSecret bit_type;
+    // typedef GC::SemiHonestRepSecret bit_type;
 
 
     // indicate security relevance of field size
