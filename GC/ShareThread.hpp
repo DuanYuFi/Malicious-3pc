@@ -85,9 +85,9 @@ void ShareThread<T>::post_run()
     //     protocol->check();
     // }
 
-    protocol->finalize_check();
-    // protocol->check();
-
+    // protocol->finalize_check();
+    
+    protocol->check();
     MC->Check(*this->P);
 }
 

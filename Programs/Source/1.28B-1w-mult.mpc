@@ -1,0 +1,25 @@
+from Compiler.GC.types import *
+
+n_threads = 32
+n_parallel = 1000
+
+sb64 = sbits.get_type(64)
+
+a = Array(20000000, sb64)
+b = Array(20000000, sb64)
+c = Array(20000000, sb64)
+
+a.assign_all(10)
+b.assign_all(20)
+
+total = 20000000
+rounds = 10000
+
+for i in range(rounds // 2):
+    @for_range_multithread(n_threads, n_parallel, 20000)
+    def _(i):
+        c[i] = a[i] & b[i]
+
+    @for_range_multithread(n_threads, n_parallel, 20000)
+    def _(i):
+        a[i] = c[i] & b[i]

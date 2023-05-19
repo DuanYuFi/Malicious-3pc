@@ -1,5 +1,3 @@
 MY_CFLAGS += -I./local/include
-MY_LDLIBS += -Wl,-rpath -Wl,/home/duanyufi/Malicious-3pc-2/local/lib -L/home/duanyufi/Malicious-3pc-2/local/lib
-MY_CFLAGS += -I./local/include
-MY_LDLIBS += -Wl,-rpath -Wl,/home/duanyufi/Malicious-3pc-2/local/lib -L/home/duanyufi/Malicious-3pc-2/local/lib
+MY_LDLIBS += -Wl,-rpath -Wl,/home/ubuntu/mal3pc/local/lib -L/home/ubuntu/mal3pc/local/lib
 MY_CFLAGS += -Wno-error=unused-parameter

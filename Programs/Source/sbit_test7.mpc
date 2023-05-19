@@ -1,0 +1,25 @@
+from Compiler.GC.types import *
+
+sb64 = sbits.get_type(64)
+
+a = sb64(10)
+b = sb64(20)
+
+SIZE = 124
+TOTAL_ROUNDS = 52115
+
+for _ in range(TOTAL_ROUNDS // 5):
+    for i in range(SIZE):
+        c = a & b
+    
+    for i in range(SIZE):
+        a = b & c
+    
+    for i in range(SIZE):
+        b = c & a
+    
+    for i in range(SIZE):
+        c = a & b
+    
+    for i in range(SIZE):
+        a = b & c

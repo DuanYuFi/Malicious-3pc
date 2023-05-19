@@ -233,7 +233,8 @@ inline __m128i clmul(__m128i a, __m128i b)
 {
 #if defined(__PCLMUL__) || !defined(__x86_64__)
     if (cpu_has_pclmul())
-    {
+    {   
+        // cout << "calling _mm_clmulepi64_si128" << endl;
         return _mm_clmulepi64_si128(a, b, choice);
     }
     else

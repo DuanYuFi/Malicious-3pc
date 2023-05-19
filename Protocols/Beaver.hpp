@@ -6,6 +6,8 @@
 #ifndef PROTOCOLS_BEAVER_HPP_
 #define PROTOCOLS_BEAVER_HPP_
 
+#define TEST_BEAVER
+
 #include "Beaver.h"
 
 #include "Replicated.hpp"
@@ -94,6 +96,10 @@ T Beaver<T>::finalize_mul(int n)
 template<class T>
 void Beaver<T>::check()
 {
+    #ifdef TEST_BEAVER
+        cout << "calling Beaver::check" << endl;
+    #endif
+    
     assert(MC);
     MC->Check(P);
 }

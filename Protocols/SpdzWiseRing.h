@@ -31,9 +31,9 @@ public:
     SpdzWiseRing(Player &P);
     ~SpdzWiseRing() {
         end = std::chrono::high_resolution_clock::now();
-        cout << "SpdzWiseRing's log is in " << typeid(typename T::part_type::Honest::Protocol).name() << endl;
-        cout << "Ends at" << end.time_since_epoch().count() << endl;
-        cout << "Time costs " << (end - start).count() / 1e6 << "ms." << endl;
+        // cout << "SpdzWiseRing's log is in " << typeid(typename T::part_type::Honest::Protocol).name() << endl;
+        // cout << "Ends at" << end.time_since_epoch().count() << endl;
+        // cout << "Time costs " << (end - start).count() / 1e6 << "ms." << endl;
     }
 
     void zero_check(check_type t);
