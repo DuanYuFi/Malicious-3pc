@@ -33,7 +33,7 @@ class FFT_Data;
 template<class T> void generate_prime_setup(string, int, int);
 
 #ifndef GFP_MOD_SZ
-#define GFP_MOD_SZ 2
+#define GFP_MOD_SZ 1
 #endif
 
 #if GFP_MOD_SZ > MAX_MOD_SZ

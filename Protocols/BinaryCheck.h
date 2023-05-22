@@ -10,7 +10,7 @@ using namespace std;
 #define BLOCK_SIZE 64
 
 typedef unsigned __int128 uint128_t;
-typedef gfp_<0, 1> Field;
+using Field = gfp0;
 
 class LocalHash {
     octetStream buffer;

@@ -1,0 +1,8 @@
+from Compiler.types import *
+
+a = sint(2 ** 60)
+b = sint(2 ** 60)
+
+c = a * b
+
+print_ln("%s", c.reveal())

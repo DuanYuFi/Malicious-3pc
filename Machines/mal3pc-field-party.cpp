@@ -39,5 +39,6 @@
 
 int main(int argc, const char** argv)
 {
+    Field::init_field(2305843009213693951, true);
     HonestMajorityFieldMachine<Malicious3PCFieldShare>(argc, argv);
 }
